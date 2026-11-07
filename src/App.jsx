@@ -8,6 +8,7 @@ import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
+import { bookLine } from './lib/bookLine.js';
 import LineSelect from './components/LineSelect.jsx';
 import Matchup from './components/Matchup.jsx';
 import PropChart from './components/PropChart.jsx';
@@ -125,7 +126,16 @@ export default function App() {
   const [season, setSeason] = useState(2026);
   const [team, setTeam] = useState('ALL');
   const [metric, setMetric] = useState('receivingYards');
-  const [line, setLine] = useState(69.5);
+  const [custom, setCustom] = useState(null);
+  const [bookGames, setBookGames] = useState([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(import.meta.env.BASE_URL + 'data/lines.json', {signal:controller.signal, cache:'no-cache'})
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (Array.isArray(data?.games)) setBookGames(data.games); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   const [direction, setDirection] = useState('over');
   const [venue, setVenue] = useState('ALL');
   const [opponent, setOpponent] = useState('ALL');
@@ -168,7 +178,7 @@ export default function App() {
   useEffect(() => {
     const key = preferredMetric(player?.position);
     setMetric(key);
-    setLine(METRICS[key].defaultLine);
+    setCustom(null);
   }, [player?.id, player?.position]);
 
   const onSelectPlayer = id => {
@@ -176,12 +186,25 @@ export default function App() {
     const picked = players.find(p=>p.id===id);
     const key = preferredMetric(picked?.position);
     setMetric(key);
-    setLine(METRICS[key].defaultLine);
+    setCustom(null);
     setOpponent('ALL'); setVenue('ALL');
   };
-  const onMetricChange = key => { setMetric(key); setLine(METRICS[key].defaultLine); };
+  const onMetricChange = key => { setMetric(key); setCustom(null); };
   const onSeasonChange = next => { setSeason(next === 'ALL' ? next : Number(next)); if (next === 'ALL') setWindowSize('season'); setOpponent('ALL'); setVenue('ALL'); };
 
+  const isDemo = data.status !== 'ready';
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const scheduleSeason = multi ? Math.max(...seasons) : season;
+  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(data.schedule ?? initialSchedule, player?.team, scheduleSeason, now);
+  const quote = bookLine(bookGames, upcoming, player?.name, metric);
+  const lineContext = [player?.id, metric, upcoming?.kickoff].join('|');
+  const manual = custom?.context === lineContext;
+  const line = manual ? custom.value : quote?.point ?? METRICS[metric].defaultLine;
+  const setLine = value => setCustom({context:lineContext, value});
   const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
   const allGames = useMemo(() => getPlayerGames(player, season, opponent, venue), [player, season, opponent, venue]);
@@ -191,14 +214,6 @@ export default function App() {
   const last10 = useMemo(() => summarize(filteredWindow(allGames, '10'), metric, line, direction), [allGames,metric,line,direction]);
   const whole = useMemo(() => summarize(allGames, metric, line, direction), [allGames,metric,line,direction]);
   const current = windowSize === '5' ? last5 : windowSize === '10' ? last10 : whole;
-  const isDemo = data.status !== 'ready';
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 30000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const scheduleSeason = multi ? Math.max(...seasons) : season;
-  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(data.schedule ?? initialSchedule, player?.team, scheduleSeason, now);
   const nextDate = upcoming && new Intl.DateTimeFormat('en-US', {
     weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York',
     ...(upcoming.timeKnown ? {hour:'numeric', minute:'2-digit', timeZoneName:'short'} : {})
@@ -262,6 +277,10 @@ export default function App() {
       <section className="line-panel" aria-labelledby="line-title">
         <div className="line-left"><h2 id="line-title">Prop line</h2></div>
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
+        <p className="book-source">{manual ? 'Custom line' : quote ? 'DraftKings pregame line' : 'Preset line · No sportsbook quote available'}
+          {quote && <> · {quote.point} on DraftKings · {new Date(quote.updated).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</>}
+          {manual && quote && <button type="button" onClick={()=>setCustom(null)}>Use book line</button>}
+        </p>
       </section>
       </div></aside>
       <div className="rail-graphics"><VenueSplits multi={multi} games={splitGames} metric={metric} line={line} direction={direction} windowSize={windowSize}/></div>
@@ -277,7 +296,7 @@ export default function App() {
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
       </div></div><footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
-        <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. No sportsbook odds, injury status, or official betting lines are provided in this version.</p>
+        <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
         <p className="footer-disclaimer">Historical hit rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>
     </main>
