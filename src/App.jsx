@@ -4,30 +4,13 @@ import {
   ChevronRight, Database, Filter, Info, Search, ShieldCheck,
   SlidersHorizontal, TrendingUp
 } from 'lucide-react';
+import LineSelect from './components/LineSelect.jsx';
 import PropChart from './components/PropChart.jsx';
 import { demoData } from './lib/demoData.js';
 import {
   METRICS, preferredMetric, isHit, summarize, formatRate, formatNumber,
   getPlayerGames, getDistinctOpponents, filteredWindow
 } from './lib/stats.js';
-
-function LineSelect({ metric, value, onChange }) {
-  const groups = useMemo(() => {
-    const maximum = METRICS[metric].maximum;
-    const width = metric === 'receptions' ? 5 : 25;
-    const ranges = [];
-    for (let start = 0; start <= maximum; start += width) {
-      const end = Math.min(start + width - 0.5, maximum);
-      const values = Array.from({ length: (end - start) * 2 + 1 }, (_, i) => start + i / 2);
-      ranges.push(<optgroup key={start} label={start === end ? String(end) : `${start} – ${end}`}>
-        {values.map(n => <option key={n} value={n}>{n}</option>)}
-      </optgroup>);
-    }
-    return ranges;
-  }, [metric]);
-  return <div className="select-wrap line-select"><select aria-label="Prop line" value={value}
-    onChange={event => onChange(Number(event.target.value))}>{groups}</select><ChevronDown size={16}/></div>;
-}
 
 function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
   const [query, setQuery] = useState('');
@@ -205,8 +188,8 @@ export default function App() {
     <div className="site-glow" aria-hidden="true" />
     <header className="topbar">
       <div className="shell topbar-inner">
-        <a className="brand" href="/" aria-label="Gridiron Lab home"><span className="brand-symbol"><Activity size={22} strokeWidth={2.6} /></span>
-          <span className="brand-name">GRIDIRON<span>LAB</span></span></a>
+        <a className="brand" href="/" aria-label="PropBets home"><span className="brand-symbol"><Activity size={22} strokeWidth={2.6} /></span>
+          <span className="brand-name">Prop<span>Bets</span></span></a>
         <nav className="topnav" aria-label="Primary"><a className="topnav-active" href="#analyzer"><BarChart3 size={16} /> Prop analyzer</a><a href="#game-log">Game log</a><a href="#about">About</a></nav>
         <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
       </div>
@@ -240,7 +223,7 @@ export default function App() {
       </section>
       <section className="panel line-panel" aria-labelledby="line-title">
         <div className="line-left"><div className="section-kicker"><Filter size={15}/> PROP LINE</div><h2 id="line-title">Set your target</h2><p>Choose a side and a line to compare against recorded games.</p></div>
-        <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><div className="line-entry"><span className="line-entry-label">LINE</span><LineSelect metric={metric} value={line} onChange={setLine} /><span className="line-units">{METRICS[metric].unit}</span></div></div>
+        <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
       </section>
       <section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><div className="section-kicker"><TrendingUp size={16}/> HIT RATE INTELLIGENCE</div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
         <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label="FULL SEASON" summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
@@ -252,7 +235,7 @@ export default function App() {
       </section>
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><div className="section-kicker"><Activity size={16}/> QUICK INSIGHTS</div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><div className="section-kicker"><Database size={16}/> RAW GAME DATA</div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      <footer id="about"><div className="footer-top"><div className="footer-logo"><Activity size={20}/><strong>GRIDIRON<span>LAB</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      <footer id="about"><div className="footer-top"><div className="footer-logo"><Activity size={20}/><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. No sportsbook odds, injury status, or official betting lines are provided in this version.</p>
         <p className="footer-disclaimer">Historical hit rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>

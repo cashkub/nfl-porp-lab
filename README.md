@@ -1,4 +1,4 @@
-# Gridiron Lab — NFL Prop Analytics
+# PropBets — NFL Prop Analytics
 
 A mobile-first, **React + Vite** NFL player prop research website. Search players, chart individual games, set your own lines, compare historical hit rates and filter by opponent and home/away. Uses **free nflverse player data**, with **GitHub Actions** for daily updates and **Cloudflare Pages** for hosting. No database, API key or paid sportsbook data feed required.
 
