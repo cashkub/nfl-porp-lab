@@ -371,3 +371,33 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .cbb-bar em {position:absolute;top:-3px;height:13px;border-left:2px solid var(--ink)}
 .cbb-Hit {background:#168654}.cbb-Miss {background:#c14856}.cbb-Push {background:#cd9b38}
 @media(max-width:620px) {.view-tabs a {padding-inline:3px;font-size:11px}.cbb-line .line-menu {right:auto;left:0}}
+
+.sport-launch {max-width:1100px;min-height:calc(100vh - 70px);margin:auto;padding:clamp(35px,7vw,92px) 0}
+.launch-title h1 {font-size:clamp(40px,6.4vw,86px);line-height:1;letter-spacing:-.07em;margin:0 0 clamp(24px,4vw,48px)}
+.launch-title h1 span {color:var(--blue)}
+.sport-cards,.tool-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.sport-card {position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;min-height:clamp(265px,29vw,390px);padding:clamp(24px,3vw,42px);border:1px solid #5888ae;border-radius:18px;color:#fff;text-decoration:none}
+.sport-card.nfl {background:linear-gradient(125deg,#101f39 10%,#19477f 64%,#26679c),#17314e}
+.sport-card.cbb {border-color:#af795e;background:linear-gradient(125deg,#301d24 10%,#783a2d 60%,#ac6034)}
+.sport-card::before {content:'';position:absolute;inset:0;z-index:-2;background:url('/playbook.svg') center/cover;opacity:.5}
+.sport-card.cbb::before {inset:-22% -12%;background:repeating-radial-gradient(ellipse at 96% 50%,transparent 0 47px,#efb0744d 48px 49px,transparent 50px 95px);transform:rotate(-10deg)}
+.sport-art {position:absolute;z-index:-1;pointer-events:none;right:-9%;top:10%;width:78%;height:90%;object-fit:contain;filter:drop-shadow(0 13px 12px #05091166)}
+.basketball-art {right:-9%;width:70%;transform:rotate(-8deg)}
+.sport-card small {font-weight:700;font-size:13px;letter-spacing:.04em;color:#d7e7ff}.sport-card.cbb small {color:#ffe1be}
+.sport-card h2,.sport-card h1 {font-size:clamp(50px,7vw,94px);letter-spacing:-.075em;line-height:.95;margin:10px 0}
+.sport-enter,.back-sports {display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+.sport-enter {align-self:flex-start;border-bottom:1px solid #ffffff80;padding-bottom:5px}
+.sport-cards a:hover .sport-enter {border-color:white}
+.back-sports {margin-bottom:18px;text-decoration:none;color:var(--muted)}
+.sport-banner {min-height:185px;justify-content:center}.sport-banner .sport-art {width:45%;right:1%;top:-6%;height:125%}
+.tool-cards {grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px}
+.tool-cards a {position:relative;padding:22px;border-radius:12px;border:1px solid var(--rule);background:white;color:var(--ink);text-decoration:none}
+[data-theme=dark] .tool-cards a {background:#182535}
+.tool-cards a:hover {border-color:var(--blue)}.tool-cards svg {color:var(--blue)}.tool-cards svg:last-child {position:absolute;right:15px;top:22px}
+.tool-cards h2 {margin:17px 0 5px}.tool-cards p {color:var(--muted);font-size:13px}
+.cbb-line + .board-scroll {margin-top:16px}
+@media(max-width:650px) {
+  .sport-cards,.tool-cards {grid-template-columns:1fr;gap:12px}
+  .sport-card {min-height:190px}.sport-art {width:58%;top:0;right:-1%;height:105%}
+  .sport-banner {min-height:145px}.tool-cards a {padding:16px 46px 16px 54px}.tool-cards h2 {margin:0 0 5px}.tool-cards svg:first-child {position:absolute;left:16px;top:19px}
+}

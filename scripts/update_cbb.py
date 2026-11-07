@@ -62,10 +62,15 @@ def build(season):
             if value != prev:
                 prev,rank = value,i
             ranks.setdefault(tid,{})[key] = rank
+    board = []
     for team,players in rosters.items():
         for p in players.values():
             p['games'].sort(key=lambda g:(g['date'],g['id']))
+            recent = p['games'][-10:]
+            board.append({'id':p['id'],'name':p['name'],'team':team,
+                          'recent':{key:[g['stats'][key] for g in recent] for key in STATS}})
         write(OUT/str(season)/(team+'.json'), sorted(players.values(),key=lambda p:p['name'] or ''))
+    write(OUT/str(season)/'board.json', board)
     write(OUT/str(season)/'teams.json', {'teams':teams,'ranks':ranks})
     return max(g['date'] for roster in rosters.values() for p in roster.values() for g in p['games'])
 

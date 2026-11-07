@@ -10,6 +10,8 @@ import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { bookLine, priceText, usageFor } from './lib/bookLine.js';
+import SportHome,{toolsBySport} from './components/SportHome.jsx';
+import CbbBoard from './components/CbbBoard.jsx';
 import CbbAnalyzer from './components/CbbAnalyzer.jsx';
 import PropsBoard from './components/PropsBoard.jsx';
 import LineSelect from './components/LineSelect.jsx';
@@ -122,11 +124,17 @@ function GameLog({ multi, games, metric, line, direction }) {
 }
 
 function activePage() {
-  return ({'#cbb':'cbb','#props':'board', '#best-hit-rates':'best'})[window.location.hash] || 'analyzer';
+  return ({'#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
+    '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'best',
+    '#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[window.location.hash] || 'home';
 }
 
 export default function App() {
   const [page, setPage] = useState(activePage);
+  const launch = ['home','nfl-home','cbb-home'].includes(page);
+  const cbb = page.startsWith('cbb');
+  const nflTool = !launch && !cbb;
+  const [initialCbb,setInitialCbb] = useState({});
   const [dark,setDark] = useState(() => {
     try { return localStorage.getItem('propbets-theme') !== 'light'; } catch { return true; }
   });
@@ -150,13 +158,14 @@ export default function App() {
   const [custom, setCustom] = useState(null);
   const [bookGames, setBookGames] = useState([]);
   useEffect(() => {
+    if (!nflTool) return;
     const controller = new AbortController();
     fetch(import.meta.env.BASE_URL + 'data/lines.json', {signal:controller.signal, cache:'no-cache'})
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (Array.isArray(data?.games)) setBookGames(data.games); })
       .catch(() => {});
     return () => controller.abort();
-  }, []);
+  }, [nflTool]);
   const [direction, setDirection] = useState('over');
   const [venue, setVenue] = useState('ALL');
   const [opponent, setOpponent] = useState('ALL');
@@ -165,6 +174,7 @@ export default function App() {
   const [showLog, setShowLog] = useState(true);
 
   useEffect(() => {
+    if (!nflTool || data.status === 'ready') return;
     let active = true;
     const base = import.meta.env.BASE_URL || '/';
     fetch(`${base}data/stats.json?v=${Date.now()}`, {cache:'no-store'})
@@ -172,6 +182,7 @@ export default function App() {
       .then(payload => {
         if (!active) return;
         if (payload.schemaVersion === 1 && payload.status === 'ready' && Array.isArray(payload.players) && payload.players.length && Array.isArray(payload.seasons)) {
+          setLoading(false);
           setData(payload);
           setSeason(Math.max(...payload.seasons));
         } else { setError('Live stats have not been imported yet.'); }
@@ -179,7 +190,7 @@ export default function App() {
       .catch(err => { if (active) setError(`Live data unavailable (${err.message}).`); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [nflTool,data.status]);
 
   const players = data.players || [];
   const seasons = data.seasons || [];
@@ -259,13 +270,16 @@ export default function App() {
       <div className="shell topbar-inner">
         <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>NFL Analyzer</a><a href="#cbb" aria-current={page==='cbb'?'page':undefined}>CBB Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props Board</a><a href="#best-hit-rates" aria-current={page==='best'?'page':undefined}>Best Hit Rates</a></nav>
+        {!launch && <nav className="view-tabs" aria-label="Sport Tools"><a href={cbb?'#cbb-home':'#nfl-home'}>{cbb?'CBB':'NFL'}</a>{toolsBySport[cbb?'cbb':'nfl'].map(([label,path])=><a key={path} href={'#'+path} aria-current={activePage()===page && window.location.hash==='#'+path?'page':undefined}>{label}</a>)}</nav>}
         <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
-        <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{page==='cbb' ? 'HOOPR DATA' : loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
+        {!launch && <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{cbb ? 'HOOPR DATA' : loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>}
       </div>
     </header>
     <main className="shell" id="analyzer">
-      {page==='cbb' ? <CbbAnalyzer/> : page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+      {launch ? <SportHome sport={page==='home'?null:(cbb?'cbb':'nfl')}/> :
+       page==='cbb' ? <CbbAnalyzer initial={initialCbb}/> :
+       cbb ? <CbbBoard key={page} ranked={page==='cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
+       page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
@@ -331,7 +345,7 @@ export default function App() {
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player Trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game Log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide Table' : 'Show Table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      </div></div></>}{page!=='cbb' && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      </div></div></>}{nflTool && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
         <p className="footer-disclaimer">Historical Hit Rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>}

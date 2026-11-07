@@ -3,14 +3,14 @@ import HitRate, {rateStyle} from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
 import {filteredWindow, summarize} from '../lib/stats.js';
 
-const markets = {
+export const markets = {
   points:{label:'Points',maximum:100,unit:'pts',defaultLine:15.5},
   rebounds:{label:'Rebounds',maximum:50,unit:'reb',defaultLine:5.5},
   assists:{label:'Assists',maximum:40,unit:'ast',defaultLine:3.5},
   threes:{label:'Made Threes',maximum:25,unit:'3PM',defaultLine:1.5}
 };
 
-function useCbbFile(path) {
+export function useCbbFile(path) {
   const [result,setResult] = useState(null);
   const [retry,setRetry] = useState(0);
   useEffect(()=>{
@@ -26,20 +26,20 @@ function useCbbFile(path) {
     reload:()=>{setResult(null);setRetry(n=>n+1);}};
 }
 
-export default function CbbAnalyzer() {
+export default function CbbAnalyzer({initial = {}}) {
   const index=useCbbFile('index.json');
-  const [year,setYear]=useState('');
+  const [year,setYear]=useState(initial.season || '');
   const season=year || index.data?.seasons[0];
   const source=useCbbFile(season ? season+'/teams.json' : null);
   const teams=Object.entries(source.data?.teams || {}).sort((a,b)=>a[1].localeCompare(b[1]));
-  const [selection,setSelection]=useState('');
+  const [selection,setSelection]=useState(initial.team || '');
   const team=source.data?.teams[selection] ? selection : (teams.find(([,name])=>name==='Illinois Fighting Illini') || teams[0])?.[0];
   const roster=useCbbFile(team ? season+'/'+team+'.json' : null);
-  const [athlete,setAthlete]=useState('');
+  const [athlete,setAthlete]=useState(initial.player || '');
   const player=roster.data?.find(p=>p.id===athlete) || roster.data?.[0];
-  const [metric,setMetric]=useState('points');
-  const [line,setLine]=useState(markets.points.defaultLine);
-  const [direction,setDirection]=useState('over');
+  const [metric,setMetric]=useState(initial.metric || 'points');
+  const [line,setLine]=useState(initial.line ?? markets.points.defaultLine);
+  const [direction,setDirection]=useState(initial.side || 'over');
   const [venue,setVenue]=useState('All Venues');
   const [period,setPeriod]=useState('10');
   const games=filteredWindow((player?.games || []).filter(g=>venue==='All Venues'||g.venue===venue),period);
