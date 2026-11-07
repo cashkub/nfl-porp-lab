@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, ArrowDown, ArrowUpRight, BarChart3, Check, ChevronDown,
-  ChevronRight, Database, Filter, Info, Search, ShieldCheck,
-  SlidersHorizontal, TrendingUp
+  ArrowDown, ArrowUpRight, BarChart3, Check, ChevronDown,
+  ChevronRight, Info, Search, ShieldCheck,
+  
 } from 'lucide-react';
 import LineSelect from './components/LineSelect.jsx';
 import PropChart from './components/PropChart.jsx';
@@ -53,7 +53,7 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
         onChange={e => { setQuery(e.target.value); setOpen(true); setFocusIndex(0); }}
         onKeyDown={onKeyDown}
       />
-      <span className="search-hint">⌕</span>
+      
     </div>
     {open && <div className="search-results" id="player-suggestions" role="listbox">
       <div className="result-header">PLAYERS <span>{results.length ? (showRoster ? 'Team roster' : 'Top matches') : 'No matches'}</span></div>
@@ -72,7 +72,7 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
 }
 
 function StatCard({ label, summary, emphasized = false, selected, onClick }) {
-  return <button type="button" onClick={onClick} className={`stat-card ${selected ? 'stat-card-selected' : ''} ${emphasized ? 'stat-card-featured' : ''}`}>
+  return <button type="button" onClick={onClick} aria-pressed={selected} className={`stat-card ${selected ? 'stat-card-selected' : ''} ${emphasized ? 'stat-card-featured' : ''}`}>
     <div className="stat-card-heading"><span>{label}</span>{selected && <Check size={16} className="selected-check" />}</div>
     <div className="stat-card-number">{formatRate(summary.rate)}</div>
     <div className="stat-card-footer"><span>{summary.hits} of {summary.total} games</span></div>
@@ -185,10 +185,10 @@ export default function App() {
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   return <div className="app">
-    <div className="site-glow" aria-hidden="true" />
+    
     <header className="topbar">
       <div className="shell topbar-inner">
-        <a className="brand" href="/" aria-label="PropBets home"><span className="brand-symbol"><Activity size={22} strokeWidth={2.6} /></span>
+        <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
         <nav className="topnav" aria-label="Primary"><a className="topnav-active" href="#analyzer"><BarChart3 size={16} /> Prop analyzer</a><a href="#game-log">Game log</a><a href="#about">About</a></nav>
         <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
@@ -196,7 +196,7 @@ export default function App() {
     </header>
     <main className="shell" id="analyzer">
       <section className="match-header" aria-label="Selected player and prop">
-        <div className="match-player">
+        <div className="field-lines" aria-hidden="true"/><div className="match-player">
           <div className="match-context">{season} regular season <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
           <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
@@ -208,8 +208,8 @@ export default function App() {
         </div>
       </section>
       {isDemo && <div className="demo-warning" role="status"><Info size={20} /><div><strong>Demo mode — not real NFL statistics.</strong><span>{error || 'This first-run preview uses fictional players and sample game logs.'} Run the <b>Update NFL Data</b> GitHub workflow after publishing to load actual player data.</span></div></div>}
-      <section className="panel controls-panel" aria-labelledby="controls-title">
-        <div className="section-topline"><div><div className="section-kicker"><SlidersHorizontal size={16} /> ANALYZER</div><h2 id="controls-title">Build your prop</h2></div><div className="controls-side"><span className="label-small">SEASON</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season">{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
+      <div className="workspace"><aside className="panel setup" aria-label="Prop settings"><section className="controls-panel" aria-labelledby="controls-title">
+        <div className="section-topline"><div><h2 id="controls-title">Prop settings</h2></div><div className="controls-side"><span className="label-small">SEASON</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season">{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
         <div className="controls-grid">
           <div className="field"><label htmlFor="team">TEAM</label><div className="select-wrap large-select">
             <select id="team" value={activeTeam} onChange={e => { setTeam(e.target.value); setVenue('ALL'); setOpponent('ALL'); }}>
@@ -221,21 +221,21 @@ export default function App() {
           <div className="field"><label>LOCATION</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
         </div>
       </section>
-      <section className="panel line-panel" aria-labelledby="line-title">
-        <div className="line-left"><div className="section-kicker"><Filter size={15}/> PROP LINE</div><h2 id="line-title">Set your target</h2><p>Choose a side and a line to compare against recorded games.</p></div>
+      <section className="line-panel" aria-labelledby="line-title">
+        <div className="line-left"><h2 id="line-title">Prop line</h2></div>
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
       </section>
-      <section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><div className="section-kicker"><TrendingUp size={16}/> HIT RATE INTELLIGENCE</div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
+      </aside><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
         <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label="FULL SEASON" summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
-        <div className="chart-top"><div><div className="section-kicker"><BarChart3 size={16}/> GAME-BY-GAME BREAKDOWN</div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?'Full regular season':`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span></div><div className="hit-summary"><strong>{formatRate(current.rate)}</strong><span>{current.hits}/{current.total} hit</span></div></div></div>
+        <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?'Full regular season':`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span></div></div></div>
         <PropChart games={displayed} metric={metric} line={line} direction={direction} />
         <div className="chart-note"><Info size={15}/><span>Tap or hover a bar for game details. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
-      <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><div className="section-kicker"><Activity size={16}/> QUICK INSIGHTS</div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
-      <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><div className="section-kicker"><Database size={16}/> RAW GAME DATA</div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      <footer id="about"><div className="footer-top"><div className="footer-logo"><Activity size={20}/><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
+      <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog games={allGames} metric={metric} line={line} direction={direction} />}</section>
+      </div></div><footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. No sportsbook odds, injury status, or official betting lines are provided in this version.</p>
         <p className="footer-disclaimer">Historical hit rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>
