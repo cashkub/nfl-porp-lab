@@ -98,14 +98,14 @@ function Insights({ games, metric, line, direction }) {
   </div>;
 }
 
-function GameLog({ games, metric, line, direction }) {
+function GameLog({ multi, games, metric, line, direction }) {
   return <div className="game-log-wrap">
     <table className="game-log"><thead><tr><th>GAME</th><th>OPPONENT</th><th>VENUE</th><th>{METRICS[metric].short}</th><th>RESULT</th></tr></thead>
       <tbody>{[...games].reverse().map((game, i) => {
         const val = Number(game.stats[metric] ?? 0);
         const hit = isHit(val, line, direction);
         return <tr key={`${game.gameId}-${game.week}-${i}`}>
-          <td><strong>W{game.week}</strong></td>
+          <td><strong>{multi && `${game.season} · `}W{game.week}</strong></td>
           <td><strong>{game.opponent || '—'}</strong></td>
           <td>{game.venue === 'H' ? <span className="venue-pill">HOME</span> : game.venue === 'A' ? <span className="venue-pill away">AWAY</span> : '—'}</td>
           <td className="table-num">{val}</td>
@@ -152,9 +152,11 @@ export default function App() {
 
   const players = data.players || [];
   const seasons = data.seasons || [];
+  const multi = season === 'ALL';
+  const seasonLabel = multi ? 'All seasons' : String(season);
   const seasonPlayers = useMemo(() => players.flatMap(p => {
     const latest = (p.games || []).reduce((last, game) =>
-      game.season === season && (!last || game.week >= last.week) ? game : last, null);
+      (season === 'ALL' || game.season === season) && (!last || game.season > last.season || (game.season === last.season && game.week >= last.week)) ? game : last, null);
     return latest ? [{ ...p, team: latest.team || p.team }] : [];
   }), [players, season]);
   const teams = useMemo(() => [...new Set(seasonPlayers.map(p => p.team).filter(Boolean))].sort(), [seasonPlayers]);
@@ -178,7 +180,7 @@ export default function App() {
     setOpponent('ALL'); setVenue('ALL');
   };
   const onMetricChange = key => { setMetric(key); setLine(METRICS[key].defaultLine); };
-  const onSeasonChange = next => { setSeason(Number(next)); setOpponent('ALL'); setVenue('ALL'); };
+  const onSeasonChange = next => { setSeason(next === 'ALL' ? next : Number(next)); if (next === 'ALL') setWindowSize('season'); setOpponent('ALL'); setVenue('ALL'); };
 
   const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
@@ -195,7 +197,8 @@ export default function App() {
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, []);
-  const upcoming = !isDemo && nextGame(data.schedule ?? initialSchedule, player?.team, season, now);
+  const scheduleSeason = multi ? Math.max(...seasons) : season;
+  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(data.schedule ?? initialSchedule, player?.team, scheduleSeason, now);
   const nextDate = upcoming && new Intl.DateTimeFormat('en-US', {
     weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York',
     ...(upcoming.timeKnown ? {hour:'numeric', minute:'2-digit', timeZoneName:'short'} : {})
@@ -215,12 +218,12 @@ export default function App() {
     <main className="shell" id="analyzer">
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
-          <div className="match-context">{season} regular season <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
+          <div className="match-context">{multi ? `All seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
           <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
           {!isDemo && <div className="next-match"><span>Next game</span>
             {upcoming ? <><strong>vs {upcoming.name}</strong><small>{upcoming.venue} · {nextDate}{upcoming.timeKnown ? '' : ' · Time TBD'}</small></> :
-              <small>No upcoming game listed for {season}.</small>}
+              <small>No upcoming game listed for {scheduleSeason}.</small>}
           </div>}
         </div>
         <div className="recent-form">
@@ -229,12 +232,12 @@ export default function App() {
             const value = game.stats[metric];
             const result = value === line ? 'Push' : isHit(value, line, direction) ? 'Hit' : 'Miss';
             return <div key={game.gameId} className={`form-tile form-${result.toLowerCase()}`} title={`Week ${game.week} vs ${game.opponent} · ${result}`}>
-              <small>W{game.week}</small><b>{value}</b><em>{result}</em>
+              <small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><b>{value}</b><em>{result}</em>
             </div>;
           })}</div>
         </div>
         <div className="match-form">
-          <span>{windowSize === 'season' ? 'Season hit rate' : `Last ${windowSize} hit rate`}</span>
+          <span>{windowSize === 'season' ? (multi ? 'All seasons hit rate' : 'Season hit rate') : `Last ${windowSize} hit rate`}</span>
           <strong>{formatRate(current.rate)}</strong>
           <small>{current.hits} of {current.total} matching games</small>
         </div>
@@ -244,7 +247,7 @@ export default function App() {
         <span>{settingsOpen ? 'Close prop settings' : 'Edit player & line'}</span>
         <span className="phone-line">{direction} {line} <ChevronDown size={16}/></span>
       </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
-        <div className="section-topline"><div><h2 id="controls-title">Prop settings</h2></div><div className="controls-side"><span className="label-small">SEASON</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season">{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
+        <div className="section-topline"><div><h2 id="controls-title">Prop settings</h2></div><div className="controls-side"><span className="label-small">SEASON</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
         <div className="controls-grid">
           <div className="field"><label htmlFor="team">TEAM</label><div className="select-wrap large-select">
             <select id="team" value={activeTeam} onChange={e => { setTeam(e.target.value); setVenue('ALL'); setOpponent('ALL'); }}>
@@ -261,18 +264,18 @@ export default function App() {
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
       </section>
       </div></aside>
-      <div className="rail-graphics"><VenueSplits games={splitGames} metric={metric} line={line} direction={direction} windowSize={windowSize}/></div>
+      <div className="rail-graphics"><VenueSplits multi={multi} games={splitGames} metric={metric} line={line} direction={direction} windowSize={windowSize}/></div>
       </div><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
-        <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label="FULL SEASON" summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
+        <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label={multi ? "ALL SEASONS" : "FULL SEASON"} summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
-        <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?'Full regular season':`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span>{displayed.some(g=>g.stats[metric] === line) && <span><i className="legend-push"/> Push</span>}</div></div></div>
-        <PropChart defenses={defenseRows} games={displayed} metric={metric} line={line} direction={direction} />
-        <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s {season} rank using all available season games. #1 allows the most {METRICS[metric].label.toLowerCase()} per game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
+        <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?(multi ? 'All regular seasons' : 'Full regular season'):`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span>{displayed.some(g=>g.stats[metric] === line) && <span><i className="legend-push"/> Push</span>}</div></div></div>
+        <PropChart multi={multi} defenses={defenseRows} games={displayed} metric={metric} line={line} direction={direction} />
+        <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s rank for {seasonLabel.toLowerCase()} using all games in that period. #1 allows the most {METRICS[metric].label.toLowerCase()} per game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
-      <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog games={allGames} metric={metric} line={line} direction={direction} />}</section>
+      <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
       </div></div><footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. No sportsbook odds, injury status, or official betting lines are provided in this version.</p>
         <p className="footer-disclaimer">Historical hit rates are descriptive, not predictions or guarantees. For research and informational use only.</p>

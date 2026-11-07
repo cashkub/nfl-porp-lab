@@ -28,3 +28,9 @@ test('last N and seasonal stats reflect filters', () => {
   assert.equal(summarize(filteredWindow(filtered,2),'receivingYards',59.5,'over').streak,2);
   assert.equal(summarize([], 'receivingYards', 60).rate, null);
 });
+
+test('all seasons orders games across year boundaries before applying the game window', () => {
+  const history = getPlayerGames(player, 'ALL', 'PIT');
+  assert.deepEqual(history.map(game => game.season), [2025, 2026]);
+  assert.equal(filteredWindow(history, '1')[0].stats.receivingYards, 50);
+});

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isHit, METRICS } from '../lib/stats.js';
 
-export default function PropChart({ defenses, games, metric, line, direction }) {
+export default function PropChart({ multi, defenses, games, metric, line, direction }) {
   const [active, setActive] = useState(null);
   const scroll = useRef(null);
   useEffect(() => {
@@ -43,13 +43,13 @@ export default function PropChart({ defenses, games, metric, line, direction }) 
                       type="button"
                       className={`chart-bar chart-bar-${outcome} ${active === id ? 'chart-bar-active' : ''}`}
                       style={{ height: `${Math.max(1.5, value/max*100)}%` }}
-                      aria-label={`Week ${game.week} ${game.venue==='H'?'home vs':'away at'} ${game.opponent}: ${value} ${METRICS[metric].label}; ${outcome}. ${rankLabel}`}
-                      title={`Week ${game.week} ${game.venue==='H'?'vs':'at'} ${game.opponent} • ${value} ${METRICS[metric].unit} • ${outcome.toUpperCase()} • ${rankLabel}`}
+                      aria-label={`${game.season} Week ${game.week} ${game.venue==='H'?'home vs':'away at'} ${game.opponent}: ${value} ${METRICS[metric].label}; ${outcome}. ${rankLabel}`}
+                      title={`${game.season} Week ${game.week} ${game.venue==='H'?'vs':'at'} ${game.opponent} • ${value} ${METRICS[metric].unit} • ${outcome.toUpperCase()} • ${rankLabel}`}
                       onClick={() => setActive(old => old === id ? null : id)}
                     >
                       <span className="chart-bar-value">{value}</span>
                     </button>
-                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>W{game.week}</small><b className="chart-defense" title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
+                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><b className="chart-defense" title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
                   </div>
                 );
               })}

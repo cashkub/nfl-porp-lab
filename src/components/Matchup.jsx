@@ -9,10 +9,11 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
   const league = leagueGames ? rows.reduce((n,r) => n + r.total, 0) / leagueGames : 0;
   const row = rows.find(r => r.team === (selection ?? upcomingOpponent) || (selection == null && r.team === 'LA' && upcomingOpponent === 'LAR'));
   const history = row ? summarize(getPlayerGames(player, season, row.team), metric, line, direction) : null;
+  const period = season === 'ALL' ? 'across available seasons' : 'this season';
   const unit = METRICS[metric].unit;
   return <section className="panel matchup" aria-labelledby="matchup-title">
     <div className="matchup-head"><div><h2 id="matchup-title">Matchup research</h2>
-      <p>{season} · {METRICS[metric].label} allowed per game to all opposing {position || '—'}s combined</p></div>
+      <p>{season === 'ALL' ? 'All seasons' : season} · {METRICS[metric].label} allowed per game to all opposing {position || '—'}s combined</p></div>
       <div className="select-wrap"><select aria-label="Defense to research" value={row?.team || ''} onChange={e=>setSelection(e.target.value)}>
         <option value="">Choose a defense</option>{rows.map(r=>r.team).sort().map(t=><option key={t}>{t}</option>)}
       </select><ChevronDown size={14}/></div></div>
@@ -22,7 +23,7 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
         <div><small>Defense rank</small><strong>#{row.rank} <em>of {rows.length}</em></strong><span>#1 allows the most</span></div>
         <div><small>League average</small><strong>{formatNumber(league)} <em>{unit}</em></strong><span>Per defense-game</span></div>
       </div>
-      <p className="history"><b>{player?.name} vs {row.team}</b> · {history.total ? `${formatRate(history.rate)} hit (${history.hits}/${history.total}) at ${direction} ${line} this season.` : 'No recorded meetings this season.'}</p>
+      <p className="history"><b>{player?.name} vs {row.team}</b> · {history.total ? `${formatRate(history.rate)} hit (${history.hits}/${history.total}) at ${direction} ${line} ${period}.` : `No recorded meetings ${period}.`}</p>
     </> : <p className="history">Choose a defense to compare its season average, league rank, and the player’s head-to-head results.</p>}
     </section>;
 }

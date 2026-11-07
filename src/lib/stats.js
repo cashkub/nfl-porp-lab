@@ -11,10 +11,10 @@ export const preferredMetric = (position) => position === 'QB' ? 'passingYards' 
 export const getPlayerGames = (player, season, opponent = 'ALL', venue = 'ALL') => {
   if (!player) return [];
   return (player.games || []).filter(g =>
-    g.season === Number(season) &&
+    (season === 'ALL' || g.season === Number(season)) &&
     (opponent === 'ALL' || g.opponent === opponent) &&
     (venue === 'ALL' || g.venue === venue)
-  ).sort((a, b) => a.week - b.week || String(a.gameId).localeCompare(String(b.gameId)));
+  ).sort((a, b) => a.season - b.season || a.week - b.week || String(a.gameId).localeCompare(String(b.gameId)));
 };
 
 // A strict over/under is important: over 50 does NOT win on exactly 50.

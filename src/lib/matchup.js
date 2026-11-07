@@ -4,7 +4,7 @@ export function defenseTable(players, season, position, metric) {
   const defenses = new Map();
   for (const player of players) {
     for (const game of player.games || []) {
-      if (game.season !== season || !game.opponent || !game.gameId) continue;
+      if ((season !== 'ALL' && game.season !== season) || !game.opponent || !game.gameId) continue;
       const team = game.opponent;
       if (!defenses.has(team)) defenses.set(team, { team, games: new Set(), total: 0 });
       const row = defenses.get(team);

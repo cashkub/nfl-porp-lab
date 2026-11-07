@@ -1,10 +1,10 @@
 import React from 'react';
 import { filteredWindow, formatRate, summarize } from '../lib/stats.js';
 
-export default function VenueSplits({ games, metric, line, direction, windowSize }) {
+export default function VenueSplits({ multi, games, metric, line, direction, windowSize }) {
   return <section className="venue-splits" aria-label="Home and away hit rates">
     <h2>Home vs. away</h2>
-    <p>{windowSize === 'season' ? 'Full season' : `Last ${windowSize} at each venue`} · {direction} {line}</p>
+    <p>{windowSize === 'season' ? (multi ? 'All seasons' : 'Full season') : `Last ${windowSize} at each venue`} · {direction} {line}</p>
     {['H', 'A'].map(venue => {
       const sample = filteredWindow(games.filter(game => game.venue === venue), windowSize);
       const { rate, hits, total } = summarize(sample, metric, line, direction);
