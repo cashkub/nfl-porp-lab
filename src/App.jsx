@@ -257,7 +257,7 @@ export default function App() {
       <div className="shell topbar-inner">
         <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props board</a><a href="#best-hit-rates" aria-current={page==='best'?'page':undefined}>Best hit rates</a></nav>
+        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props Board</a><a href="#best-hit-rates" aria-current={page==='best'?'page':undefined}>Best Hit Rates</a></nav>
         <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
         <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
       </div>

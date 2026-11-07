@@ -72,7 +72,7 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
     setAscending(key === sort ? !ascending : !['rate','over','under'].includes(key));
     setSort(key);setLimit(30);
   }
-  const title = ranked ? 'Best hit rates' : 'Props board';
+  const title = ranked ? 'Best Hit Rates' : 'Props Board';
   function filter(setter,event) {setter(event.target.value);setLimit(30);}
   return <section className="panel props-board" aria-label={title}>
     <header><h1>{title}</h1><p>DraftKings pregame snapshots · {filtered.length} {ranked ? 'ranked sides' : 'props'}</p></header>
