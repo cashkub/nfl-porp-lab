@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="420" viewBox="0 0 700 420" fill="none">
+  <defs>
+    <pattern id="grid" width="35" height="35" patternUnits="userSpaceOnUse"><path d="M35 0H0V35" stroke="#32618e" opacity=".20"/></pattern>
+    <pattern id="hashes" width="70" height="210" patternUnits="userSpaceOnUse"><path d="M0 0v210M14 54v8m14-8v8m14-8v8m14-8v8M14 146v8m14-8v8m14-8v8m14-8v8" stroke="#396da0" opacity=".32"/></pattern>
+  </defs>
+  <rect width="700" height="420" fill="url(#grid)"/><rect width="700" height="420" fill="url(#hashes)"/>
+  <g stroke="#356eaa" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity=".52">
+    <circle cx="106" cy="282" r="6"/><path d="M106 275v-89q0-10 10-10h105l49-50m-12 2 13-4-2 14"/>
+    <circle cx="144" cy="282" r="6"/><path d="M144 273v-47l64-40" stroke-dasharray="5 7"/>
+    <path d="m185 270 11 11m0-11-11 11m36-47 10 10m0-10-10 10"/>
+    <circle cx="466" cy="88" r="6"/><path d="M466 96v47l72 53v52m-7-10 7 11 7-11"/>
+    <path d="m489 125 10 10m0-10-10 10"/>
+  </g>
+</svg>

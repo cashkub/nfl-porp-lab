@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="210" viewBox="0 0 320 210" fill="none">
+  <defs>
+    <linearGradient id="leather" x1="105" y1="45" x2="164" y2="169" gradientUnits="userSpaceOnUse"><stop stop-color="#a4efff"/><stop offset=".26" stop-color="#578de9"/><stop offset=".59" stop-color="#244889"/><stop offset="1" stop-color="#0d2142"/></linearGradient>
+    <pattern id="grain" width="4" height="4" patternUnits="userSpaceOnUse"><circle r=".7" cx="1" cy="1" fill="#ceeaff" opacity=".44"/></pattern>
+    <clipPath id="shape"><path d="M39 113Q126 5 266 88Q181 194 39 113Z"/></clipPath>
+  </defs>
+  <g transform="rotate(-19 155 105)">
+    <g stroke="#85baff" opacity=".6"><path d="m7 119 48-4m-28 13 38-3M1 139l38-3"/></g>
+    <g clip-path="url(#shape)">
+      <path fill="url(#leather)" d="M29 29h246v144H29z"/>
+      <path fill="url(#grain)" d="M29 29h246v144H29z"/>
+      <path d="M73 57q-2 49 24 103m112-119q-2 47 30 91" stroke="#c7eaff" opacity=".77" stroke-width="9"/>
+      <path d="M35 115q103-60 237-29" stroke="#c3e7ff" opacity=".8" stroke-width="2"/>
+      <path d="M35 114q115 29 236-29" stroke="#101f44" opacity=".65" stroke-width="2"/>
+    </g>
+    <path d="M39 113Q126 5 266 88Q181 194 39 113Z" stroke="#a7dfff" stroke-width="2"/>
+    <path d="M115 86q31-10 64-9" stroke="#182f5b" stroke-width="7" stroke-linecap="round"/>
+    <path d="m118 82 2 7m8-10 2 8m8-10 2 8m8-9 1 8m9-10 1 8m9-9 1 8m8-8 1 7" stroke="#e6f6ff" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+</svg>

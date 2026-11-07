@@ -4,6 +4,7 @@ import {
   ChevronRight, Info, Search, ShieldCheck,
   
 } from 'lucide-react';
+import VenueSplits from './components/VenueSplits.jsx';
 import LineSelect from './components/LineSelect.jsx';
 import Matchup from './components/Matchup.jsx';
 import PropChart from './components/PropChart.jsx';
@@ -178,6 +179,7 @@ export default function App() {
 
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
   const allGames = useMemo(() => getPlayerGames(player, season, opponent, venue), [player, season, opponent, venue]);
+  const splitGames = useMemo(() => getPlayerGames(player, season, opponent), [player, season, opponent]);
   const displayed = useMemo(() => filteredWindow(allGames, windowSize), [allGames,windowSize]);
   const last5 = useMemo(() => summarize(filteredWindow(allGames, '5'), metric, line, direction), [allGames,metric,line,direction]);
   const last10 = useMemo(() => summarize(filteredWindow(allGames, '10'), metric, line, direction), [allGames,metric,line,direction]);
@@ -198,7 +200,7 @@ export default function App() {
     </header>
     <main className="shell" id="analyzer">
       <section className="match-header" aria-label="Selected player and prop">
-        <div className="field-lines" aria-hidden="true"/><div className="match-player">
+        <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{season} regular season <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
           <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
@@ -220,7 +222,7 @@ export default function App() {
         </div>
       </section>
       {isDemo && <div className="demo-warning" role="status"><Info size={20} /><div><strong>Demo mode — not real NFL statistics.</strong><span>{error || 'This first-run preview uses fictional players and sample game logs.'} Run the <b>Update NFL Data</b> GitHub workflow after publishing to load actual player data.</span></div></div>}
-      <div className="workspace"><aside className="panel setup" aria-label="Prop settings"><button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
+      <div className="workspace"><div className="analysis-rail"><aside className="panel setup" aria-label="Prop settings"><button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
         <span>{settingsOpen ? 'Close prop settings' : 'Edit player & line'}</span>
         <span className="phone-line">{direction} {line} <ChevronDown size={16}/></span>
       </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
@@ -240,7 +242,9 @@ export default function App() {
         <div className="line-left"><h2 id="line-title">Prop line</h2></div>
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
       </section>
-      </div></aside><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
+      </div></aside>
+      <div className="rail-graphics"><VenueSplits games={splitGames} metric={metric} line={line} direction={direction} windowSize={windowSize}/></div>
+      </div><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
         <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label="FULL SEASON" summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
