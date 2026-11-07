@@ -1,0 +1,46 @@
+name: Update NFL Data
+
+on:
+  schedule:
+    - cron: '25 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-nfl-stats
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Import nflverse game stats
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test stats importer
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Download weekly player stats
+        run: python scripts/update_data.py
+
+      - name: Commit and publish changed data
+        run: |
+          if git diff --quiet -- public/data/stats.json; then
+            echo "No new player stats — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/stats.json
+          git commit -m "data: refresh NFL player game logs"
+          git push
