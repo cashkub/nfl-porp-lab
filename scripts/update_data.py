@@ -21,6 +21,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "public" / "data" / "stats.json"
@@ -85,6 +86,28 @@ def to_number(value: str | None) -> int:
 def normalize_team(team: str) -> str:
     team = (team or "").upper().strip()
     return TEAM_ALIASES.get(team, team)
+
+
+def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
+    reader = csv.DictReader(io.StringIO(text))
+    required = {"season", "game_type", "gameday", "gametime", "week", "away_team", "home_team", "result", "location"}
+    if not required.issubset(reader.fieldnames or []):
+        raise ValueError("Unexpected nflverse schedule columns")
+    games = []
+    eastern = ZoneInfo("America/New_York")
+    for row in reader:
+        season = to_number(row["season"])
+        if season not in seasons or row["game_type"] == "PRE" or row["result"] not in ("", "NA"):
+            continue
+        if not row["gameday"] or not row["away_team"] or not row["home_team"]:
+            continue
+        time_known = row["gametime"] not in ("", "NA", "TBD")
+        local = datetime.fromisoformat(row["gameday"] + "T" + (row["gametime"] if time_known else "23:59")).replace(tzinfo=eastern)
+        games.append({"season": season, "week": row["week"], "stage": row["game_type"],
+                      "date": row["gameday"], "kickoff": local.isoformat(), "timeKnown": time_known,
+                      "away": normalize_team(row["away_team"]), "home": normalize_team(row["home_team"]),
+                      "neutral": row["location"] == "Neutral"})
+    return sorted(games, key=lambda g: g["kickoff"])
 
 
 def venue_from_game_id(game_id: str, team: str) -> str:
@@ -221,6 +244,15 @@ def main() -> int:
     if not payload["players"]:
         print("ERROR: No searchable players in downloaded data; keeping old data.", file=sys.stderr)
         return 1
+    try:
+        with urllib.request.urlopen("https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv", timeout=45) as response:
+            payload["schedule"] = schedule_rows(response.read().decode("utf-8-sig"), payload["seasons"])
+    except (OSError, ValueError) as exc:
+        print(f"Schedule refresh unavailable: {exc}", file=sys.stderr)
+        if OUTPUT.exists():
+            previous = json.loads(OUTPUT.read_text())
+            if isinstance(previous.get("schedule"), list):
+                payload["schedule"] = previous["schedule"]
     save_if_changed(payload)
     return 0
 

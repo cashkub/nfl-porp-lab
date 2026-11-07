@@ -1,15 +1,13 @@
-import React, {useMemo, useState} from 'react';
+import React, {useState} from 'react';
 import { ChevronDown } from 'lucide-react';
-import { defenseTable } from '../lib/matchup.js';
 import { METRICS, formatNumber, formatRate, getPlayerGames, summarize } from '../lib/stats.js';
 
-export default function Matchup({players, player, season, metric, line, direction}) {
-  const [selection, setSelection] = useState('');
+export default function Matchup({upcomingOpponent, rows, player, season, metric, line, direction}) {
+  const [selection, setSelection] = useState(null);
   const position = player?.position;
-  const rows = useMemo(() => defenseTable(players, season, position, metric), [players, season, position, metric]);
   const leagueGames = rows.reduce((n,r) => n + r.games, 0);
   const league = leagueGames ? rows.reduce((n,r) => n + r.total, 0) / leagueGames : 0;
-  const row = rows.find(r => r.team === selection);
+  const row = rows.find(r => r.team === (selection ?? upcomingOpponent) || (selection == null && r.team === 'LA' && upcomingOpponent === 'LAR'));
   const history = row ? summarize(getPlayerGames(player, season, row.team), metric, line, direction) : null;
   const unit = METRICS[metric].unit;
   return <section className="panel matchup" aria-labelledby="matchup-title">

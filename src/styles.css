@@ -261,3 +261,14 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
   .hero-football {left:40%;top:32%;width:140px;opacity:.20}
   .app {background-size:auto,460px 276px}
 }
+
+.next-match {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-top:14px;color:#fff}
+.next-match>span {font-size:10px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:#b6dcff}
+.next-match strong {font-size:15px}
+.next-match small {flex-basis:100%;font-size:12px;color:#dae9ff}
+.chart-main {height:320px}
+.chart-defense {display:block;background:#e9efff;border-radius:4px;padding:3px 4px;font-size:9px;color:#264991;white-space:nowrap}
+@media(max-width:620px) {
+  .chart-main {height:249px}
+  .chart-inner {min-width:calc(var(--game-count) * 48px + 33px)}
+}

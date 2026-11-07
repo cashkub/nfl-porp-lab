@@ -4,6 +4,9 @@ import {
   ChevronRight, Info, Search, ShieldCheck,
   
 } from 'lucide-react';
+import { defenseTable } from './lib/matchup.js';
+import initialSchedule from './lib/initialSchedule.json';
+import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import LineSelect from './components/LineSelect.jsx';
 import Matchup from './components/Matchup.jsx';
@@ -177,6 +180,7 @@ export default function App() {
   const onMetricChange = key => { setMetric(key); setLine(METRICS[key].defaultLine); };
   const onSeasonChange = next => { setSeason(Number(next)); setOpponent('ALL'); setVenue('ALL'); };
 
+  const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
   const allGames = useMemo(() => getPlayerGames(player, season, opponent, venue), [player, season, opponent, venue]);
   const splitGames = useMemo(() => getPlayerGames(player, season, opponent), [player, season, opponent]);
@@ -186,6 +190,16 @@ export default function App() {
   const whole = useMemo(() => summarize(allGames, metric, line, direction), [allGames,metric,line,direction]);
   const current = windowSize === '5' ? last5 : windowSize === '10' ? last10 : whole;
   const isDemo = data.status !== 'ready';
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const upcoming = !isDemo && nextGame(data.schedule ?? initialSchedule, player?.team, season, now);
+  const nextDate = upcoming && new Intl.DateTimeFormat('en-US', {
+    weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York',
+    ...(upcoming.timeKnown ? {hour:'numeric', minute:'2-digit', timeZoneName:'short'} : {})
+  }).format(new Date(upcoming.kickoff));
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   return <div className="app">
@@ -204,6 +218,10 @@ export default function App() {
           <div className="match-context">{season} regular season <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
           <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
+          {!isDemo && <div className="next-match"><span>Next game</span>
+            {upcoming ? <><strong>vs {upcoming.name}</strong><small>{upcoming.venue} · {nextDate}{upcoming.timeKnown ? '' : ' · Time TBD'}</small></> :
+              <small>No upcoming game listed for {season}.</small>}
+          </div>}
         </div>
         <div className="recent-form">
           <span>{allGames.length ? 'Recent games · oldest first' : 'No matching games'}</span>
@@ -249,10 +267,10 @@ export default function App() {
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
         <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?'Full regular season':`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span>{displayed.some(g=>g.stats[metric] === line) && <span><i className="legend-push"/> Push</span>}</div></div></div>
-        <PropChart games={displayed} metric={metric} line={line} direction={direction} />
-        <div className="chart-note"><Info size={15}/><span>Tap or hover a bar for game details. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
+        <PropChart defenses={defenseRows} games={displayed} metric={metric} line={line} direction={direction} />
+        <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s {season} rank using all available season games. #1 allows the most {METRICS[metric].label.toLowerCase()} per game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
-      <Matchup players={players} player={player} season={season} metric={metric} line={line} direction={direction} />
+      <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog games={allGames} metric={metric} line={line} direction={direction} />}</section>
       </div></div><footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
