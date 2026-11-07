@@ -1,4 +1,4 @@
-import HitRate from './HitRate.jsx';
+import HitRate, {defenseRankStyle} from './HitRate.jsx';
 import React, {useState} from 'react';
 import { ChevronDown } from 'lucide-react';
 import { METRICS, formatNumber, getPlayerGames, summarize } from '../lib/stats.js';
@@ -21,7 +21,7 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
     {row ? <>
       <div className="scout-grid">
         <div><small>{row.team} allowed</small><strong>{formatNumber(row.average)} <em>{unit}</em></strong><span>{row.games} games</span></div>
-        <div><small>Defense Rank</small><strong>#{row.rank} <em>of {rows.length}</em></strong><span>#1 allows the most</span></div>
+        <div><small>Defense Rank</small><strong style={defenseRankStyle(row.rank)}>#{row.rank} <em>of {rows.length}</em></strong><span>#1 allows the most</span></div>
         <div><small>League Average</small><strong>{formatNumber(league)} <em>{unit}</em></strong><span>Per Defense-Game</span></div>
       </div>
       <p className="history"><b>{player?.name} vs {row.team}</b> · {history.total ? <><strong><HitRate rate={history.rate}/></strong> hit ({history.hits}/{history.total}) at {direction} {line} {period}.</> : `No recorded meetings ${period}.`}</p>

@@ -1,4 +1,4 @@
-import HitRate from './HitRate.jsx';
+import HitRate, {defenseRankStyle} from './HitRate.jsx';
 import React, {useMemo, useState} from 'react';
 import {playerKey, priceText} from '../lib/bookLine.js';
 import {METRICS, getPlayerGames, summarize} from '../lib/stats.js';
@@ -94,7 +94,7 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
     <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,summary,pick})=><tr key={[g.id,line.player,line.metric,line.point,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
       <td><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
       <td><strong>{ranked && (pick==='over' ? 'Over ' : 'Under ')}{line.point}</strong> {METRICS[line.metric]?.label}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
-      <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td>{rank ? '#'+rank : '—'}</td>
+      <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td style={defenseRankStyle(rank)}>{rank ? '#'+rank : '—'}</td>
     </tr>)}</tbody></table></div>
     {!filtered.length && <p className="board-foot">No saved props match these filters.</p>}
     {filtered.length>limit && <button className="outline-button" onClick={()=>setLimit(limit+30)}>Show More Props</button>}

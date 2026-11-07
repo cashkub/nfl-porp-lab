@@ -1,3 +1,4 @@
+import {defenseRankStyle} from './HitRate.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isHit, METRICS } from '../lib/stats.js';
 
@@ -52,7 +53,7 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
                     >
                       <span className="chart-bar-value">{value}</span>
                     </button>
-                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><small className="usage-label" title={usage.label}>{game.usage?.[usage.key] ?? '—'} {usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small><b className="chart-defense" title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
+                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><small className="usage-label" title={usage.label}>{game.usage?.[usage.key] ?? '—'} {usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small><b className="chart-defense" style={defenseRankStyle(rank)} title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
                   </div>
                 );
               })}
