@@ -1,7 +1,7 @@
 export const METRICS = {
-  passingYards: { label: 'Passing yards', short: 'PASS YDS', unit: 'yds', defaultLine: 224.5, maximum: 600 },
-  rushingYards: { label: 'Rushing yards', short: 'RUSH YDS', unit: 'yds', defaultLine: 69.5, maximum: 350 },
-  receivingYards: { label: 'Receiving yards', short: 'REC YDS', unit: 'yds', defaultLine: 69.5, maximum: 350 },
+  passingYards: { label: 'Passing Yards', short: 'PASS YDS', unit: 'yds', defaultLine: 224.5, maximum: 600 },
+  rushingYards: { label: 'Rushing Yards', short: 'RUSH YDS', unit: 'yds', defaultLine: 69.5, maximum: 350 },
+  receivingYards: { label: 'Receiving Yards', short: 'REC YDS', unit: 'yds', defaultLine: 69.5, maximum: 350 },
   receptions: { label: 'Receptions', short: 'RECEPTIONS', unit: 'rec', defaultLine: 4.5, maximum: 20 }
 };
 

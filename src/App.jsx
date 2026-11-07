@@ -56,7 +56,7 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
       <input
         type="search" value={query} role="combobox" aria-autocomplete="list" aria-expanded={open}
         aria-controls="player-suggestions" aria-label="Search players"
-        placeholder={selected ? `${selected.name} · ${selected.team || selected.position}` : 'Search any NFL player…'}
+        placeholder={selected ? `${selected.name} · ${selected.team || selected.position}` : 'Search Any NFL Player…'}
         onFocus={() => { setOpen(true); setFocusIndex(0); }}
         onChange={e => { setQuery(e.target.value); setOpen(true); setFocusIndex(0); }}
         onKeyDown={onKeyDown}
@@ -64,7 +64,7 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
       
     </div>
     {open && <div className="search-results" id="player-suggestions" role="listbox">
-      <div className="result-header">PLAYERS <span>{results.length ? (showRoster ? 'Team roster' : 'Top matches') : 'No matches'}</span></div>
+      <div className="result-header">PLAYERS <span>{results.length ? (showRoster ? 'Team Roster' : 'Top Matches') : 'No Matches'}</span></div>
       {results.length ? results.map((player, i) => <button
         type="button" role="option" aria-selected={i === focusIndex}
         key={player.id} className={`player-result ${i === focusIndex ? 'result-focused' : ''}`}
@@ -94,25 +94,25 @@ function Insights({ games, metric, line, direction }) {
   const changes = games.length >= 6 ?
     (games.slice(-3).reduce((t,g)=>t+g.stats[metric],0)/3) - (games.slice(-6,-3).reduce((t,g)=>t+g.stats[metric],0)/3) : null;
   return <div className="insight-grid">
-    <div className="small-card"><span>Average</span><strong>{formatNumber(summaries.average)}</strong><small>per game</small></div>
-    <div className="small-card"><span>Median</span><strong>{formatNumber(summaries.median)}</strong><small>per game</small></div>
-    <div className="small-card"><span>Last 3 hit rate</span><strong><HitRate rate={lastThree.rate}/></strong><small>{lastThree.hits}/{lastThree.total} games</small></div>
-    <div className="small-card"><span>Recent trend</span><strong className={changes == null ? '' : changes>=0 ? 'positive' : 'negative'}>{changes == null ? '—' : `${changes >= 0 ? '+' : ''}${changes.toFixed(1)}`}</strong><small>last 3 vs prior 3</small></div>
+    <div className="small-card"><span>Average</span><strong>{formatNumber(summaries.average)}</strong><small>Per Game</small></div>
+    <div className="small-card"><span>Median</span><strong>{formatNumber(summaries.median)}</strong><small>Per Game</small></div>
+    <div className="small-card"><span>Last 3 Hit Rate</span><strong><HitRate rate={lastThree.rate}/></strong><small>{lastThree.hits}/{lastThree.total} games</small></div>
+    <div className="small-card"><span>Recent Trend</span><strong className={changes == null ? '' : changes>=0 ? 'positive' : 'negative'}>{changes == null ? '—' : `${changes >= 0 ? '+' : ''}${changes.toFixed(1)}`}</strong><small>last 3 vs prior 3</small></div>
   </div>;
 }
 
 function GameLog({ multi, games, metric, line, direction }) {
   return <div className="game-log-wrap">
-    <table className="game-log"><thead><tr><th>GAME</th><th>OPPONENT</th><th>VENUE</th><th>{METRICS[metric].short}</th><th>{usageFor(metric).label.toUpperCase()}</th><th>RESULT</th></tr></thead>
+    <table className="game-log"><thead><tr><th>Game</th><th>Opponent</th><th>Venue</th><th>{METRICS[metric].short}</th><th>{usageFor(metric).label}</th><th>Result</th></tr></thead>
       <tbody>{[...games].reverse().map((game, i) => {
         const val = Number(game.stats[metric] ?? 0);
         const hit = isHit(val, line, direction);
         return <tr key={`${game.gameId}-${game.week}-${i}`}>
           <td><strong>{multi && `${game.season} · `}W{game.week}</strong></td>
           <td><strong>{game.opponent || '—'}</strong></td>
-          <td>{game.venue === 'H' ? <span className="venue-pill">HOME</span> : game.venue === 'A' ? <span className="venue-pill away">AWAY</span> : '—'}</td>
+          <td>{game.venue === 'H' ? <span className="venue-pill">Home</span> : game.venue === 'A' ? <span className="venue-pill away">Away</span> : '—'}</td>
           <td className="table-num">{val}</td><td>{game.usage?.[usageFor(metric).key] ?? "—"}</td>
-          <td><span className={`result-pill ${val === line ? 'push' : hit?'hit':'miss'}`}>{val === line ? 'PUSH' : hit ? 'HIT' : 'MISS'}</span></td>
+          <td><span className={`result-pill ${val === line ? 'push' : hit?'hit':'miss'}`}>{val === line ? 'Push' : hit ? 'Hit' : 'Miss'}</span></td>
         </tr>;
       })}</tbody>
     </table>
@@ -183,7 +183,7 @@ export default function App() {
   const players = data.players || [];
   const seasons = data.seasons || [];
   const multi = season === 'ALL';
-  const seasonLabel = multi ? 'All seasons' : String(season);
+  const seasonLabel = multi ? 'All Seasons' : String(season);
   const seasonPlayers = useMemo(() => players.flatMap(p => {
     const latest = (p.games || []).reduce((last, game) =>
       (season === 'ALL' || game.season === season) && (!last || game.season > last.season || (game.season === last.season && game.week >= last.week)) ? game : last, null);
@@ -267,16 +267,16 @@ export default function App() {
       {page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
-          <div className="match-context">{multi ? `All seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
+          <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
           <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
-          {!isDemo && <div className="next-match"><span>Next game</span>
+          {!isDemo && <div className="next-match"><span>Next Game</span>
             {upcoming ? <><strong>vs {upcoming.name}</strong><small>{upcoming.venue} · {nextDate}{upcoming.timeKnown ? '' : ' · Time TBD'}</small></> :
               <small>No upcoming game listed for {scheduleSeason}.</small>}
           </div>}
         </div>
         <div className="recent-form">
-          <span>{allGames.length ? 'Recent games · oldest first' : 'No matching games'}</span>
+          <span>{allGames.length ? 'Recent Games · Oldest First' : 'No matching games'}</span>
           <div className="form-tiles">{allGames.slice(-5).map(game => {
             const value = game.stats[metric];
             const result = value === line ? 'Push' : isHit(value, line, direction) ? 'Hit' : 'Miss';
@@ -286,53 +286,53 @@ export default function App() {
           })}</div>
         </div>
         <div className="match-form">
-          <span>{windowSize === 'season' ? (multi ? 'All seasons hit rate' : 'Season hit rate') : `Last ${windowSize} hit rate`}</span>
+          <span>{windowSize === 'season' ? (multi ? 'All Seasons hit rate' : 'Season Hit Rate') : `Last ${windowSize} Hit Rate`}</span>
           <strong><HitRate rate={current.rate}/></strong>
           <small>{current.hits} of {current.total} matching games</small>
         </div>
       </section>
       {isDemo && <div className="demo-warning" role="status"><Info size={20} /><div><strong>Demo mode — not real NFL statistics.</strong><span>{error || 'This first-run preview uses fictional players and sample game logs.'} Run the <b>Update NFL Data</b> GitHub workflow after publishing to load actual player data.</span></div></div>}
-      <div className="workspace"><div className="analysis-rail"><aside className="panel setup" aria-label="Prop settings"><button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
-        <span>{settingsOpen ? 'Close prop settings' : 'Edit player & line'}</span>
+      <div className="workspace"><div className="analysis-rail"><aside className="panel setup" aria-label="Prop Settings"><button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
+        <span>{settingsOpen ? 'Close Prop Settings' : 'Edit Player & Line'}</span>
         <span className="phone-line">{direction} {line} <ChevronDown size={16}/></span>
       </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
-        <div className="section-topline"><div><h2 id="controls-title">Prop settings</h2></div><div className="controls-side"><span className="label-small">SEASON</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
+        <div className="section-topline"><div><h2 id="controls-title">Prop Settings</h2></div><div className="controls-side"><span className="label-small">Season</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All Seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
         <div className="controls-grid">
-          <div className="field"><label htmlFor="team">TEAM</label><div className="select-wrap large-select">
+          <div className="field"><label htmlFor="team">Team</label><div className="select-wrap large-select">
             <select id="team" value={activeTeam} onChange={e => { setTeam(e.target.value); setVenue('ALL'); setOpponent('ALL'); }}>
-              <option value="ALL">All teams</option>{teams.map(t => <option key={t}>{t}</option>)}
+              <option value="ALL">All Teams</option>{teams.map(t => <option key={t}>{t}</option>)}
             </select><ChevronDown size={16}/></div></div>
-          <div className="field field-player"><label>PLAYER <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL'} selected={player} season={season} onSelect={onSelectPlayer} /></div>
-          <div className="field"><label>STAT CATEGORY</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{Object.entries(METRICS).map(([key,m])=><option key={key} value={key}>{m.label}</option>)}</select><ChevronDown size={16}/></div></div>
-          <div className="field"><label>OPPONENT</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
-          <div className="field"><label>LOCATION</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
+          <div className="field field-player"><label>Player <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL'} selected={player} season={season} onSelect={onSelectPlayer} /></div>
+          <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{Object.entries(METRICS).map(([key,m])=><option key={key} value={key}>{m.label}</option>)}</select><ChevronDown size={16}/></div></div>
+          <div className="field"><label>Opponent</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
+          <div className="field"><label>Location</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
         </div>
       </section>
       <section className="line-panel" aria-labelledby="line-title">
-        <div className="line-left"><h2 id="line-title">Prop line</h2></div>
+        <div className="line-left"><h2 id="line-title">Prop Line</h2></div>
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
         {quote && <div className="quote-prices"><b>DK {quote.point}</b><span>Over <strong>{priceText(quote.over)}</strong></span><span>Under <strong>{priceText(quote.under)}</strong></span></div>}
-        <p className="book-source">{manual ? 'Custom line' : quote ? 'DraftKings pregame line' : 'Preset line · No sportsbook quote available'}
+        <p className="book-source">{manual ? 'Custom Line' : quote ? 'DraftKings Pregame Line' : 'Preset Line · No Sportsbook Quote Available'}
           {quote && <> · {quote.point} on DraftKings · {new Date(quote.updated).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</>}
-          {manual && quote && <button type="button" onClick={()=>setCustom(null)}>Use book line</button>}
+          {manual && quote && <button type="button" onClick={()=>setCustom(null)}>Use Book Line</button>}
         </p>
       </section>
       </div></aside>
       <div className="rail-graphics"><VenueSplits multi={multi} games={splitGames} metric={metric} line={line} direction={direction} windowSize={windowSize}/></div>
-      </div><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
-        <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label={multi ? "ALL SEASONS" : "FULL SEASON"} summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
+      </div><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit Rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'All Opponents':`vs ${opponent}`} · {venue==='ALL'?'All Venues':venue==='H'?'Home Only':'Away Only'}</p></div></div>
+        <div className="stat-grid"><StatCard label="Last 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="Last 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label={multi ? "All Seasons" : "Full Season"} summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
-        <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?(multi ? 'All regular seasons' : 'Full regular season'):`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span>{displayed.some(g=>g.stats[metric] === line) && <span><i className="legend-push"/> Push</span>}</div></div></div>
+        <div className="chart-top"><div><h2 id="chart-title">Game-by-Game Performance</h2><p>{windowSize==='season'?(multi ? 'All Regular Seasons' : 'Full Regular Season'):`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span>{displayed.some(g=>g.stats[metric] === line) && <span><i className="legend-push"/> Push</span>}</div></div></div>
         <PropChart multi={multi} defenses={defenseRows} games={displayed} metric={metric} line={line} direction={direction} />
-        <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s rank for {seasonLabel.toLowerCase()} using all games in that period. #1 allows the most {METRICS[metric].label.toLowerCase()} per game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
+        <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s rank for {seasonLabel.toLowerCase()} using all games in that period. #1 allows the most {METRICS[metric].label.toLowerCase()} Per Game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
-      <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
-      <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
+      <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player Trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
+      <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game Log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide Table' : 'Show Table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
       </div></div></>}<footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
-        <p className="footer-disclaimer">Historical hit rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
+        <p className="footer-disclaimer">Historical Hit Rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>
     </main>
   </div>;

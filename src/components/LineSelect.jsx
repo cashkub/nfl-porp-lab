@@ -46,14 +46,14 @@ export default function LineSelect({ metric, value, onChange }) {
     onBlur={e => { if (e.relatedTarget && !wrapper.current.contains(e.relatedTarget)) setOpen(false); }}
     onKeyDown={e => { if (e.key === 'Escape' && open) { e.preventDefault(); close(); } }}>
     <button className="line-trigger" ref={trigger} type="button" aria-haspopup="dialog"
-      aria-expanded={open} aria-label={`Prop line, ${value} ${unit}`}
+      aria-expanded={open} aria-label={`Prop Line, ${value} ${unit}`}
       onClick={() => { setPage(Math.floor(value * 2 / PAGE_SIZE)); setQuery(''); setOpen(!open); }}>
-      <span><small>Prop line</small><strong>{value} <em>{unit}</em></strong></span><ChevronDown size={17}/>
+      <span><small>Prop Line</small><strong>{value} <em>{unit}</em></strong></span><ChevronDown size={17}/>
     </button>
-    {open && <div className="line-menu" role="dialog" aria-label="Choose a prop line">
-      <label htmlFor="exact-line">Choose a line</label>
+    {open && <div className="line-menu" role="dialog" aria-label="Choose a Prop Line">
+      <label htmlFor="exact-line">Choose a Line</label>
       <input id="exact-line" ref={input} type="text" inputMode="decimal" value={query}
-        placeholder="Enter an exact line…" autoComplete="off" onChange={e => setQuery(e.target.value)}
+        placeholder="Enter an Exact Line…" autoComplete="off" onChange={e => setQuery(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && valid) { e.preventDefault(); choose(exact); } }}/>
       {!search && <div className="line-pages">
         <button type="button" aria-label="Previous line range" disabled={page === 0} onClick={() => setPage(page - 1)}><ChevronLeft size={16}/></button>

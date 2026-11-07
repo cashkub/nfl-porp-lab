@@ -14,7 +14,7 @@ export function bookLine(games, upcoming, name, metric) {
 export const priceText = price => Number.isFinite(price) ? (price > 0 ? '+' + price : String(price)) : '—';
 
 export function usageFor(metric) {
-  if (metric === 'passingYards') return {key:'attempts', label:'Pass attempts'};
+  if (metric === 'passingYards') return {key:'attempts', label:'Pass Attempts'};
   if (metric === 'rushingYards') return {key:'carries', label:'Carries'};
   return {key:'targets', label:'Targets'};
 }
