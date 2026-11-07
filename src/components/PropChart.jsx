@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isHit, METRICS } from '../lib/stats.js';
 
+import { usageFor } from '../lib/bookLine.js';
+
 export default function PropChart({ multi, defenses, games, metric, line, direction }) {
   const [active, setActive] = useState(null);
   const scroll = useRef(null);
@@ -12,6 +14,7 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
     const highest = Math.max(...games.map(g => Number(g.stats[metric] || 0)), Number(line), 1);
     return Math.max(5, Math.ceil(highest * 1.22 / 10) * 10);
   }, [games, metric, line]);
+  const usage = usageFor(metric);
   const ticks = [0, 0.25, 0.5, 0.75, 1];
   const linePct = Math.max(0, Math.min(100, Number(line) / max * 100));
   if (!games.length) {
@@ -49,7 +52,7 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
                     >
                       <span className="chart-bar-value">{value}</span>
                     </button>
-                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><b className="chart-defense" title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
+                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><small className="usage-label" title={usage.label}>{game.usage?.[usage.key] ?? '—'} {usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small><b className="chart-defense" title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
                   </div>
                 );
               })}

@@ -32,12 +32,20 @@ def extract_lines(event, checked):
         if book['key'] != 'draftkings':
             continue
         for market in book.get('markets', []):
+            metric = MARKETS.get(market['key'])
+            if not metric:
+                continue
+            paired = {}
             for outcome in market.get('outcomes', []):
-                point = outcome.get('point')
-                if (market['key'] in MARKETS and outcome['name'] == 'Over'
-                        and outcome.get('description') and isinstance(point, (float, int))):
-                    lines.append({'player': outcome['description'], 'metric': MARKETS[market['key']],
-                                  'point': point, 'updated': market.get('last_update') or checked})
+                point, name = outcome.get('point'), outcome.get('description')
+                side = outcome.get('name')
+                if not name or not isinstance(point, (float, int)) or side not in ('Over', 'Under'):
+                    continue
+                line = paired.setdefault((name, point), {
+                    'player': name, 'metric': metric, 'point': point,
+                    'updated': market.get('last_update') or checked})
+                line[side.lower()] = outcome.get('price')
+            lines.extend(paired.values())
     return lines
 
 
@@ -51,7 +59,7 @@ def main():
     events, remaining = request('')
     for event in sorted(events, key=lambda e: e['commence_time']):
         kickoff = datetime.fromisoformat(event['commence_time'])
-        if event['id'] in games or not now < kickoff <= now + timedelta(hours=24):
+        if games.get(event['id'], {}).get('version') == 2 or not now < kickoff <= now + timedelta(hours=24):
             continue
         home = TEAMS.get(event['home_team'].split()[-1])
         away = TEAMS.get(event['away_team'].split()[-1])
@@ -63,7 +71,7 @@ def main():
                                      markets=','.join(MARKETS), oddsFormat='american')
         lines = extract_lines(details, now.isoformat())
         if lines:
-            games[event['id']] = {'id':event['id'], 'home':home, 'away':away,
+            games[event['id']] = {'version':2, 'id':event['id'], 'home':home, 'away':away,
                                   'kickoff':event['commence_time'], 'lines':lines}
     CACHE.write_text(json.dumps({'games':list(games.values())}, separators=(',', ':')) + '\n')
 

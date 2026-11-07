@@ -8,7 +8,8 @@ import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
-import { bookLine } from './lib/bookLine.js';
+import { bookLine, priceText, usageFor } from './lib/bookLine.js';
+import PropsBoard from './components/PropsBoard.jsx';
 import LineSelect from './components/LineSelect.jsx';
 import Matchup from './components/Matchup.jsx';
 import PropChart from './components/PropChart.jsx';
@@ -101,7 +102,7 @@ function Insights({ games, metric, line, direction }) {
 
 function GameLog({ multi, games, metric, line, direction }) {
   return <div className="game-log-wrap">
-    <table className="game-log"><thead><tr><th>GAME</th><th>OPPONENT</th><th>VENUE</th><th>{METRICS[metric].short}</th><th>RESULT</th></tr></thead>
+    <table className="game-log"><thead><tr><th>GAME</th><th>OPPONENT</th><th>VENUE</th><th>{METRICS[metric].short}</th><th>{usageFor(metric).label.toUpperCase()}</th><th>RESULT</th></tr></thead>
       <tbody>{[...games].reverse().map((game, i) => {
         const val = Number(game.stats[metric] ?? 0);
         const hit = isHit(val, line, direction);
@@ -109,7 +110,7 @@ function GameLog({ multi, games, metric, line, direction }) {
           <td><strong>{multi && `${game.season} · `}W{game.week}</strong></td>
           <td><strong>{game.opponent || '—'}</strong></td>
           <td>{game.venue === 'H' ? <span className="venue-pill">HOME</span> : game.venue === 'A' ? <span className="venue-pill away">AWAY</span> : '—'}</td>
-          <td className="table-num">{val}</td>
+          <td className="table-num">{val}</td><td>{game.usage?.[usageFor(metric).key] ?? "—"}</td>
           <td><span className={`result-pill ${val === line ? 'push' : hit?'hit':'miss'}`}>{val === line ? 'PUSH' : hit ? 'HIT' : 'MISS'}</span></td>
         </tr>;
       })}</tbody>
@@ -119,6 +120,20 @@ function GameLog({ multi, games, metric, line, direction }) {
 }
 
 export default function App() {
+  const [page, setPage] = useState(() => window.location.hash === '#props' ? 'board' : 'analyzer');
+  const [dark,setDark] = useState(() => {
+    try { return localStorage.getItem('propbets-theme') !== 'light'; } catch { return true; }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    try { localStorage.setItem('propbets-theme',dark ? 'dark' : 'light'); } catch {}
+  },[dark]);
+  useEffect(() => {
+    const changePage = () => setPage(window.location.hash === '#props' ? 'board' : 'analyzer');
+    window.addEventListener('hashchange',changePage);
+    return () => window.removeEventListener('hashchange',changePage);
+  },[]);
+  const boardSelection = useRef(null);
   const [data, setData] = useState(demoData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -176,6 +191,7 @@ export default function App() {
   const player = roster.find(p => p.id === selectedId) ||
     roster.find(p => ['WR','QB','RB','TE'].includes(p.position)) || roster[0];
   useEffect(() => {
+    if (boardSelection.current === player?.id) { boardSelection.current=null; return; }
     const key = preferredMetric(player?.position);
     setMetric(key);
     setCustom(null);
@@ -214,6 +230,17 @@ export default function App() {
   const last10 = useMemo(() => summarize(filteredWindow(allGames, '10'), metric, line, direction), [allGames,metric,line,direction]);
   const whole = useMemo(() => summarize(allGames, metric, line, direction), [allGames,metric,line,direction]);
   const current = windowSize === '5' ? last5 : windowSize === '10' ? last10 : whole;
+  function openFromBoard(p, market, side, game) {
+    const latest = Math.max(...seasons);
+    const history = getPlayerGames(p,latest);
+    const next = nextGame(data.schedule ?? initialSchedule,history.at(-1)?.team || p.team,latest,now);
+    boardSelection.current = p.id !== player?.id ? p.id : null;
+    setTeam('ALL'); setSeason(latest); setVenue('ALL'); setOpponent('ALL');
+    setSelectedId(p.id); setMetric(market.metric); setDirection(side); setWindowSize('10');
+    const saved = bookLine([game],next,p.name,market.metric);
+    setCustom(saved?.point === market.point ? null : {context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point});
+    setPage('analyzer'); window.location.hash='analyzer'; window.scrollTo(0,0);
+  }
   const nextDate = upcoming && new Intl.DateTimeFormat('en-US', {
     weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York',
     ...(upcoming.timeKnown ? {hour:'numeric', minute:'2-digit', timeZoneName:'short'} : {})
@@ -226,11 +253,13 @@ export default function App() {
       <div className="shell topbar-inner">
         <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        <nav className="topnav" aria-label="Primary"><a className="topnav-active" href="#analyzer"><BarChart3 size={16} /> Prop analyzer</a><a href="#game-log">Game log</a><a href="#about">About</a></nav>
+        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props board</a></nav>
+        <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
         <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
       </div>
     </header>
     <main className="shell" id="analyzer">
+      {page==='board' ? <PropsBoard games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
@@ -277,6 +306,7 @@ export default function App() {
       <section className="line-panel" aria-labelledby="line-title">
         <div className="line-left"><h2 id="line-title">Prop line</h2></div>
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
+        {quote && <div className="quote-prices"><b>DK {quote.point}</b><span>Over <strong>{priceText(quote.over)}</strong></span><span>Under <strong>{priceText(quote.under)}</strong></span></div>}
         <p className="book-source">{manual ? 'Custom line' : quote ? 'DraftKings pregame line' : 'Preset line · No sportsbook quote available'}
           {quote && <> · {quote.point} on DraftKings · {new Date(quote.updated).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</>}
           {manual && quote && <button type="button" onClick={()=>setCustom(null)}>Use book line</button>}
@@ -295,7 +325,7 @@ export default function App() {
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      </div></div><footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      </div></div></>}<footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
         <p className="footer-disclaimer">Historical hit rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>

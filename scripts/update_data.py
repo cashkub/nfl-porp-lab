@@ -158,6 +158,8 @@ def parse_player_stats_csv(text: str, expected_season: int) -> list[dict]:
                 "season": expected_season, "week": week, "seasonType": "REG", "gameId": game_id,
                 "team": team, "opponent": (raw.get("opponent_team") or "").strip().upper(),
                 "venue": venue_from_game_id(game_id, team), "stats": stats,
+                "usage": {key: to_number(raw[key]) for key in ("attempts", "carries", "targets")
+                          if raw.get(key) not in (None, "", "NA", "NaN")},
             },
         })
     return records

@@ -1,6 +1,9 @@
 name: Update NFL Data
 
 on:
+  push:
+    branches: [main]
+    paths: ['scripts/update_data.py']
   schedule:
     - cron: '25 11 * * *'
   workflow_dispatch:
@@ -43,4 +46,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/data/stats.json
           git commit -m "data: refresh NFL player game logs"
+          git pull --rebase origin main
           git push

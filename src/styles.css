@@ -284,3 +284,50 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
   .line-panel {flex-wrap:wrap}
   .book-source {width:100%}
 }
+
+.view-tabs,.quote-prices {display:flex;align-items:center;gap:8px}
+.view-tabs a,.theme-button {font-size:13px;font-weight:700;border-radius:7px;padding:8px 10px;text-decoration:none}
+.view-tabs a[aria-current="page"] {color:var(--blue);background:var(--ice)}
+.theme-button {margin-left:auto;border:1px solid var(--rule);background:transparent;color:inherit}
+.topbar .data-status {margin-left:0}
+.quote-prices {flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.quote-prices strong {color:var(--ink)}
+.props-board {margin:24px 0;padding:22px;min-width:0}
+.props-board h1 {font-size:clamp(28px,4vw,44px);letter-spacing:-.055em;margin:0}
+.props-board header p,.board-foot {font-size:12px;color:var(--muted)}
+.board-controls {display:flex;flex-wrap:wrap;gap:9px;margin:18px 0}
+.board-controls label {font-size:11px;font-weight:700;display:grid;gap:4px}
+.board-controls select,.board-controls input {min-height:38px;border:1px solid var(--rule);border-radius:6px;padding:5px 8px;color:var(--ink);background:var(--ice)}
+.board-scroll {overflow-x:auto}
+.board-player {border:0;background:none;color:var(--blue);font-weight:700;padding:4px 0}
+.board-player:disabled {color:var(--muted);cursor:default}
+.props-board td small {display:block;color:var(--muted);font-size:10px}
+.props-board .outline-button,.board-foot {margin-top:12px}
+.chart-main {height:337px}
+html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:#e4edf8;--blue:#93bbff;--muted:#a9b9cc;--rule:#324255;--ice:#1e3049}
+[data-theme=dark] .app {background-color:#101b28;background-image:linear-gradient(90deg,#0d1826c9,#101c2bee 25%,#101c2bee 75%,#0d1826c9),url('/playbook.svg')}
+[data-theme=dark] :is(.panel,.topbar,.stat-card,.small-card,.line-menu,.search-results,.player-result,.outline-button,.phone-settings,.line-menu button) {background:#182535;border-color:var(--rule);color:var(--ink)}
+[data-theme=dark] :is(.segmented,.select-wrap,.search-input-shell,.game-log th,.board-controls select,.board-controls input,.line-menu input,.matchup-head .select-wrap) {color:var(--ink);background:#111e2d;border-color:#415168}
+[data-theme=dark] :is(.field label,.chart-game-label,.chart-bar-value,.search-input-shell input::placeholder,.result-header,.small-card span) {color:#bdcce0}
+[data-theme=dark] :is(.stat-card-selected,.line-trigger,.chart-defense,.result-pill.hit,.line-menu button[aria-pressed=true],.player-result:hover,.result-focused) {background:#223b5b;color:#c5e0ff;border-color:#4c79ac}
+[data-theme=dark] .matchup-head {background:linear-gradient(100deg,#203551,#182535)}
+[data-theme=dark] .chart-target {border-color:#c2ddff}
+[data-theme=dark] .chart-gridline {border-color:#47596f}
+[data-theme=dark] .rate-track {background:#34455b}
+[data-theme=dark] .venue-pill,[data-theme=dark] .result-pill.miss {background:#314055;color:#d1dcec}
+[data-theme=dark] .positive {color:#76d6ae}
+[data-theme=dark] .negative {color:#ffa29e}
+[data-theme=dark] .footer-logo strong {color:#e4edf8}
+[data-theme=dark] .demo-warning {color:#f6ddac;background:#322d22}
+[data-theme=dark] .data-status,[data-theme=dark] .footer-status {color:#b1c5d8}
+@media(max-width:700px) {
+ .topbar-inner {gap:4px;flex-wrap:wrap;padding-block:5px}
+ .topbar .data-status {display:none}
+ .view-tabs {gap:0}.view-tabs a,.theme-button {font-size:12px;padding:7px}
+ .brand-name {font-size:21px}.brand {gap:4px}
+ .props-board {padding:12px}
+ .board-controls {display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .board-controls select,.board-controls input {font-size:16px;min-width:0;width:100%}
+}
+@media(max-width:620px) {.chart-main {height:266px}}
+.open-prop {cursor:pointer}.open-prop:hover {background:var(--ice)}

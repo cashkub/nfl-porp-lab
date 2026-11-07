@@ -1,5 +1,8 @@
 name: Update sportsbook lines
 on:
+  push:
+    branches: [main]
+    paths: ['scripts/update_lines.py']
   workflow_dispatch:
   schedule:
     - cron: '43 */4 * * *'
