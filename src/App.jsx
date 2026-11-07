@@ -119,8 +119,12 @@ function GameLog({ multi, games, metric, line, direction }) {
   </div>;
 }
 
+function activePage() {
+  return ({'#props':'board', '#best-hit-rates':'best'})[window.location.hash] || 'analyzer';
+}
+
 export default function App() {
-  const [page, setPage] = useState(() => window.location.hash === '#props' ? 'board' : 'analyzer');
+  const [page, setPage] = useState(activePage);
   const [dark,setDark] = useState(() => {
     try { return localStorage.getItem('propbets-theme') !== 'light'; } catch { return true; }
   });
@@ -129,7 +133,7 @@ export default function App() {
     try { localStorage.setItem('propbets-theme',dark ? 'dark' : 'light'); } catch {}
   },[dark]);
   useEffect(() => {
-    const changePage = () => setPage(window.location.hash === '#props' ? 'board' : 'analyzer');
+    const changePage = () => { setPage(activePage()); window.scrollTo(0,0); };
     window.addEventListener('hashchange',changePage);
     return () => window.removeEventListener('hashchange',changePage);
   },[]);
@@ -253,13 +257,13 @@ export default function App() {
       <div className="shell topbar-inner">
         <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props board</a></nav>
+        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props board</a><a href="#best-hit-rates" aria-current={page==='best'?'page':undefined}>Best hit rates</a></nav>
         <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
         <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
       </div>
     </header>
     <main className="shell" id="analyzer">
-      {page==='board' ? <PropsBoard games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+      {page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
