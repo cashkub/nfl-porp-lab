@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "status": "pending",
+  "message": "Run the Update NFL Data GitHub Action to download real nflverse player stats.",
+  "seasons": [],
+  "players": []
+}
