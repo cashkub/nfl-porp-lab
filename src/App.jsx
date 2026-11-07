@@ -10,6 +10,7 @@ import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { bookLine, priceText, usageFor } from './lib/bookLine.js';
+import CbbAnalyzer from './components/CbbAnalyzer.jsx';
 import PropsBoard from './components/PropsBoard.jsx';
 import LineSelect from './components/LineSelect.jsx';
 import Matchup from './components/Matchup.jsx';
@@ -121,7 +122,7 @@ function GameLog({ multi, games, metric, line, direction }) {
 }
 
 function activePage() {
-  return ({'#props':'board', '#best-hit-rates':'best'})[window.location.hash] || 'analyzer';
+  return ({'#cbb':'cbb','#props':'board', '#best-hit-rates':'best'})[window.location.hash] || 'analyzer';
 }
 
 export default function App() {
@@ -258,13 +259,13 @@ export default function App() {
       <div className="shell topbar-inner">
         <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props Board</a><a href="#best-hit-rates" aria-current={page==='best'?'page':undefined}>Best Hit Rates</a></nav>
+        <nav className="view-tabs" aria-label="Primary"><a href="#analyzer" aria-current={page==='analyzer'?'page':undefined}>NFL Analyzer</a><a href="#cbb" aria-current={page==='cbb'?'page':undefined}>CBB Analyzer</a><a href="#props" aria-current={page==='board'?'page':undefined}>Props Board</a><a href="#best-hit-rates" aria-current={page==='best'?'page':undefined}>Best Hit Rates</a></nav>
         <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
-        <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
+        <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{page==='cbb' ? 'HOOPR DATA' : loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>
       </div>
     </header>
     <main className="shell" id="analyzer">
-      {page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+      {page==='cbb' ? <CbbAnalyzer/> : page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
@@ -330,10 +331,10 @@ export default function App() {
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player Trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game Log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide Table' : 'Show Table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      </div></div></>}<footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      </div></div></>}{page!=='cbb' && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
         <p className="footer-disclaimer">Historical Hit Rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
-      </footer>
+      </footer>}
     </main>
   </div>;
 }

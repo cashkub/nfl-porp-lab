@@ -359,3 +359,15 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .app .hit-percent {font:inherit;letter-spacing:inherit;margin:0;color:inherit}
 /* Carry the product's title casing through dynamic captions and status copy. */
 .app :is(p,small,label,th,.label-small,.stat-card-heading,.match-context,.match-form>span,.data-status,.footer-status,.recent-form>span,.next-match>span,.history,.result-header,.chart-note,.stat-card-footer,.board-foot,.form-tile em,.scout-grid span) {text-transform:capitalize}
+.cbb-board {margin-bottom:36px}
+.cbb-board .board-controls label {min-width:0}
+.cbb-line {max-width:230px}
+.cbb-summary {display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 16px;padding:22px 0 12px}
+.cbb-summary span {font-size:inherit}
+.cbb-bar {display:flex;align-items:center;gap:8px}
+.cbb-bar b {min-width:2ch}
+.cbb-bar div {width:90px;height:7px;background:var(--rule);position:relative}
+.cbb-bar i {display:block;height:100%}
+.cbb-bar em {position:absolute;top:-3px;height:13px;border-left:2px solid var(--ink)}
+.cbb-Hit {background:#168654}.cbb-Miss {background:#c14856}.cbb-Push {background:#cd9b38}
+@media(max-width:620px) {.view-tabs a {padding-inline:3px;font-size:11px}.cbb-line .line-menu {right:auto;left:0}}

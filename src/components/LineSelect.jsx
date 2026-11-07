@@ -4,8 +4,8 @@ import { METRICS } from '../lib/stats.js';
 
 const PAGE_SIZE = 12;
 
-export default function LineSelect({ metric, value, onChange }) {
-  const { maximum, unit } = METRICS[metric];
+export default function LineSelect({ metric, value, onChange, markets = METRICS }) {
+  const { maximum, unit } = markets[metric];
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState('');
