@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import math
 import json
 import os
 import sys
@@ -88,6 +89,39 @@ def normalize_team(team: str) -> str:
     return TEAM_ALIASES.get(team, team)
 
 
+def team_ratings(results):
+    """Fit scoring and points-allowed effects against each opponent, with four league-average prior games."""
+    games = defaultdict(list)
+    for home, away, hp, ap, neutral in results:
+        advantage = 0 if neutral else 0.75
+        games[home].append((away, hp, ap, advantage))
+        games[away].append((home, ap, hp, -advantage))
+    if not games:
+        return {}
+    baseline = sum(hp + ap for _, _, hp, ap, _ in results) / (2 * len(results))
+    attack = dict.fromkeys(games, 0)
+    allowed = attack.copy()
+    for _ in range(30):
+        new_attack, new_allowed = {}, {}
+        for team, rows in games.items():
+            new_attack[team] = sum(pf - baseline - venue - allowed[opp] for opp,pf,pa,venue in rows) / (len(rows)+4)
+            new_allowed[team] = sum(pa - baseline + venue - attack[opp] for opp,pf,pa,venue in rows) / (len(rows)+4)
+        attack, allowed = new_attack, new_allowed
+    return {team: {'offense':round(baseline+attack[team],2), 'defense':round(baseline+allowed[team],2),
+                   'baseline':round(baseline,2), 'games':len(rows),
+                   'wins':[opp for opp,pf,pa,_ in rows if pf>pa],
+                   'scheduleStrength':round(sum(attack[o]-allowed[o] for o,*_ in rows)/len(rows),1)}
+            for team,rows in games.items()}
+
+
+def market_number(value):
+    try:
+        number = float(value)
+        return number if math.isfinite(number) else None
+    except (ValueError, TypeError):
+        return None
+
+
 def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
     reader = csv.DictReader(io.StringIO(text))
     required = {"season", "game_type", "gameday", "gametime", "week", "away_team", "home_team", "result", "location"}
@@ -95,18 +129,33 @@ def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
         raise ValueError("Unexpected nflverse schedule columns")
     games = []
     eastern = ZoneInfo("America/New_York")
-    for row in reader:
+    results = defaultdict(list)
+    ratings = {}
+    for row in sorted(reader, key=lambda r: (r["gameday"], r["gametime"])):
         season = to_number(row["season"])
-        if season not in seasons or row["game_type"] == "PRE" or row["result"] not in ("", "NA"):
+        if season not in seasons or row["game_type"] == "PRE":
             continue
         if not row["gameday"] or not row["away_team"] or not row["home_team"]:
             continue
+        home, away = normalize_team(row["home_team"]), normalize_team(row["away_team"])
+        neutral = row["location"] == "Neutral"
+        if row["result"] not in ("", "NA"):
+            hp, ap = market_number(row.get("home_score")), market_number(row.get("away_score"))
+            if hp is not None and ap is not None:
+                results[season].append((home, away, hp, ap, neutral))
+                ratings.pop(season, None)
+            continue
+        if season not in ratings:
+            ratings[season] = team_ratings(results[season])
+        spread = market_number(row.get("spread_line"))
         time_known = row["gametime"] not in ("", "NA", "TBD")
         local = datetime.fromisoformat(row["gameday"] + "T" + (row["gametime"] if time_known else "23:59")).replace(tzinfo=eastern)
         games.append({"season": season, "week": row["week"], "stage": row["game_type"],
                       "date": row["gameday"], "kickoff": local.isoformat(), "timeKnown": time_known,
                       "away": normalize_team(row["away_team"]), "home": normalize_team(row["home_team"]),
-                      "neutral": row["location"] == "Neutral"})
+                      "neutral": neutral, "homeRating": ratings[season].get(home), "awayRating": ratings[season].get(away),
+                      "homeSpread": -spread if spread is not None else None,
+                      "homePrice": market_number(row.get("home_moneyline")), "awayPrice": market_number(row.get("away_moneyline"))})
     return sorted(games, key=lambda g: g["kickoff"])
 
 
@@ -143,6 +192,8 @@ def parse_player_stats_csv(text: str, expected_season: int) -> list[dict]:
             continue
         position = (raw.get("position") or "").strip().upper()
         stats = {key: to_number(raw.get(column)) for key, column in STAT_COLUMNS.items()}
+        if "carries" in raw:
+            stats["rushingAttempts"] = to_number(raw["carries"])
         if position not in OFFENSE_POSITIONS and not any(stats.values()):
             continue
         name = (raw.get("player_display_name") or raw.get("player_name") or "").strip()
@@ -255,6 +306,28 @@ def main() -> int:
             previous = json.loads(OUTPUT.read_text())
             if isinstance(previous.get("schedule"), list):
                 payload["schedule"] = previous["schedule"]
+    season = max(payload["seasons"])
+    try:
+        url = f"https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_{season}.csv"
+        with urllib.request.urlopen(url, timeout=40) as response:
+            reports = defaultdict(dict)
+            for row in csv.DictReader(io.StringIO(response.read().decode("utf-8-sig"))):
+                name = row.get("full_name") or row.get("athlete_display_name")
+                status = row.get("report_status")
+                if not status or status in ("NA", "None"):
+                    status = row.get("practice_status")
+                if not name or not status or status in ("NA", "None"):
+                    continue
+                key = (normalize_team(row.get("team")), str(row.get("week")))
+                item = {"name":name, "status":status, "date":row.get("date_modified") or ""}
+                if item["date"] >= reports[key].get(name, {}).get("date", ""):
+                    reports[key][name] = item
+        for game in payload.get("schedule", []):
+            if game["season"] == season:
+                game["injuries"] = {team:list(reports[(team, game["week"])].values())
+                                    for team in (game["home"],game["away"])}
+    except (OSError, ValueError) as exc:
+        print(f"Injury reports unavailable: {exc}", file=sys.stderr)
     save_if_changed(payload)
     return 0
 

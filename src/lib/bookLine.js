@@ -15,6 +15,6 @@ export const priceText = price => Number.isFinite(price) ? (price > 0 ? '+' + pr
 
 export function usageFor(metric) {
   if (metric === 'passingYards') return {key:'attempts', label:'Pass Attempts'};
-  if (metric === 'rushingYards') return {key:'carries', label:'Carries'};
+  if (metric === 'rushingYards' || metric === 'rushingAttempts') return {key:'carries', label:'Carries'};
   return {key:'targets', label:'Targets'};
 }

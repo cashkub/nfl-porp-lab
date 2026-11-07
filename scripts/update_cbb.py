@@ -41,10 +41,10 @@ def conference_membership(fixtures):
 
 def build(season):
     fixtures = read_source('schedules','mbb_schedule',season,['game_id','neutral_site','home_id','away_id',
-        'home_conference_id','away_conference_id','groups_id','groups_name','groups_is_conference'])
+        'home_conference_id','away_conference_id','groups_id','groups_name','groups_is_conference','date','home_color','away_color','home_display_name','away_display_name','home_score','away_score','status_type_completed'])
     neutral = {str(g['game_id']) for g in fixtures if g['neutral_site']}
     columns = ['game_id','game_date','athlete_id','athlete_display_name','team_id','team_display_name',
-               'opponent_team_id','opponent_team_abbreviation','home_away','minutes','did_not_play',*STATS.values()]
+               'opponent_team_id','opponent_team_abbreviation','home_away','minutes','field_goals_attempted','did_not_play',*STATS.values()]
     rows = read_source('player_box','player_box',season,columns)
     rosters = defaultdict(dict)
     teams, allowed, seen = {}, defaultdict(dict), set()
@@ -66,7 +66,7 @@ def build(season):
         p = rosters[team].setdefault(player, {'id':player,'name':row['athlete_display_name'],'games':[]})
         p['games'].append({'id':game,'date':str(row['game_date'])[:10], 'opponent':opp,
                            'abbr':row['opponent_team_abbreviation'] or opp,'venue':venue,
-                           'minutes':row['minutes'],'stats':stats})
+                           'minutes':row['minutes'],'shots':row['field_goals_attempted'],'stats':stats})
     if not teams:
         raise ValueError(f'No usable player games for {season}')
     ranks = {}
@@ -84,12 +84,29 @@ def build(season):
             p['games'].sort(key=lambda g:(g['date'],g['id']))
             recent = p['games'][-10:]
             board.append({'id':p['id'],'name':p['name'],'team':team,
+                          'minutes':round(sum(g['minutes'] for g in recent)/len(recent),1),
                           'recent':{key:[g['stats'][key] for g in recent] for key in STATS}})
         write(OUT/str(season)/(team+'.json'), sorted(players.values(),key=lambda p:p['name'] or ''))
     write(OUT/str(season)/'board.json', board)
+    schedule = []
+    colors = {}
+    for g in fixtures:
+        if not g['date'] or not g['home_id'] or not g['away_id']:
+            continue
+        game = {'id':str(g['game_id']), 'kickoff':str(g['date']), 'final':bool(g['status_type_completed']),
+                'neutral':bool(g['neutral_site'])}
+        for side in ('home','away'):
+            tid = str(g[side+'_id'])
+            game[side] = tid
+            game[side+'Name'] = g[side+'_display_name'] or teams.get(tid, tid)
+            game[side+'Score'] = g[side+'_score'] if game['final'] else None
+            if g[side+'_color']:
+                colors[tid] = g[side+'_color']
+        schedule.append(game)
+    write(OUT/str(season)/'schedule.json', sorted(schedule,key=lambda g:g['kickoff']))
     affiliations = conference_membership(fixtures)
     conferences = {tid:affiliations.get(tid, 'Unclassified') for tid in teams}
-    write(OUT/str(season)/'teams.json', {'teams':teams,'ranks':ranks,'conferences':conferences})
+    write(OUT/str(season)/'teams.json', {'teams':teams,'colors':colors,'ranks':ranks,'conferences':conferences})
     return max(g['date'] for roster in rosters.values() for p in roster.values() for g in p['games'])
 
 

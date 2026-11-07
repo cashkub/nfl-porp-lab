@@ -1,11 +1,11 @@
 import React from 'react';
-import {ArrowUpRight, ChevronRight, SlidersHorizontal, ListFilter, Trophy} from 'lucide-react';
+import {ArrowUpRight, ChevronRight, SlidersHorizontal, ListFilter, Trophy, Star, CalendarDays} from 'lucide-react';
 
 export const toolsBySport = {
-  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Best Hit Rates','best-hit-rates']],
-  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Best Hit Rates','cbb-best']]
+  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Best Hit Rates','best-hit-rates'],['Top 5','top-five'],['Moneylines','moneylines']],
+  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Best Hit Rates','cbb-best'],['Top 5','cbb-top'],['Games','cbb-games']]
 };
-const icons=[SlidersHorizontal,ListFilter,Trophy];
+const icons=[SlidersHorizontal,ListFilter,Trophy,Star,CalendarDays];
 
 export default function SportHome({sport}) {
   if(sport) return <section className={'sport-launch '+sport}>
@@ -13,7 +13,7 @@ export default function SportHome({sport}) {
     <div className={'sport-banner sport-card '+sport}><div><small>{sport==='nfl'?'Pro Football':'Men’s College Basketball'}</small><h1>{sport.toUpperCase()}</h1></div></div>
     <div className="tool-cards">{toolsBySport[sport].map(([label,path],i)=>{
       const Icon=icons[i];
-      const details=['Explore a Player’s Game Log',sport==='nfl'?'Browse DraftKings Lines':'Compare Players at Your Line','Rank Historical Over and Under Results'];
+      const details=['Explore a Player’s Game Log',sport==='nfl'?'Browse DraftKings Lines':'Compare Players at Your Line','Rank Historical Over and Under Results','See the Numbers Behind Each Pick',sport==='nfl'?'Compare Projected Scores and Market Lines':'Browse Matchups by Date'];
       return <a key={path} href={'#'+path}><Icon size={23}/><h2>{label}</h2><p>{details[i]}</p><ChevronRight size={17}/></a>;
     })}</div>
   </section>;

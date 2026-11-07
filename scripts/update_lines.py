@@ -10,7 +10,7 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / 'public/data/lines.json'
 API = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events'
-MARKETS = {'player_pass_yds': 'passingYards', 'player_rush_yds': 'rushingYards',
+MARKETS = {'player_rush_attempts': 'rushingAttempts', 'player_pass_yds': 'passingYards', 'player_rush_yds': 'rushingYards',
            'player_reception_yds': 'receivingYards', 'player_receptions': 'receptions'}
 TEAMS = dict(zip(
     'Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Chargers Rams Raiders Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Seahawks 49ers Buccaneers Titans Commanders'.split(),

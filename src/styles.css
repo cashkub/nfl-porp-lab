@@ -443,3 +443,11 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
  .sport-cards a:hover,.tool-cards a:hover {transform:none}
  .sport-cards a,.tool-cards a {transition:none}
 }
+
+.research-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin:20px 0}
+.research-card,.usage-trend {min-width:0;background:var(--ice);color:var(--ink);border:1px solid var(--rule);border-radius:12px;padding:18px}
+.research-card {background-image:linear-gradient(90deg,var(--away-color) 0 49%,var(--home-color) 51% 100%);background-repeat:no-repeat;background-size:100% 5px}
+.research-card h3 {font-size:1.18rem;margin:10px 0}.research-card small,.usage-trend small {color:var(--muted)}
+.research-card p,.usage-trend p {line-height:1.5}.research-card details {border-top:1px solid var(--rule);margin-top:10px;padding-top:10px}.research-card summary {cursor:pointer;font-weight:650}
+.usage-trend {margin:16px 0}.usage-bars {display:flex;align-items:end;gap:4px}.usage-bars div {flex:1;text-align:center;min-width:0}.usage-bars i {display:block;margin:4px auto;width:65%;max-width:40px;border-radius:3px;background:var(--blue)}.usage-bars small {display:block;overflow-wrap:anywhere;font-size:10px}
+.view-tabs {max-width:100%;min-width:0;flex-wrap:wrap}.research-card a {color:var(--blue)}.board-controls input[type=date] {min-width:0;font-size:16px}

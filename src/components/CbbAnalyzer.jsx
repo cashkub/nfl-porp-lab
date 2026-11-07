@@ -1,3 +1,4 @@
+import {UsageTrends} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
 import React, {useEffect, useState} from 'react';
 import HitRate, {rateStyle} from './HitRate.jsx';
@@ -74,6 +75,7 @@ export default function CbbAnalyzer({initial = {}}) {
           <td>{g.minutes}</td><td style={rankCount>1 && rank ? rateStyle((rankCount-rank)/(rankCount-1)):undefined}>{rank ? '#'+rank : '—'}</td>
           <td><span className={'result-pill '+outcome.toLowerCase()}>{outcome}</span></td></tr>;
       })}</tbody></table></div>:<p>No Recorded Games Match These Filters.</p>}
+      <UsageTrends games={games} label="Minutes" value={g=>g.minutes}/><UsageTrends games={games} label="Shot Attempts" value={g=>g.shots}/>
       <p className="board-foot">Bar markers show your line. Defense #1 allows the most of the selected stat per game to all opposing players combined. Rankings use the selected season’s available box scores.</p></>}
     <p className="board-foot">Box Scores and Schedules · <a href="https://github.com/sportsdataverse/hoopR-mbb-data">SportsDataverse / hoopR</a></p>
   </section>;

@@ -10,6 +10,7 @@ import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { bookLine, priceText, usageFor } from './lib/bookLine.js';
+import {CbbGames,Moneylines,UsageTrends,MatchCard} from './components/Research.jsx';
 import SportHome,{toolsBySport} from './components/SportHome.jsx';
 import CbbBoard from './components/CbbBoard.jsx';
 import CbbAnalyzer from './components/CbbAnalyzer.jsx';
@@ -126,7 +127,7 @@ function GameLog({ multi, games, metric, line, direction }) {
 function activePage() {
   return ({'#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
     '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'best',
-    '#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[window.location.hash] || 'home';
+    '#top-five':'nfl-top','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[window.location.hash] || 'home';
 }
 
 export default function App() {
@@ -278,8 +279,10 @@ export default function App() {
     <main className="shell" id="analyzer">
       {launch ? <SportHome sport={page==='home'?null:(cbb?'cbb':'nfl')}/> :
        page==='cbb' ? <CbbAnalyzer initial={initialCbb}/> :
-       cbb ? <CbbBoard key={page} ranked={page==='cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
-       page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+       page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
+       page==='cbb-games' ? <CbbGames/> :
+       cbb ? <CbbBoard top={page==='cbb-top'} key={page} ranked={page==='cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
+       page!=='analyzer' ? <PropsBoard key={page} top={page==='nfl-top'} ranked={page==='best'||page==='nfl-top'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
@@ -343,6 +346,8 @@ export default function App() {
         <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s rank for {seasonLabel.toLowerCase()} using all games in that period. #1 allows the most {METRICS[metric].label.toLowerCase()} Per Game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
+      {upcoming && <MatchCard game={upcoming}/>}
+      <UsageTrends games={displayed} label={usageFor(metric).label} value={g=>g.usage?.[usageFor(metric).key]}/>
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player Trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game Log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide Table' : 'Show Table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
       </div></div></>}{nflTool && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>

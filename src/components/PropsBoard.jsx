@@ -1,3 +1,4 @@
+import {MatchCard} from './Research.jsx';
 import HitRate, {defenseRankStyle} from './HitRate.jsx';
 import React, {useMemo, useState} from 'react';
 import {playerKey, priceText} from '../lib/bookLine.js';
@@ -8,7 +9,7 @@ const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
 const day = date => new Date(date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const gameTime = date => new Date(date).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
 
-export default function PropsBoard({ranked=false,games,players,season,now,onOpen}) {
+export default function PropsBoard({ranked=false,top=false,games,players,season,now,onOpen}) {
   const [match,setMatch] = useState('');
   const [team,setTeam] = useState('');
   const [stat,setStat] = useState('');
@@ -75,6 +76,21 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
   }
   const title = ranked ? 'Best Hit Rates' : 'Props Board';
   function filter(setter,event) {setter(event.target.value);setLimit(30);}
+  if(top){
+    const score=r=>{
+      const price=r.line[r.pick];
+      const implied=price<0?-price/(100-price):100/(100+price);
+      return (r.summary.hits+2)/(r.summary.total+4)-implied;
+    };
+    const seen=new Set();
+    const picks=filtered.filter(r=>Number.isFinite(r.line[r.pick]) && Math.abs(r.line[r.pick])>=100 && score(r)>0)
+      .sort((a,b)=>score(b)-score(a)).filter(r=>{
+        if(seen.has(r.entry.p.id))return false;
+        seen.add(r.entry.p.id);return true;
+      }).slice(0,5);
+    return <section className="panel props-board"><h1>NFL Top 5</h1><p>DraftKings · Ranked by last-10 hit rate, adjusted toward 50%, minus the price’s break-even rate. Minimum five games.</p>
+      <div className="research-grid">{picks.map(({entry,g,line,pick,summary,rank})=><MatchCard key={entry.p.id} game={g}><button className="board-player" onClick={()=>onOpen(entry.p,line,pick,g)}>{line.player}</button><p><b>{pick==='over'?'Over':'Under'} {line.point} {METRICS[line.metric].label} · {priceText(line[pick])}</b></p><p>This side hit in {summary.hits} of {summary.total} games (<HitRate rate={summary.rate}/>). {line.player} averaged {summary.average.toFixed(1)}. {rank?'The opponent ranks #'+rank+' in this stat allowed to '+entry.p.position+'s (#1 allows the most).':''}</p></MatchCard>)}</div>{!picks.length && <p>No Upcoming Priced Props Meet the Screen.</p>}</section>;
+  }
   return <section className="panel props-board" aria-label={title}>
     <header><h1>{title}</h1><p>DraftKings Pregame Snapshots · {filtered.length} {ranked ? 'ranked sides' : 'props'}</p></header>
     <div className="board-controls">
