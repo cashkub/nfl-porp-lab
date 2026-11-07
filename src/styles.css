@@ -343,3 +343,17 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .board-sort .outline-button {margin:0}
 .props-board th button {border:none;background:none;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;padding:4px 0}
 @media(max-width:620px) {.board-sort select {font-size:16px}}
+
+/* Shared outcome palette. The header and venue card always use dark surfaces. */
+:root {--rate-low:#ae273b;--rate-mid:#805708;--rate-high:#08703e}
+[data-theme=dark], .match-header, .venue-splits {--rate-low:#ffa0ac;--rate-mid:#f4ca75;--rate-high:#79e8ae}
+.app .rate-track i,.venue-splits .venue-row .venue-track i {background:currentColor}
+.app .chart-bar-hit,.app .legend-hit {background:#168654}
+.app .chart-bar-miss,.app .legend-miss {background:repeating-linear-gradient(135deg,#c14856 0 4px,#a83746 4px 7px)}
+[data-theme=dark] .chart-bar-hit,[data-theme=dark] .legend-hit {background:#42bc83}
+[data-theme=dark] .chart-bar-miss,[data-theme=dark] .legend-miss {background:repeating-linear-gradient(135deg,#dd7886 0 4px,#bc5365 4px 7px)}
+.app .result-pill.hit {background:#d9f5e5;color:#075532}
+.app .result-pill.miss {background:#fde4e5;color:#942636}
+.app .form-hit,[data-theme=dark] .app .result-pill.hit {background:#173e34;color:#a4f1c5;border-color:#3b946c}
+.app .form-miss,[data-theme=dark] .app .result-pill.miss {background:#4c2532;color:#ffc0c5;border-color:#b26a78}
+.app .hit-percent {font:inherit;letter-spacing:inherit;margin:0;color:inherit}

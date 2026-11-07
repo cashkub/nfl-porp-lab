@@ -1,6 +1,7 @@
+import HitRate from './HitRate.jsx';
 import React, {useState} from 'react';
 import { ChevronDown } from 'lucide-react';
-import { METRICS, formatNumber, formatRate, getPlayerGames, summarize } from '../lib/stats.js';
+import { METRICS, formatNumber, getPlayerGames, summarize } from '../lib/stats.js';
 
 export default function Matchup({upcomingOpponent, rows, player, season, metric, line, direction}) {
   const [selection, setSelection] = useState(null);
@@ -23,7 +24,7 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
         <div><small>Defense rank</small><strong>#{row.rank} <em>of {rows.length}</em></strong><span>#1 allows the most</span></div>
         <div><small>League average</small><strong>{formatNumber(league)} <em>{unit}</em></strong><span>Per defense-game</span></div>
       </div>
-      <p className="history"><b>{player?.name} vs {row.team}</b> · {history.total ? `${formatRate(history.rate)} hit (${history.hits}/${history.total}) at ${direction} ${line} ${period}.` : `No recorded meetings ${period}.`}</p>
+      <p className="history"><b>{player?.name} vs {row.team}</b> · {history.total ? <><strong><HitRate rate={history.rate}/></strong> hit ({history.hits}/{history.total}) at {direction} {line} {period}.</> : `No recorded meetings ${period}.`}</p>
     </> : <p className="history">Choose a defense to compare its season average, league rank, and the player’s head-to-head results.</p>}
     </section>;
 }

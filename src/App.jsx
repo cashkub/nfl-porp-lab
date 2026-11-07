@@ -1,3 +1,4 @@
+import HitRate, {rateStyle} from './components/HitRate.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, ArrowUpRight, BarChart3, Check, ChevronDown,
@@ -15,7 +16,7 @@ import Matchup from './components/Matchup.jsx';
 import PropChart from './components/PropChart.jsx';
 import { demoData } from './lib/demoData.js';
 import {
-  METRICS, preferredMetric, isHit, summarize, formatRate, formatNumber,
+  METRICS, preferredMetric, isHit, summarize, formatNumber,
   getPlayerGames, getDistinctOpponents, filteredWindow
 } from './lib/stats.js';
 
@@ -81,9 +82,9 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
 function StatCard({ label, summary, emphasized = false, selected, onClick }) {
   return <button type="button" onClick={onClick} aria-pressed={selected} className={`stat-card ${selected ? 'stat-card-selected' : ''} ${emphasized ? 'stat-card-featured' : ''}`}>
     <div className="stat-card-heading"><span>{label}</span>{selected && <Check size={16} className="selected-check" />}</div>
-    <div className="stat-card-number">{formatRate(summary.rate)}</div>
+    <div className="stat-card-number"><HitRate rate={summary.rate}/></div>
     <div className="stat-card-footer"><span>{summary.hits} of {summary.total} games</span></div>
-    <div className="rate-track" aria-hidden="true"><i style={{width: `${(summary.rate || 0) * 100}%`}} /></div>
+    <div className="rate-track" aria-hidden="true"><i style={{...rateStyle(summary.rate), width: `${(summary.rate || 0) * 100}%`}} /></div>
   </button>;
 }
 
@@ -95,7 +96,7 @@ function Insights({ games, metric, line, direction }) {
   return <div className="insight-grid">
     <div className="small-card"><span>Average</span><strong>{formatNumber(summaries.average)}</strong><small>per game</small></div>
     <div className="small-card"><span>Median</span><strong>{formatNumber(summaries.median)}</strong><small>per game</small></div>
-    <div className="small-card"><span>Last 3 hit rate</span><strong>{formatRate(lastThree.rate)}</strong><small>{lastThree.hits}/{lastThree.total} games</small></div>
+    <div className="small-card"><span>Last 3 hit rate</span><strong><HitRate rate={lastThree.rate}/></strong><small>{lastThree.hits}/{lastThree.total} games</small></div>
     <div className="small-card"><span>Recent trend</span><strong className={changes == null ? '' : changes>=0 ? 'positive' : 'negative'}>{changes == null ? '—' : `${changes >= 0 ? '+' : ''}${changes.toFixed(1)}`}</strong><small>last 3 vs prior 3</small></div>
   </div>;
 }
@@ -286,7 +287,7 @@ export default function App() {
         </div>
         <div className="match-form">
           <span>{windowSize === 'season' ? (multi ? 'All seasons hit rate' : 'Season hit rate') : `Last ${windowSize} hit rate`}</span>
-          <strong>{formatRate(current.rate)}</strong>
+          <strong><HitRate rate={current.rate}/></strong>
           <small>{current.hits} of {current.total} matching games</small>
         </div>
       </section>
