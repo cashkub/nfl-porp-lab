@@ -1,7 +1,7 @@
 """Build compact men's basketball research data from public hoopR box scores."""
 import json
 import os
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date
 from io import BytesIO
 from pathlib import Path
@@ -24,8 +24,24 @@ def write(path, value):
     path.write_text(json.dumps(value, separators=(',', ':'), ensure_ascii=False) + '\n')
 
 
+def conference_membership(fixtures):
+    # Match each school's own conference ID, including on nonconference games.
+    names = {}
+    ids = defaultdict(Counter)
+    for g in fixtures:
+        if g['groups_is_conference'] and g['groups_id'] and g['groups_name']:
+            names[str(g['groups_id'])] = g['groups_name']
+        for side in ('home', 'away'):
+            team, conf = g[f'{side}_id'], g[f'{side}_conference_id']
+            if team and conf:
+                ids[str(team)][str(conf)] += 1
+    return {team:names[conf] for team, counts in ids.items()
+            for conf, _ in counts.most_common(1) if conf in names}
+
+
 def build(season):
-    fixtures = read_source('schedules','mbb_schedule',season,['game_id','neutral_site'])
+    fixtures = read_source('schedules','mbb_schedule',season,['game_id','neutral_site','home_id','away_id',
+        'home_conference_id','away_conference_id','groups_id','groups_name','groups_is_conference'])
     neutral = {str(g['game_id']) for g in fixtures if g['neutral_site']}
     columns = ['game_id','game_date','athlete_id','athlete_display_name','team_id','team_display_name',
                'opponent_team_id','opponent_team_abbreviation','home_away','minutes','did_not_play',*STATS.values()]
@@ -71,7 +87,9 @@ def build(season):
                           'recent':{key:[g['stats'][key] for g in recent] for key in STATS}})
         write(OUT/str(season)/(team+'.json'), sorted(players.values(),key=lambda p:p['name'] or ''))
     write(OUT/str(season)/'board.json', board)
-    write(OUT/str(season)/'teams.json', {'teams':teams,'ranks':ranks})
+    affiliations = conference_membership(fixtures)
+    conferences = {tid:affiliations.get(tid, 'Unclassified') for tid in teams}
+    write(OUT/str(season)/'teams.json', {'teams':teams,'ranks':ranks,'conferences':conferences})
     return max(g['date'] for roster in rosters.values() for p in roster.values() for g in p['games'])
 
 
