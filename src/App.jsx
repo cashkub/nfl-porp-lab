@@ -5,6 +5,7 @@ import {
   
 } from 'lucide-react';
 import LineSelect from './components/LineSelect.jsx';
+import Matchup from './components/Matchup.jsx';
 import PropChart from './components/PropChart.jsx';
 import { demoData } from './lib/demoData.js';
 import {
@@ -104,7 +105,7 @@ function GameLog({ games, metric, line, direction }) {
           <td><strong>{game.opponent || '—'}</strong></td>
           <td>{game.venue === 'H' ? <span className="venue-pill">HOME</span> : game.venue === 'A' ? <span className="venue-pill away">AWAY</span> : '—'}</td>
           <td className="table-num">{val}</td>
-          <td><span className={`result-pill ${hit?'hit':'miss'}`}>{hit ? 'HIT' : 'MISS'}</span></td>
+          <td><span className={`result-pill ${val === line ? 'push' : hit?'hit':'miss'}`}>{val === line ? 'PUSH' : hit ? 'HIT' : 'MISS'}</span></td>
         </tr>;
       })}</tbody>
     </table>
@@ -125,6 +126,7 @@ export default function App() {
   const [venue, setVenue] = useState('ALL');
   const [opponent, setOpponent] = useState('ALL');
   const [windowSize, setWindowSize] = useState('10');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showLog, setShowLog] = useState(true);
 
   useEffect(() => {
@@ -201,6 +203,16 @@ export default function App() {
           <h1>{player?.name || 'Player props'}</h1>
           <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
         </div>
+        <div className="recent-form">
+          <span>{allGames.length ? 'Recent games · oldest first' : 'No matching games'}</span>
+          <div className="form-tiles">{allGames.slice(-5).map(game => {
+            const value = game.stats[metric];
+            const result = value === line ? 'Push' : isHit(value, line, direction) ? 'Hit' : 'Miss';
+            return <div key={game.gameId} className={`form-tile form-${result.toLowerCase()}`} title={`Week ${game.week} vs ${game.opponent} · ${result}`}>
+              <small>W{game.week}</small><b>{value}</b><em>{result}</em>
+            </div>;
+          })}</div>
+        </div>
         <div className="match-form">
           <span>{windowSize === 'season' ? 'Season hit rate' : `Last ${windowSize} hit rate`}</span>
           <strong>{formatRate(current.rate)}</strong>
@@ -208,7 +220,10 @@ export default function App() {
         </div>
       </section>
       {isDemo && <div className="demo-warning" role="status"><Info size={20} /><div><strong>Demo mode — not real NFL statistics.</strong><span>{error || 'This first-run preview uses fictional players and sample game logs.'} Run the <b>Update NFL Data</b> GitHub workflow after publishing to load actual player data.</span></div></div>}
-      <div className="workspace"><aside className="panel setup" aria-label="Prop settings"><section className="controls-panel" aria-labelledby="controls-title">
+      <div className="workspace"><aside className="panel setup" aria-label="Prop settings"><button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
+        <span>{settingsOpen ? 'Close prop settings' : 'Edit player & line'}</span>
+        <span className="phone-line">{direction} {line} <ChevronDown size={16}/></span>
+      </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
         <div className="section-topline"><div><h2 id="controls-title">Prop settings</h2></div><div className="controls-side"><span className="label-small">SEASON</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season">{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
         <div className="controls-grid">
           <div className="field"><label htmlFor="team">TEAM</label><div className="select-wrap large-select">
@@ -225,14 +240,15 @@ export default function App() {
         <div className="line-left"><h2 id="line-title">Prop line</h2></div>
         <div className="line-controls"><div className="segmented direction-switch"><button className={direction==='over'?'active':''} onClick={()=>setDirection('over')} type="button"><ArrowUpRight size={16}/> Over</button><button className={direction==='under'?'active':''} onClick={()=>setDirection('under')} type="button"><ArrowDown size={16}/> Under</button></div><LineSelect key={metric} metric={metric} value={line} onChange={setLine} /></div>
       </section>
-      </aside><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
+      </div></aside><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'all opponents':`vs ${opponent}`} · {venue==='ALL'?'all venues':venue==='H'?'home only':'away only'}</p></div></div>
         <div className="stat-grid"><StatCard label="LAST 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="LAST 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label="FULL SEASON" summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
-        <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?'Full regular season':`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span></div></div></div>
+        <div className="chart-top"><div><h2 id="chart-title">Game-by-game performance</h2><p>{windowSize==='season'?'Full regular season':`Last ${windowSize} matching games`} · {METRICS[metric].label}</p></div><div className="chart-top-right"><div className="legend"><span><i className="legend-hit"/> Hit</span><span><i className="legend-miss"/> Miss</span>{displayed.some(g=>g.stats[metric] === line) && <span><i className="legend-push"/> Push</span>}</div></div></div>
         <PropChart games={displayed} metric={metric} line={line} direction={direction} />
         <div className="chart-note"><Info size={15}/><span>Tap or hover a bar for game details. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
+      <Matchup players={players} player={player} season={season} metric={metric} line={line} direction={direction} />
       <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide table' : 'Show table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog games={allGames} metric={metric} line={line} direction={direction} />}</section>
       </div></div><footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>

@@ -1,8 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isHit, METRICS } from '../lib/stats.js';
 
 export default function PropChart({ games, metric, line, direction }) {
   const [active, setActive] = useState(null);
+  const scroll = useRef(null);
+  useEffect(() => {
+    const area = scroll.current;
+    if (area && window.matchMedia('(max-width: 620px)').matches) area.scrollLeft = area.scrollWidth;
+  }, [games]);
   const max = useMemo(() => {
     const highest = Math.max(...games.map(g => Number(g.stats[metric] || 0)), Number(line), 1);
     return Math.max(5, Math.ceil(highest * 1.22 / 10) * 10);
@@ -13,8 +18,8 @@ export default function PropChart({ games, metric, line, direction }) {
     return <div className="empty-chart">No games match the current filters. Try another opponent or venue.</div>;
   }
   return (
-    <div className="chart-scroll" aria-label="Game-by-game statistics, scroll horizontally on smaller screens">
-      <div className="chart-inner" style={{ minWidth: Math.max(560, games.length * 53) }}>
+    <div ref={scroll} className="chart-scroll" aria-label="Game-by-game statistics, scroll horizontally on smaller screens">
+      <div className="chart-inner" style={{ "--game-count": games.length }}>
         <div className="chart-main">
           <div className="chart-axis" aria-hidden="true">
             {ticks.map(f => <span key={f} style={{ bottom: `${f*100}%` }}>{Math.round(f*max)}</span>)}
@@ -28,15 +33,16 @@ export default function PropChart({ games, metric, line, direction }) {
               {games.map((game, idx) => {
                 const value = Number(game.stats[metric] ?? 0);
                 const hit = isHit(value, line, direction);
+                const outcome = value === line ? 'push' : hit ? 'hit' : 'miss';
                 const id = `${game.season}-${game.week}-${game.gameId}-${idx}`;
                 return (
                   <div className="chart-column" key={id}>
                     <button
                       type="button"
-                      className={`chart-bar ${hit ? 'chart-bar-hit' : 'chart-bar-miss'} ${active === id ? 'chart-bar-active' : ''}`}
+                      className={`chart-bar chart-bar-${outcome} ${active === id ? 'chart-bar-active' : ''}`}
                       style={{ height: `${Math.max(1.5, value/max*100)}%` }}
-                      aria-label={`Week ${game.week} ${game.venue==='H'?'home vs':'away at'} ${game.opponent}: ${value} ${METRICS[metric].label}; ${hit?'hit':'miss'}`}
-                      title={`Week ${game.week} ${game.venue==='H'?'vs':'at'} ${game.opponent} • ${value} ${METRICS[metric].unit} • ${hit?'HIT':'MISS'}`}
+                      aria-label={`Week ${game.week} ${game.venue==='H'?'home vs':'away at'} ${game.opponent}: ${value} ${METRICS[metric].label}; ${outcome}`}
+                      title={`Week ${game.week} ${game.venue==='H'?'vs':'at'} ${game.opponent} • ${value} ${METRICS[metric].unit} • ${outcome.toUpperCase()}`}
                       onClick={() => setActive(old => old === id ? null : id)}
                     >
                       <span className="chart-bar-value">{value}</span>

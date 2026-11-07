@@ -147,3 +147,76 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
   .insight-grid {grid-template-columns:1fr 1fr}.chart-top {align-items:flex-start}.legend {gap:5px}
   .footer-top {align-items:flex-start;flex-wrap:wrap}.footer-status {margin-left:0}
 }
+
+/* Recent outcomes and opponent comparison */
+.recent-form {margin-left:auto}
+.recent-form>span {display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#c4ddff;margin-bottom:7px}
+.form-tiles {display:flex;gap:5px}
+.form-tile {display:grid;text-align:center;min-width:44px;padding:6px 5px;border:1px solid #7892b4;border-radius:6px;background:#203956;color:white}
+.form-tile small,.form-tile em {font-size:9px;font-style:normal}
+.form-tile b {font-size:20px;font-variant-numeric:tabular-nums}
+.form-hit {background:#c2ecff;border-color:#b6e8ff;color:#13365b}
+.form-push,.result-pill.push {background:#fff0cc;color:#684b15}
+.chart-bar-push,.legend-push {background:#d7a137}
+.matchup {overflow:hidden}
+.matchup-head {padding:20px 22px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(105deg,#edf4ff,#fff)}
+.matchup-head p,.history,.scout-grid span {font-size:12px;color:var(--muted);line-height:1.55}
+.matchup-head .select-wrap {flex-shrink:0;background:#fff}
+.scout-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:18px 20px}
+.scout-grid>div {display:grid;gap:4px;padding-left:16px;border-left:1px solid var(--rule)}
+.scout-grid>div:first-child {padding-left:0;border:0}
+.scout-grid small {font-size:11px;font-weight:700;color:var(--muted)}
+.scout-grid strong {font-size:clamp(22px,3vw,34px);color:var(--ink);letter-spacing:-.05em}
+.scout-grid em {font-size:12px;letter-spacing:0;font-style:normal;color:var(--muted)}
+.history {padding:12px 22px;border-top:1px solid var(--rule)}
+@media(max-width:800px) {
+ .match-header {flex-wrap:wrap}
+ .recent-form {order:3;width:100%;margin:0}
+ .form-tile {min-width:0;flex:1}
+ .match-player {flex:1;min-width:0;overflow-wrap:anywhere}
+}
+@media(max-width:620px) {
+ .matchup-head {flex-wrap:wrap;padding:15px}
+ .scout-grid {padding:14px 10px}
+ .scout-grid>div {padding-left:8px}
+ .history {padding:12px}
+ .legend {flex-wrap:wrap;justify-content:flex-end}
+}
+
+.phone-settings {display:none}
+.chart-inner {min-width:max(560px,calc(var(--game-count) * 53px))}
+@media(max-width:620px) {
+  .shell {padding-inline:12px}
+  .match-header {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px}
+  .match-context {line-height:1.5}
+  .match-player h1 {font-size:clamp(27px,8vw,36px);margin:5px 0}
+  .match-form {max-width:96px}
+  .recent-form {grid-column:1/-1}
+  .form-tiles {gap:4px}
+  .form-tile {grid-template-columns:1fr auto;align-items:center;gap:1px 3px;padding:4px 6px}
+  .form-tile b {font-size:16px;grid-column:2;grid-row:1/3}
+  .form-tile small,.form-tile em {font-size:9px;text-align:left}
+  .setup {padding:0;border-top:1px solid var(--rule)}
+  .phone-settings {display:flex;align-items:center;justify-content:space-between;width:100%;min-height:47px;padding:10px 14px;border:0;background:white;border-radius:12px;font-weight:700;text-align:left}
+  .phone-line {display:flex;align-items:center;gap:8px;text-transform:capitalize;color:var(--blue);font-size:13px}
+  .phone-settings[aria-expanded=true] svg {transform:rotate(180deg)}
+  .settings-fields {display:none}
+  .settings-fields.expanded {display:block;padding:12px;border-top:1px solid var(--rule)}
+  .field-player {grid-column:1/-1;grid-row:1}
+  .field:last-child {grid-column:auto}
+  .settings-fields input,.settings-fields select,.matchup-head select {font-size:16px}
+  .line-options button,.line-pages button,.segmented button {min-height:40px}
+  .chart-top {flex-wrap:wrap}.chart-top p {margin-top:4px}
+  .chart-inner {min-width:calc(var(--game-count) * 39px + 33px)}
+  .chart-main {height:228px;gap:4px}
+  .chart-plot,.chart-axis {height:179px}
+  .chart-columns {gap:3px;padding:0 2px}
+  .chart-axis {width:23px}
+  .chart-game-label {font-size:9px}
+  .matchup-head .select-wrap {width:100%}
+  .game-log th,.game-log td {padding:9px 7px}
+}
+@media(max-width:375px) {
+  .form-tile {display:flex;flex-direction:column}
+  .stat-card-heading {letter-spacing:0}
+}
