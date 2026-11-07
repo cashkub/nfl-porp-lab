@@ -24,7 +24,9 @@ export default function LineSelect({ metric, value, onChange }) {
 
   useEffect(() => {
     if (!open) return;
-    input.current?.focus({ preventScroll: true });
+    if (!window.matchMedia('(pointer: coarse)').matches) {
+      input.current?.focus({ preventScroll: true });
+    }
     const outside = event => {
       if (!wrapper.current?.contains(event.target)) setOpen(false);
     };

@@ -204,7 +204,6 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
   .settings-fields.expanded {display:block;padding:12px;border-top:1px solid var(--rule)}
   .field-player {grid-column:1/-1;grid-row:1}
   .field:last-child {grid-column:auto}
-  .settings-fields input,.settings-fields select,.matchup-head select {font-size:16px}
   .line-options button,.line-pages button,.segmented button {min-height:40px}
   .chart-top {flex-wrap:wrap}.chart-top p {margin-top:4px}
   .chart-inner {min-width:calc(var(--game-count) * 39px + 33px)}
@@ -219,4 +218,9 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
 @media(max-width:375px) {
   .form-tile {display:flex;flex-direction:column}
   .stat-card-heading {letter-spacing:0}
+}
+
+/* Keep editable controls at a comfortable focus size across touch orientations. */
+@media (any-pointer: coarse), (max-width: 620px) {
+  .app input, .app select { font-size: max(16px, 1rem); }
 }
