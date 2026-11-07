@@ -83,7 +83,7 @@ h2 {font-size:21px;letter-spacing:-.04em}
 .line-options button {display:flex;justify-content:center;align-items:center;gap:2px;font-size:12px}
 .line-options button[aria-pressed=true] {background:var(--blue);color:white}
 .line-menu p {font-size:12px;margin-top:6px}
-.results {min-width:0;display:grid;gap:17px}
+.results {min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:17px}
 .hit-section .section-header {margin-bottom:10px}
 .section-header p,.chart-top p,.log-heading p {color:var(--muted);font-size:12px;margin-top:3px}
 .stat-grid,.insight-grid {display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -128,7 +128,7 @@ h2 {font-size:21px;letter-spacing:-.04em}
 footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;font-size:11px;color:var(--muted);line-height:1.65}
 .footer-top {margin-bottom:10px}.footer-logo strong {font-size:20px;color:var(--ink)}.footer-logo img {width:28px;height:28px}
 @media(max-width:880px) {
-  .workspace {grid-template-columns:1fr}
+  .workspace {grid-template-columns:minmax(0,1fr)}
   .controls-grid {grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0}
   .field-player {grid-column:span 2}
   .line-panel {display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -272,3 +272,9 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
   .chart-main {height:249px}
   .chart-inner {min-width:calc(var(--game-count) * 48px + 33px)}
 }
+
+/* Keep long histories inside their own scroll areas. */
+.chart-panel {min-width:0}
+.chart-scroll {max-width:100%;overscroll-behavior-x:contain}
+.log-panel[data-multi-season="true"] .game-log-wrap {max-height:28rem;max-height:min(28rem,65svh)}
+.log-panel[data-multi-season="true"] th {position:sticky;top:0;z-index:1}
