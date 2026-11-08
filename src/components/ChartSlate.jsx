@@ -1,3 +1,4 @@
+import ChartSelect from './ChartSelect.jsx';
 import React,{useState} from 'react';
 
 export function useChartSlate(schedule,now) {
@@ -19,8 +20,8 @@ export function useChartSlate(schedule,now) {
 
 export function ChartSlate({slate}) {
   return <div className="chart-slate">
-    <label>Game week<select value={slate.week} onChange={e=>slate.changeWeek(e.target.value)}>{slate.weeks.map(w=><option key={w} value={w}>Week {w}</option>)}</select></label>
-    <label>Matchup<select value={slate.game?.id || ''} onChange={e=>slate.changeMatch(e.target.value)}><option value="">All matchups</option>{slate.games.map(g=><option key={g.id} value={g.id}>{g.away} at {g.home}</option>)}</select></label>
-    <label>Team<select value={slate.team} onChange={e=>slate.changeTeam(e.target.value)}><option value="">All teams</option>{slate.teams.map(t=><option key={t}>{t}</option>)}</select></label>
+    <ChartSelect label="Game week" value={slate.week} onChange={slate.changeWeek}>{slate.weeks.map(w=><option key={w} value={w}>Week {w}</option>)}</ChartSelect>
+    <ChartSelect label="Matchup" value={slate.game?.id || ''} onChange={slate.changeMatch}><option value="">All matchups</option>{slate.games.map(g=><option key={g.id} value={g.id}>{g.away} at {g.home}</option>)}</ChartSelect>
+    <ChartSelect label="Team" value={slate.team} onChange={slate.changeTeam}><option value="">All teams</option>{slate.teams.map(t=><option key={t}>{t}</option>)}</ChartSelect>
   </div>;
 }

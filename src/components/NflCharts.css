@@ -27,7 +27,7 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .chart-lab [data-result=Hit]{--outcome:#66e8b2}.chart-lab [data-result=Miss]{--outcome:#ff819a}.chart-lab [data-result=Push]{--outcome:#ffcc7e}
 .margin-bars [data-result=Miss] i{bottom:auto;top:50%;border-radius:0 0 3px 3px}
 .margin-bars [aria-pressed=true] .bar-space{background-color:#ffffff0f}.margin-detail b{color:var(--outcome)}
-@media(max-width:620px){.lab-controls{grid-template-columns:repeat(6,minmax(0,1fr))}.lab-controls label{grid-column:span 2}.lab-controls label:nth-child(-n+2){grid-column:span 3}.lab-player .player-photo{float:none;margin:0 0 .45rem;display:flex}.lab-rate{max-width:7rem}.lab-splits{display:block}}
+@media(max-width:620px){.lab-controls{grid-template-columns:repeat(6,minmax(0,1fr))}.lab-controls .chart-filter{grid-column:span 2}.lab-controls .chart-filter:nth-child(-n+2){grid-column:span 3}.lab-player .player-photo{float:none;margin:0 0 .45rem;display:flex}.lab-rate{max-width:7rem}.lab-splits{display:block}}
 .chart-slate{display:grid;grid-template-columns:1fr 2fr 1fr;gap:.6rem;margin-bottom:.6rem}
 .chart-slate label,.line-control label{display:grid;gap:.3rem;color:#c8ddeb;font-size:.78rem;font-weight:650}
 .chart-slate select{width:100%;min-width:0;padding:.55rem;border-radius:.4rem;background:#142438;color:white;border:1px solid var(--lab-rule);font:inherit;font-size:.95rem}
@@ -64,7 +64,7 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .line-compare button[aria-pressed=true]{border-color:#83deff;background:#1b3e52;box-shadow:inset 0 -2px #83deff}
 .line-compare sup{font-size:.55rem;color:#9de6ff}.line-compare strong{font-size:1.05rem;color:white}.line-compare span{font-size:.8rem}.line-compare small{font-size:.72rem}
 @media(min-width:621px){.lab-controls{grid-template-columns:2fr 1.6fr repeat(4,1fr)}}
-@media(max-width:620px){.lab-controls label:nth-child(n+3){grid-column:span 3}}
+@media(max-width:620px){.lab-controls .chart-filter:nth-child(n+3){grid-column:span 3}}
 .margin-bars{grid-template-columns:repeat(var(--count),minmax(5.6rem,1fr));--rate-high:#86efc0;--rate-mid:#f9d487;--rate-low:#ffa6b4}
 .margin-bars .bar-space{height:11rem;background-color:#0c1829}
 .margin-bars .bar-space i{left:23%;right:23%;border:1px solid var(--outcome);border-radius:.28rem .28rem .1rem .1rem;box-shadow:inset 0 2px 0 #ffffff85,0 0 .45rem color-mix(in srgb,var(--outcome) 26%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--outcome) 48%,#122131),color-mix(in srgb,var(--outcome) 74%,#102239) 75%,var(--outcome))}
@@ -83,3 +83,17 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .bar-report{margin-top:.7rem;border:1px solid #46617a;border-radius:.5rem;background:#142638}.bar-report h3{margin:.7rem 0 .3rem}.bar-hint{font-size:.8rem}
 .log-table thead th{font-size:.76rem;color:#bdd5e7}.log-table td{font-variant-numeric:tabular-nums}.log-table th:first-child{position:sticky;left:0;background:#142639;box-shadow:1px 0 #365065}
 .log-table-team{display:flex;align-items:center;justify-content:center;gap:.4rem}.log-table-team img{width:1.8rem;height:1.8rem}
+
+.chart-filter {display:grid;gap:.3rem;min-width:0}
+.chart-select-row {display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:2px}
+.chart-step-buttons {display:grid;grid-template-rows:repeat(2,1fr);gap:1px}
+.chart-step-buttons button {display:grid;place-items:center;padding:0;min-height:24px;background:#21324a;color:#d2c2ff;border:1px solid var(--lab-rule);border-radius:4px}
+.chart-step-buttons button:disabled {opacity:.4}
+.chart-step-buttons button:enabled:hover,.chart-step-buttons button:focus-visible {background:#413461;color:white}
+.chart-step-buttons span {width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0}
+.chart-step-up {transform:translateY(1px) rotate(225deg)}
+.chart-step-down {transform:translateY(-1px) rotate(45deg)}
+@media(max-width:620px){
+  .chart-slate {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .chart-slate .chart-filter:nth-child(2) {grid-column:1/-1;grid-row:2}
+}

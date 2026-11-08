@@ -1,3 +1,4 @@
+import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
 import {METRICS,getPlayerGames,filteredWindow,isHit,summarize,formatNumber,formatRate} from '../lib/stats.js';
 import {priceText,usageFor} from '../lib/bookLine.js';
@@ -183,13 +184,13 @@ function GameLog({games,line,direction,metric,position}) {
   return <section className="lab-block player-log" aria-label="Game Log">
     <h2>Game Log</h2><p>{market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
     {ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
-      <th>Opponent</th><th>{market.label}</th><th>Result</th>{columns.map(([label])=><th key={label}>{label}</th>)}<th>Date</th><th>Week</th>
+      <th>Week</th><th>Opponent</th><th>{market.label}</th><th>Result</th>{columns.map(([label])=><th key={label}>{label}</th>)}<th>Date</th>
     </tr></thead><tbody>{ordered.map(g=>{
       const v=g.stats[metric] ?? 0;
       const outcome=line==null?'Unrated':v===line?'Push':isHit(v,line,direction)?'Hit':'Miss';
-      return <tr key={g.gameId}><th scope="row"><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></th>
+      return <tr key={g.gameId}><th scope="row">{g.week}</th><td><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></td>
         <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}</span></td>
-        {columns.map(([label,read])=><td key={label}>{read(g) ?? '—'}</td>)}<td>{gameDate(g)}</td><td>{g.week}</td></tr>;
+        {columns.map(([label,read])=><td key={label}>{read(g) ?? '—'}</td>)}<td>{gameDate(g)}</td></tr>;
     })}</tbody></table></div>}
     {!games.length && <p>No Games At This Venue.</p>}
   </section>;
@@ -213,12 +214,12 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
     {!loading && !error && <ChartSlate slate={slate}/>}
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls">
-      <label>Player<select value={player.id} onChange={e=>onPlayer(e.target.value)}>{roster.map(p=><option key={p.id} value={p.id}>{p.name} · {p.team}</option>)}</select></label>
-      <label>Market<select value={metric} onChange={e=>onMetric(e.target.value)}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</select></label>
-      <label>Side<select value={direction} onChange={e=>setDirection(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
-      <label>Venue<select value={venue} onChange={e=>onVenue(e.target.value)}><option value="ALL">All games</option><option value="H">Home</option><option value="A">Away</option></select></label>
-      <label>History season<select value={historySeason} onChange={e=>setChosenSeason(e.target.value)}>{[...seasons].sort((a,b)=>b-a).map(y=><option key={y}>{y}</option>)}<option value="ALL">All seasons</option></select></label>
-      <label>Window<select value={windowSize} onChange={e=>setWindowSize(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full history</option></select></label>
+      <ChartSelect label="Player" value={player.id} onChange={onPlayer}>{roster.map(p=><option key={p.id} value={p.id}>{p.name} · {p.team}</option>)}</ChartSelect>
+      <ChartSelect label="Market" value={metric} onChange={onMetric}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
+      <ChartSelect label="Side" value={direction} onChange={setDirection}><option value="over">Over</option><option value="under">Under</option></ChartSelect>
+      <ChartSelect label="Venue" value={venue} onChange={onVenue}><option value="ALL">All games</option><option value="H">Home</option><option value="A">Away</option></ChartSelect>
+      <ChartSelect label="History season" value={historySeason} onChange={setChosenSeason}>{[...seasons].sort((a,b)=>b-a).map(y=><option key={y}>{y}</option>)}<option value="ALL">All seasons</option></ChartSelect>
+      <ChartSelect label="Window" value={windowSize} onChange={setWindowSize}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full history</option></ChartSelect>
     </div>
     <section className="lab-player"><div><PlayerPhoto key={player.id} large id={player.id} name={player.name} url={player.photo}/>
       <small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-next">{nextFixture?<><TeamLogo team={nextFixture.opponent}/><span><b>Next game</b> · {player.team} {nextFixture.venue==='Away'?'at':'vs.'} {nextFixture.opponent}<br/>{new Date(nextFixture.kickoff).toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',...(nextFixture.timeKnown===false?{}:{hour:'numeric',minute:'2-digit',timeZoneName:'short'})})}{nextFixture.timeKnown===false?' · Time TBD':''}</span></>:<span>No upcoming game scheduled</span>}</div><p>{line==null?'No sportsbook line data':(direction==='over'?'Over ':'Under ')+line+' '+chartMarkets[metric].label.toLowerCase()+' · '+(manual?'Custom line':'DraftKings snapshot')}</p>
