@@ -68,20 +68,22 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
     if(draft!=null && draft.trim() && Number.isFinite(value) && value>=0)setLine(value);
     setDraft(null);
   }
-  return <div className="line-control"><div><label htmlFor="chart-line">Prop line</label><small>{source}{manual?' · Custom line active':''}</small></div>
+  return <details className="line-control">
+    <summary><span className="line-caption">Prop Line</span><strong>{line ?? '—'}</strong><small>{manual?'Custom':quote?'DK Snapshot':'No Sportsbook Line Data'}</small><span className="line-edit">{line==null?'Set Line':'Edit Line'}</span></summary>
+    <div className="line-panel"><small>{source}</small>
     {options.length>0 && <div className="line-compare" role="group" aria-label="Compare research lines">{options.map(value=>{
       const summary=summarize(games,metric,value,direction);
       const saved=quote?.point===value;
       return <button type="button" key={value} aria-pressed={line===value} onClick={()=>{setDraft(null);if(saved)resetLine();else setLine(value)}}>
-        <small>{saved?'DK snapshot':'Research line'}</small><strong>{value}</strong><span>{summary.hits}/{summary.total} {direction}</span>
+        <strong>{value}{saved && <sup> DK</sup>}</strong><span>{summary.hits}/{summary.total} {direction}</span>
       </button>;
     })}</div>}
     <div className="line-stepper"><button aria-label="Decrease line by half a point" disabled={line==null || line<=0} onClick={()=>step(-.5)}>−</button>
-    <input id="chart-line" type="text" inputMode="decimal" placeholder="Line" value={draft ?? line ?? ''} onFocus={e=>e.target.select()} onChange={e=>setDraft(e.target.value)} onBlur={apply} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>
+    <input id="chart-line" aria-label="Exact prop line" type="text" inputMode="decimal" placeholder="Line" value={draft ?? line ?? ''} onFocus={e=>e.target.select()} onChange={e=>setDraft(e.target.value)} onBlur={apply} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>
     <button aria-label="Increase line by half a point" disabled={line==null} onClick={()=>step(.5)}>+</button></div>
     {Number.isFinite(median) && median>=0 && median!==line && <button className="line-reset" onClick={()=>{setDraft(null);setLine(median)}}>Use median · {median}</button>}
     {manual && <button className="line-reset" onClick={()=>{setDraft(null);resetLine()}}>{quote?'Use DK '+quote.point:'Clear custom line'}</button>}
-  </div>;
+    </div></details>;
 }
 
 function recentDefenseGames(players,matchup,position,metric) {
