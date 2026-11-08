@@ -13,12 +13,23 @@ def number(value):
         return None
 
 
-def plays(data):
+def plays(data, scoring_chances=None):
     games = defaultdict(dict)
     with gzip.GzipFile(fileobj=io.BytesIO(data)) as f:
         for p in csv.DictReader(io.TextIOWrapper(f, encoding='utf-8-sig')):
             team = p['posteam']
             typ = 'pass' if p['qb_dropback'] in ('1','1.0') else 'rush'
+            if scoring_chances is not None and team and p['play_type'] in ('pass','run') and p['qb_kneel'] not in ('1','1.0') and p['qb_spike'] not in ('1','1.0') and p.get('two_point_attempt') not in ('1','1.0'):
+                game_chances = scoring_chances.setdefault((p['game_id'],team), {})
+                distance = number(p.get('yardline_100'))
+                if distance is not None and 0 < distance <= 20:
+                    rush = number(p.get('rush_attempt')) == 1
+                    player = p.get('rusher_player_id') if rush else p.get('receiver_player_id')
+                    if player and player != 'NA':
+                        counts = game_chances.setdefault(player, [0,0,0])
+                        counts[0 if rush else 1] += 1
+                        if rush and distance <= 5:
+                            counts[2] += 1
             epa = number(p['epa'])
             if not team or epa is None or p['play_type'] not in ('pass','run') or p['qb_kneel'] in ('1','1.0') or p['qb_spike'] in ('1','1.0'):
                 continue

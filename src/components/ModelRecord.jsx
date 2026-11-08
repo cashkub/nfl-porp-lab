@@ -13,6 +13,31 @@ function outcome(row){
   if(!direction(row.final))return 'Tie';
   return direction(row.final)===direction(row.overall)?'Correct':'Incorrect';
 }
+function recordCell(results){
+  const wins=results.filter(s=>s==='Correct' || s==='Hit').length;
+  const losses=results.filter(s=>s==='Incorrect' || s==='Miss').length;
+  const pending=results.filter(s=>s==='Pending').length;
+  const other=results.length-wins-losses-pending;
+  if(!results.length)return '—';
+  return <><b className="result-win">{wins} W</b> · <b className="result-loss">{losses} L</b> · <HitRate rate={wins/(wins+losses)}/>
+    {(pending>0 || other>0) && <small>{[pending && pending+' pending',other && other+' ungraded or tied'].filter(Boolean).join(' · ')}</small>}</>;
+}
+
+function PerformanceSummary({games,picks,period,sport}){
+  const groups=new Map();
+  function add(label,row,result){
+    if(!groups.has(label))groups.set(label,{overall:[],selected:[]});
+    const group=groups.get(label);
+    group.overall.push(result);
+    if(recordPeriod(row,sport)===period)group.selected.push(result);
+  }
+  for(const row of games)add(sport==='nfl'?'Moneyline Winners':'Game Winners',row,outcome({...row,overall:overallScore(row)}));
+  for(const row of picks)add(row.kind==='touchdown'?'Anytime Touchdown Scorers':row.label,row,row.result || 'Pending');
+  return <section className="performance-summary"><h2>Performance by Category</h2>
+    <div className="board-scroll"><table className="game-log"><thead><tr><th>Category</th><th>Overall</th><th>{period?periodLabel(period,sport):'Selected Period'}</th></tr></thead>
+    <tbody>{[...groups].map(([label,group])=><tr key={label}><th scope="row">{label}</th><td>{recordCell(group.overall)}</td><td>{recordCell(group.selected)}</td></tr>)}</tbody></table></div>
+    <small>Win rates use decided picks. Overall includes the full published archive.</small></section>;
+}
 export default function ModelRecord({validation,sport='nfl'}){
   const [tab,setTab]=useState('games');
   const periodName=sport==='cbb'?'Date':'Week';
@@ -26,10 +51,14 @@ export default function ModelRecord({validation,sport='nfl'}){
   const decided=graded.filter(r=>margin(r.final) && margin(r.overall));
   const right=decided.filter(r=>outcome(r)==='Correct').length;
   const selector=<div className="board-controls"><label>Game {periodName}<select aria-label={'Game '+periodName} value={period} onChange={e=>setPeriod(e.target.value)}><option value="all">All {periodName}s</option>{periods.map(w=><option value={w} key={w}>{periodLabel(w,sport)}</option>)}</select></label></div>;
+  const nearest=[...(games || []),...(picks.rows || [])].filter(r=>Number.isFinite(Date.parse(r.kickoff)))
+    .sort((a,b)=>Math.abs(Date.parse(a.kickoff)-Date.now())-Math.abs(Date.parse(b.kickoff)-Date.now()))[0];
+  const summaryPeriod=period==='all'?(nearest?recordPeriod(nearest,sport):periods[0]):period;
+  const summary=games && picks.rows?<PerformanceSummary games={games} picks={picks.rows} period={summaryPeriod} sport={sport}/>:null;
   const tabs=<div className="board-sort">{[['games','Game Winners'],['props','Top Props'],...(sport==='nfl'?[['touchdowns','Touchdown Scorers']]:[])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}</div>;
-  if(tab!=='games')return <TrackedPicks sport={sport} touchdownRecord={tab==='touchdowns'} record archive={{...picks,rows:picks.rows?.filter(inPeriod)}}>{tabs}{selector}</TrackedPicks>;
-  return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}
-    <div className="usage-trend"><h3>Overall Record</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>
+  if(tab!=='games')return <TrackedPicks sport={sport} touchdownRecord={tab==='touchdowns'} record archive={{...picks,rows:picks.rows?.filter(inPeriod)}}>{tabs}{selector}{summary}</TrackedPicks>;
+  return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}{summary}
+    <div className="usage-trend"><h3>{period==='all'?'Overall Game Record':'Selected Game Record'}</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>
       <small>{decided.length?<><HitRate rate={right/decided.length}/> accuracy · </>:''}{graded.length} graded · Average margin error {graded.length?(graded.reduce((sum,r)=>sum+Math.abs(margin(r.final)-margin(r.overall)),0)/graded.length).toFixed(1)+' pts':'—'}</small></div>
     {validation && <details><summary>2025 Held-Out Test · {validation.games} Games</summary><p>Average absolute error in points. Historical evaluation uses recorded starting QBs and outdoor conditions. The injury overlay is evaluated prospectively.</p>{Object.entries(validation.results).map(([k,v])=><p key={k}><b>{k}</b> · Team score {v.scoreMAE} · Margin {v.marginMAE}</p>)}</details>}
     {rows?.length?<div className="board-scroll"><table className="game-log"><thead><tr>{[...(sport==='cbb'?['Game Date']:[]),'Matchup (Away First)','Overall Pick','Projected Score','Final','Result','Saved'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id}>

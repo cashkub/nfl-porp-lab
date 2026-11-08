@@ -608,3 +608,11 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
   .compact-pick small,.compact-price,.compact-rank {font-size:.8rem}
   .compact-body {padding:12px;border-top:1px solid var(--rule)}
 }
+
+.performance-summary {margin:18px 0}
+.performance-summary h2 {margin-bottom:10px}
+.performance-summary td small,.performance-summary > small,.td-chances > small {display:block;color:var(--muted);margin:4px 0}
+.performance-summary tbody th {text-align:left}
+.td-chances {margin:10px 0;padding:10px 0;border-block:1px solid var(--rule)}
+.td-chances .report-heading {margin-top:0}
+.td-chances .pick-metrics {margin:6px 0}

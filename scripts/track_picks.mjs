@@ -55,8 +55,20 @@ if(sport==='nfl'){
     const quotes=book?.anytime?.filter(q=>playerKey(q.player)===playerKey(row.player) && Number.isFinite(q.price) && Date.parse(q.updated)<Date.parse(row.kickoff));
     return quotes?.length===1?quotes[0]:null;
   }
+  function recentChances(history,team,week){
+    const recent=history.filter(g=>code(g.team)===team && g.week<week).slice(-3);
+    const covered=recent.filter(g=>Array.isArray(g.scoringChances));
+    if(!covered.length)return null;
+    return {games:covered.length,window:recent.length,totals:[0,1,2].map(i=>covered.reduce((sum,g)=>sum+g.scoringChances[i],0))};
+  }
   for(const row of archive){
-    if(row.kind!=='touchdown' || row.price!=null)continue;
+    if(row.kind!=='touchdown')continue;
+    if(!row.chances && Date.parse(row.kickoff)>now){
+      const entry=byName.get(playerKey(row.player)+'|'+row.team);
+      const week=Number(row.gameId.split('_')[1]);
+      if(entry?.p.id===row.playerId)row.chances=recentChances(entry.hist,row.team,week);
+    }
+    if(row.price!=null)continue;
     const quote=touchdownQuote(row);
     if(quote){row.price=quote.price;row.priceUpdated=quote.updated}
   }
@@ -96,7 +108,7 @@ if(sport==='nfl'){
         away:g.away,home:g.home,team,player:p.name,playerId:p.id,metric:'scoredTDs',label:'Touchdowns',
         line:.5,side:'over',price:quote?.price ?? null,priceUpdated:quote?.updated,score,hits,total:values.length,average:mean(values),values,defenseRank,
         role:workload.toFixed(1)+' carries + targets per game over the last three',context:injury?.status || '',
-        model:'td-scorers.v1',saved});
+        chances:recentChances(hist,team,Number(g.week)),model:'td-scorers.v1',saved});
     }
   }
   for(const book of books.filter(upcoming)){
