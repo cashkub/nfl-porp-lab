@@ -73,20 +73,26 @@ def enrich(payload,schedule_text):
     near=[item for item in games if 0<(datetime.fromisoformat(item[0]['kickoff'])-now).total_seconds()<7*86400]
     with ThreadPoolExecutor(max_workers=4) as pool:
         weather={r['game_id']:w for (_,r),w in zip(near,pool.map(forecast,near))}
-    pbp_url=f'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv.gz'
-    chances={}
-    try:
-        with urlopen(pbp_url,timeout=65) as r: logs=plays(r.read(), chances)
-    except (OSError,ValueError,KeyError) as exc:
-        print(f'Play-by-play unavailable: {exc}')
-        logs={}
-        chances.clear()
-    completed={r['game_id'] for r in rows if number(r.get('result')) is not None}
+    chances = {}
+    logs = {}
+    for year in payload['seasons']:
+        pbp_url = f'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{year}.csv.gz'
+        season_chances = {}
+        try:
+            with urlopen(pbp_url, timeout=65) as response:
+                season_logs = plays(response.read(), season_chances, include_efficiency=(year == season))
+            chances.update(season_chances)
+            if year == season:
+                logs = season_logs
+        except (OSError,ValueError,KeyError) as exc:
+            print(f'{year} play-by-play unavailable: {exc}')
+    completed = {r['game_id'] for r in csv.DictReader(io.StringIO(schedule_text))
+                 if number(r.get('result')) is not None}
     for player in payload['players']:
         for game in player['games']:
             key=(game['gameId'],normalize(game['team']))
             if key in chances and key[0] in completed:
-                game['scoringChances']=chances[key].get(player['id'],[0,0,0])
+                game['scoringChances']=chances[key].get(player['id'],[0,0,0,0,0])
     depths=depth_chart(season,now)
     form=Form()
     for r in sorted(rows,key=lambda r:(r['gameday'],r['gametime'])):

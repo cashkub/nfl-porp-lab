@@ -97,3 +97,8 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
   .chart-slate {grid-template-columns:repeat(2,minmax(0,1fr))}
   .chart-slate .chart-filter:nth-child(2) {grid-column:1/-1;grid-row:2}
 }
+
+.workload-usage h3 {margin:1.4rem 0 .25rem}
+.workload-usage p,.workload-usage dd small {color:#acc6db;font-size:.8rem}
+.workload-usage p {margin:0}
+.workload-usage dd small {margin-right:.5rem;font-weight:500}

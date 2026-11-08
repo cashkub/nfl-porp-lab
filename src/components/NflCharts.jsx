@@ -1,3 +1,4 @@
+import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
 import {METRICS,getPlayerGames,filteredWindow,isHit,summarize,formatNumber,formatRate} from '../lib/stats.js';
@@ -234,7 +235,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div><dt>{usage.label} per game</dt><dd>{formatNumber(meanUsage)}</dd></div>
       <div><dt>{usage.label} · last {recentUsage.length} recorded</dt><dd>{recentUsage.length?formatNumber(recentUsage.reduce((a,b)=>a+b,0)/recentUsage.length):'—'} per game</dd></div>
       {['H','A'].map(v=>{const s=summarize(splitGames.filter(g=>g.venue===v),metric,line,direction);return <div key={v}><dt>Selected history · {v==='H'?'home':'away'} hits</dt><dd>{line==null?'—':s.hits+'/'+s.total+' · '+formatRate(s.rate)}</dd></div>})}
-    </dl></section>
+    </dl><WorkloadUsage players={players} games={displayed} position={player.position}/></section>
     <GameLog position={player.position} games={allGames} line={line} direction={direction} metric={metric}/>
     </>}
   </main>;
