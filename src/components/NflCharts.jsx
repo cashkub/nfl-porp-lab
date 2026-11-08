@@ -22,7 +22,17 @@ function TeamLogo({team}) {
   return code?<img key={code} className="chart-logo" alt="" src={'https://a.espncdn.com/i/teamlogos/nfl/500/'+code+'.png'} onError={e=>{e.currentTarget.hidden=true}}/>:null;
 }
 
-function GameChart({games,players,playerPosition,metric,line,direction}) {
+function boxScoreFields(g) {
+  return [['Pass Yards',g.stats.passingYards],['Rush Yards',g.stats.rushingYards],['Receiving Yards',g.stats.receivingYards],
+        ['Pass Attempts',g.usage?.attempts],['Carries',g.usage?.carries],['Targets',g.usage?.targets],
+        ['Receptions',g.stats.receptions],['Pass TDs',g.stats.passingTDs],['TDs Scored',g.stats.scoredTDs]];
+}
+
+function PlayerBoxScore({game}) {
+  return <dl>{boxScoreFields(game).map(([label,stat])=><div key={label}><dt>{label}</dt><dd>{stat ?? '—'}</dd></div>)}</dl>;
+}
+
+function GameChart({games,players,playerPosition,playerName,metric,line,direction}) {
   const [selected,setSelected]=useState('');
   const info=chartMarkets[metric];
   const volume=usageFor(metric);
@@ -39,19 +49,19 @@ function GameChart({games,players,playerPosition,metric,line,direction}) {
   const low=Math.min(0,...rows.map(r=>r.value));
   const high=Math.max(1,line,...rows.map(r=>r.value));
   const position=v=>8+75*(v-low)/(high-low);
-  const active=rows.find(r=>r.game.gameId===selected) || rows.at(-1);
-  if(!active)return <p>No recorded games match this venue and window.</p>;
+  const active=rows.find(r=>r.game.gameId===selected);
+  if(!rows.length)return <p>No recorded games match this venue and window.</p>;
   return <><div className="plot-heading"><span>{info.label}</span>{line!=null && <b>{direction} {line} · dashed line</b>}</div>
     <div className="margin-scroll"><div className="margin-bars" style={{'--count':rows.length,'--target':position(line)+'%'}}>
     {rows.map(r=><button key={r.game.gameId} type="button" data-result={r.outcome} aria-pressed={r===active}
       aria-label={'Week '+r.game.week+' against '+r.game.opponent+', '+r.value+' '+info.unit+', '+r.outcome}
-      onClick={()=>setSelected(r.game.gameId)}>
+      onClick={()=>setSelected(previous=>previous===r.game.gameId?'':r.game.gameId)}>
       <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
       <TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@ ':'vs '}{r.game.opponent}</b><span className="chart-rank" style={defenseRankStyle(r.defense?.rank,r.teams)}>DEF {r.defense?'#'+r.defense.rank:'—'}</span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
       <span className="game-volume">{usageFields.map(([key,label])=><span key={key}><b>{r.game.usage?.[key] ?? '—'}</b> {label.toLowerCase()}</span>)}</span>
     </button>)}</div></div>
-    <p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF #{active.defense.rank} of {active.teams}</b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'} Rank 1 allows the most to the position before that week.</p></>;
+    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF #{active.defense.rank} of {active.teams}</b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'} Rank 1 allows the most to the position before that week.</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
 }
 
 function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,direction}) {
@@ -69,7 +79,7 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
     setDraft(null);
   }
   return <details className="line-control">
-    <summary><span className="line-caption">Prop Line</span><strong>{line ?? '—'}</strong><small>{manual?'Custom':quote?'DK Snapshot':'No Sportsbook Line Data'}</small><span className="line-edit">{line==null?'Set Line':'Edit Line'}</span></summary>
+    <summary><span className="line-caption">Prop Line</span><strong>{line ?? '—'}</strong><small>{manual?'Custom':quote?'DK Snapshot':'No Sportsbook Line Data'}</small><span className="line-edit"><span className="line-closed-label">Choose Line</span><span className="line-open-label">Close</span></span></summary>
     <div className="line-panel"><small>{source}</small>
     {options.length>0 && <div className="line-compare" role="group" aria-label="Compare research lines">{options.map(value=>{
       const summary=summarize(games,metric,value,direction);
@@ -142,22 +152,31 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
 
 function GameLog({games,line,direction,metric}) {
   const market=chartMarkets[metric];
+  const [view,setView]=useState('Table');
+  const ordered=[...games].reverse();
   return <section className="lab-block player-log" aria-label="Game Log">
     <h2>Game Log</h2><p>{market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
-    {[...games].reverse().map(g=>{
+    <div className="log-view" role="group" aria-label="Game Log View">{['Table','Cards'].map(mode=><button type="button" key={mode} aria-pressed={view===mode} onClick={()=>setView(mode)}>{mode}</button>)}</div>
+    {view==='Table' && ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
+      <th>Opponent</th><th>{market.label}</th><th>Result</th><th>Date</th><th>Week</th>{boxScoreFields(ordered[0]).map(([label])=><th key={label}>{label}</th>)}
+    </tr></thead><tbody>{ordered.map(g=>{
+      const v=g.stats[metric] ?? 0;
+      const outcome=line==null?'Unrated':v===line?'Push':isHit(v,line,direction)?'Hit':'Miss';
+      return <tr key={g.gameId}><th scope="row"><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></th>
+        <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}</span></td><td>{gameDate(g)}</td><td>{g.week}</td>
+        {boxScoreFields(g).map(([label,stat])=><td key={label}>{stat ?? '—'}</td>)}</tr>;
+    })}</tbody></table></div>}
+    {view==='Cards' && ordered.map(g=>{
       const value=g.stats[metric] ?? 0;
       const result=line==null?'Unrated':value===line?'Push':isHit(value,line,direction)?'Hit':'Miss';
       const venue=g.venue==='A'?'Away':g.venue==='H'?'Home':'Neutral';
       const delta=line==null?null:Math.round((value-line)*100)/100;
-      const fields=[['Pass Yards',g.stats.passingYards],['Rush Yards',g.stats.rushingYards],['Receiving Yards',g.stats.receivingYards],
-        ['Pass Attempts',g.usage?.attempts],['Carries',g.usage?.carries],['Targets',g.usage?.targets],
-        ['Receptions',g.stats.receptions],['Pass TDs',g.stats.passingTDs],['TDs Scored',g.stats.scoredTDs]];
       return <details key={g.gameId} className="log-game" style={{'--opponent':teamColor(g.opponent) || '#6086a2'}}>
         <summary><span className="log-match"><span className="log-emblem"><TeamLogo team={g.opponent}/></span><span><strong>{g.team} {venue==='Away'?'@':'vs.'} {g.opponent}</strong><small>{gameDate(g)}{g.date ? ' · W'+g.week : ''} · {venue}</small></span></span>
           <span className="log-performance"><strong>{value} <small>{market.unit}</small></strong><span className="log-outcome" data-result={result}>{result}</span></span>
           <span className="log-expand" aria-hidden="true">⌄</span></summary>
         <div className="log-body">{delta!=null && <p>{delta===0?'Exactly On The Line':Math.abs(delta)+' '+market.unit+' '+(delta>0?'Above':'Below')+' The Line'} · {direction==='over'?'Over':'Under'} {line}</p>}
-          <dl>{fields.map(([label,stat])=><div key={label}><dt>{label}</dt><dd>{stat ?? '—'}</dd></div>)}</dl>
+          <PlayerBoxScore game={g}/>
         </div>
       </details>;
     })}
@@ -196,7 +215,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div className="lab-rate">{line==null?<span>Enter a line for hit rates</span>:<><strong>{formatRate(current.rate)}</strong><span>{current.hits} hits in {current.total} games</span><small>{current.total-current.hits-pushes} misses · {pushes} pushes</small></>}</div>
     </section>
     <section className="lab-block"><h2>Game by game</h2><LineControl key={player.id+metric+(upcoming?.id || '')} line={line} setLine={setLine} resetLine={resetLine} manual={manual} quote={quote} median={current.median} games={displayed} metric={metric} direction={direction}/>
-      <GameChart players={players} playerPosition={player.position} games={displayed} metric={metric} line={line} direction={direction}/></section>
+      <GameChart key={player.id} playerName={player.name} players={players} playerPosition={player.position} games={displayed} metric={metric} line={line} direction={direction}/></section>
     <MatchResearch players={players} game={upcoming} player={player} metric={metric} line={line} direction={direction} history={splitGames} defenses={defenses}/>
     <section className="lab-block"><h2>Production &amp; workload</h2><dl>
       <div><dt>Average / median</dt><dd>{formatNumber(current.average)} / {formatNumber(current.median)} {chartMarkets[metric].unit}</dd></div>
