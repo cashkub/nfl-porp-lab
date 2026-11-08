@@ -71,7 +71,7 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
   const [draft,setDraft]=useState(null);
   const savedAt=Date.parse(quote?.updated);
   const stamp=Number.isFinite(savedAt)?new Date(savedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'}):'';
-  const source=quote?'DraftKings snapshot · '+quote.point+(stamp?' · '+stamp:''):'No sportsbook line data';
+  const source=quote?'DraftKings · '+quote.point+(stamp?' · '+stamp:''):'No Sportsbook Line Data';
   const anchor=quote?.point ?? median ?? line;
   const interval=chartMarkets[metric].unit==='yds'?5:1;
   const options=anchor==null || !games.length?[]:Array.from({length:3},(_,i)=>(anchor>=interval?anchor-interval:Math.max(0,anchor))+i*interval);
@@ -82,8 +82,15 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
     setDraft(null);
   }
   return <details className="line-control">
-    <summary><span className="line-caption">Prop Line</span><strong>{line ?? '—'}</strong><small>{manual?'Custom':quote?'DK Snapshot':'No Sportsbook Line Data'}</small><span className="line-edit"><span className="line-closed-label">Choose Line</span><span className="line-open-label">Close</span></span></summary>
-    <div className="line-panel"><small>{source}</small>
+    <summary>
+      <span className="line-caption">Prop Line</span>
+      <strong>{line==null?'—':direction+' '+line}</strong>
+      <small>{manual?'Custom Line':quote?'DraftKings':'No Sportsbook Line'}</small>
+      <span className="line-edit"><span className="line-closed-label">{line==null?'Choose Line':'Edit Line'}</span><span className="line-open-label">Close</span></span>
+    </summary>
+    <div className="chart-line-panel">
+    <div className="chart-line-options">
+    {options.length>0 && <h3>Compare Lines</h3>}
     {options.length>0 && <div className="line-compare" role="group" aria-label="Compare research lines">{options.map(value=>{
       const summary=summarize(games,metric,value,direction);
       const saved=quote?.point===value;
@@ -91,12 +98,15 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
         <strong>{value}{saved && <sup> DK</sup>}</strong><span>{summary.hits}/{summary.total} {direction}</span>
       </button>;
     })}</div>}
+    <small className="line-source">{source}</small>
+    </div><div className="line-exact"><label htmlFor="chart-line">Exact Line</label>
     <div className="line-stepper"><button aria-label="Decrease line by half a point" disabled={line==null || line<=0} onClick={()=>step(-.5)}>−</button>
     <input id="chart-line" aria-label="Exact prop line" type="text" inputMode="decimal" placeholder="Line" value={draft ?? line ?? ''} onFocus={e=>e.target.select()} onChange={e=>setDraft(e.target.value)} onBlur={apply} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>
     <button aria-label="Increase line by half a point" disabled={line==null} onClick={()=>step(.5)}>+</button></div>
+    <div className="line-actions">
     {Number.isFinite(median) && median>=0 && median!==line && <button className="line-reset" onClick={()=>{setDraft(null);setLine(median)}}>Use median · {median}</button>}
     {manual && <button className="line-reset" onClick={()=>{setDraft(null);resetLine()}}>{quote?'Use DK '+quote.point:'Clear custom line'}</button>}
-    </div></details>;
+    </div></div></div></details>;
 }
 
 function recentDefenseGames(players,matchup,position,metric) {
@@ -138,7 +148,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   const redZone=game.context?.redZoneDefense?.[game.opponent];
   const outcomes=Number.isFinite(redZone?.passingTDs) && redZone.trips>0 ? [
     ['Rush TD', redZone.rushingTDs, '#925cf5'], ['Pass TD', redZone.passingTDs, '#d2b2ff'],
-    ['Other TD', redZone.otherTDs, '#f4c784'], ['No TD', redZone.trips-redZone.touchdowns, '#677084']
+    ['Other TD', redZone.otherTDs, '#f4c784'], ['No TD', redZone.trips-redZone.touchdowns, '#796c83']
   ].filter(([label,n])=>label!=='Other TD' || n>0) : [];
   const against=history.filter(g=>g.opponent===game.opponent);
   const headToHead=summarize(against,metric,line,direction);
@@ -224,7 +234,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const observedUsage=displayed.map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
   const meanUsage=observedUsage.length ? observedUsage.reduce((sum,value)=>sum+value,0)/observedUsage.length : null;
   const recentUsage=displayed.slice(-3).map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
-  return <main className="chart-lab" style={{'--club':teamColor(player?.team) || '#55cfff'}}>
+  return <main className="chart-lab" style={{'--club':teamColor(player?.team) || '#be98ed'}}>
     <header><a href="/preview/"><img alt="" src="/preview/assets/mark.svg"/> PropBets</a><a href="/preview/nfl/">← NFL Menu</a></header>
     <h1>Player <em>Charts</em></h1>
     {!loading && !error && !player && <ChartSlate slate={slate}/>}
@@ -248,14 +258,20 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
     <LineControl key={player.id+metric+(upcoming?.id || '')} line={line} setLine={setLine} resetLine={resetLine} manual={manual} quote={quote} median={current.median} games={displayed} metric={metric} direction={direction}/>
     <section className="lab-player">
       <div className="player-identity"><PlayerPhoto key={player.id} large id={player.id} name={player.name} url={player.photo}/>
-        <div><small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-next">{nextFixture?<><TeamLogo team={nextFixture.opponent}/><span><b>Next game</b> · {player.team} {nextFixture.venue==='Away'?'at':'vs.'} {nextFixture.opponent}<br/>{new Date(nextFixture.kickoff).toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',...(nextFixture.timeKnown===false?{}:{hour:'numeric',minute:'2-digit',timeZoneName:'short'})})}{nextFixture.timeKnown===false?' · Time TBD':''}</span></>:<span>No upcoming game scheduled</span>}</div></div>
+        <div><small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-prop">
+          <strong>{line==null?'No Line Selected':direction+' '+line}</strong><span>{chartMarkets[metric].label}</span>
+          {line!=null && <small>{manual?'Custom Line': 'DraftKings'}</small>}
+          {quote && line===quote.point && <div className="prop-prices" aria-label="DraftKings odds">
+            {['over','under'].map(side=><span key={side} data-selected={side===direction}>{side} <b>{priceText(quote[side])}</b></span>)}
+          </div>}
+        </div><div className="player-next">{nextFixture?<><TeamLogo team={nextFixture.opponent}/><span><b>Next game</b> · {player.team} {nextFixture.venue==='Away'?'at':'vs.'} {nextFixture.opponent}<br/>{new Date(nextFixture.kickoff).toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',...(nextFixture.timeKnown===false?{}:{hour:'numeric',minute:'2-digit',timeZoneName:'short'})})}{nextFixture.timeKnown===false?' · Time TBD':''}</span></>:<span>No upcoming game scheduled</span>}</div></div>
       </div>
       <div className="player-numbers">
         <div><small>Median</small><b>{formatNumber(current.median)} <small>{chartMarkets[metric].unit}</small></b></div>
         <div><small>Hit Rate</small>{line==null?<button type="button" onClick={()=>{const input=document.getElementById('chart-line');input.closest('details').open=true;input.focus()}}>Set Custom Line</button>:<><b>{formatRate(current.rate)}</b><small>{current.hits} Hits · {current.total-current.hits-pushes} Misses · {pushes} Pushes</small></>}</div>
         <div><small>Games Shown</small><b>{displayed.length}</b></div>
       </div>
-      {!manual && quote && <small className="player-prices">Over {priceText(quote.over)} · Under {priceText(quote.under)}</small>}
+
     </section>
     <section className="lab-block"><h2>Game By Game</h2>
       <GameChart windowSize={windowSize} key={player.id} playerName={player.name} players={players} playerPosition={player.position} games={displayed} metric={metric} line={line} direction={direction}/></section>
