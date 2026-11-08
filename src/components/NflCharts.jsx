@@ -150,36 +150,47 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   </section>;
 }
 
-function GameLog({games,line,direction,metric}) {
+const logFields={
+  passingYards:['Pass Yards',g=>g.stats.passingYards],
+  attempts:['Pass Attempts',g=>g.usage?.attempts],
+  passingTDs:['Pass TDs',g=>g.stats.passingTDs],
+  rushingYards:['Rush Yards',g=>g.stats.rushingYards],
+  rushingAttempts:['Carries',g=>g.usage?.carries ?? g.stats.rushingAttempts],
+  receivingYards:['Receiving Yards',g=>g.stats.receivingYards],
+  receptions:['Receptions',g=>g.stats.receptions],
+  targets:['Targets',g=>g.usage?.targets],
+  scoredTDs:['TDs Scored',g=>g.stats.scoredTDs],
+};
+const passing=['passingYards','attempts','passingTDs'];
+const receiving=['receivingYards','receptions','targets'];
+const rushing=['rushingYards','rushingAttempts'];
+
+function logColumns(position,games,metric){
+  let fields;
+  if(position==='QB')fields=[...passing,...rushing,'scoredTDs'];
+  else if(position==='RB' || position==='FB')fields=[...rushing,...receiving,'scoredTDs'];
+  else if(position==='WR' || position==='TE'){
+    fields=[...receiving,'scoredTDs'];
+    if(games.some(g=>logFields.rushingAttempts[1](g)>0 || g.stats.rushingYards))fields.push(...rushing);
+  }else fields=Object.keys(logFields).filter(key=>games.some(g=>logFields[key][1](g)));
+  return fields.filter(key=>key!==metric).map(key=>logFields[key]);
+}
+
+function GameLog({games,line,direction,metric,position}) {
   const market=chartMarkets[metric];
-  const [view,setView]=useState('Table');
+  const columns=logColumns(position,games,metric);
   const ordered=[...games].reverse();
   return <section className="lab-block player-log" aria-label="Game Log">
     <h2>Game Log</h2><p>{market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
-    <div className="log-view" role="group" aria-label="Game Log View">{['Table','Cards'].map(mode=><button type="button" key={mode} aria-pressed={view===mode} onClick={()=>setView(mode)}>{mode}</button>)}</div>
-    {view==='Table' && ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
-      <th>Opponent</th><th>{market.label}</th><th>Result</th><th>Date</th><th>Week</th>{boxScoreFields(ordered[0]).map(([label])=><th key={label}>{label}</th>)}
+    {ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
+      <th>Opponent</th><th>{market.label}</th><th>Result</th>{columns.map(([label])=><th key={label}>{label}</th>)}<th>Date</th><th>Week</th>
     </tr></thead><tbody>{ordered.map(g=>{
       const v=g.stats[metric] ?? 0;
       const outcome=line==null?'Unrated':v===line?'Push':isHit(v,line,direction)?'Hit':'Miss';
       return <tr key={g.gameId}><th scope="row"><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></th>
-        <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}</span></td><td>{gameDate(g)}</td><td>{g.week}</td>
-        {boxScoreFields(g).map(([label,stat])=><td key={label}>{stat ?? '—'}</td>)}</tr>;
+        <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}</span></td>
+        {columns.map(([label,read])=><td key={label}>{read(g) ?? '—'}</td>)}<td>{gameDate(g)}</td><td>{g.week}</td></tr>;
     })}</tbody></table></div>}
-    {view==='Cards' && ordered.map(g=>{
-      const value=g.stats[metric] ?? 0;
-      const result=line==null?'Unrated':value===line?'Push':isHit(value,line,direction)?'Hit':'Miss';
-      const venue=g.venue==='A'?'Away':g.venue==='H'?'Home':'Neutral';
-      const delta=line==null?null:Math.round((value-line)*100)/100;
-      return <details key={g.gameId} className="log-game" style={{'--opponent':teamColor(g.opponent) || '#6086a2'}}>
-        <summary><span className="log-match"><span className="log-emblem"><TeamLogo team={g.opponent}/></span><span><strong>{g.team} {venue==='Away'?'@':'vs.'} {g.opponent}</strong><small>{gameDate(g)}{g.date ? ' · W'+g.week : ''} · {venue}</small></span></span>
-          <span className="log-performance"><strong>{value} <small>{market.unit}</small></strong><span className="log-outcome" data-result={result}>{result}</span></span>
-          <span className="log-expand" aria-hidden="true">⌄</span></summary>
-        <div className="log-body">{delta!=null && <p>{delta===0?'Exactly On The Line':Math.abs(delta)+' '+market.unit+' '+(delta>0?'Above':'Below')+' The Line'} · {direction==='over'?'Over':'Under'} {line}</p>}
-          <PlayerBoxScore game={g}/>
-        </div>
-      </details>;
-    })}
     {!games.length && <p>No Games At This Venue.</p>}
   </section>;
 }
@@ -223,7 +234,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div><dt>{usage.label} · last {recentUsage.length} recorded</dt><dd>{recentUsage.length?formatNumber(recentUsage.reduce((a,b)=>a+b,0)/recentUsage.length):'—'} per game</dd></div>
       {['H','A'].map(v=>{const s=summarize(splitGames.filter(g=>g.venue===v),metric,line,direction);return <div key={v}><dt>Selected history · {v==='H'?'home':'away'} hits</dt><dd>{line==null?'—':s.hits+'/'+s.total+' · '+formatRate(s.rate)}</dd></div>})}
     </dl></section>
-    <GameLog games={allGames} line={line} direction={direction} metric={metric}/>
+    <GameLog position={player.position} games={allGames} line={line} direction={direction} metric={metric}/>
     </>}
   </main>;
 }
