@@ -1,3 +1,7 @@
+export function overallScore({overall,blend,stats}) {
+  return [overall,blend,stats].find(pair => Array.isArray(pair) && pair.length===2 && pair.every(Number.isFinite));
+}
+
 export function projection(game, away, home, college=false) {
   const minimum = college ? 1 : 3;
   if (!(away?.games >= minimum && home?.games >= minimum)) return null;
@@ -19,12 +23,13 @@ export function projection(game, away, home, college=false) {
   const margin = Number((h.score - a.score).toFixed(1));
   let blend=null;
   const ctx=game.context;
-  if(!college && a.profile && h.profile && Number.isFinite(game.homeSpread) && Number.isFinite(ctx.total)){
+  if(!college && a.profile && h.profile && Number.isFinite(game.homeSpread) && Number.isFinite(ctx.total) && Number.isFinite(ctx.marketWeight) && ctx.marketWeight>=0 && ctx.marketWeight<=1){
     const weight=ctx.marketWeight;
     const predicted=(s,spread)=>Number(((1-weight)*s.score+weight*(ctx.total+spread)/2).toFixed(1));
     blend={away:predicted(a,game.homeSpread),home:predicted(h,-game.homeSpread),weight};
   }
-  return {a, h, margin, blend, winner:margin > 0 ? h : margin < 0 ? a : null};
+  const overall=overallScore({stats:[a.score,h.score],blend:blend && [blend.away,blend.home]});
+  return {a, h, margin, blend, overall, winner:margin > 0 ? h : margin < 0 ? a : null};
 }
 
 // Fit scoring and points allowed jointly. Four average games shrink small samples.

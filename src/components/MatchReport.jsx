@@ -24,6 +24,8 @@ function InjuryReport({game}){
 export function MatchReport({game:g,away,home,college=false,names={}}){
   const model=projection(g,away,home,college);
   const label=t=>names[t] || t;
+  const overallMargin=model?Number((model.overall[1]-model.overall[0]).toFixed(1)):0;
+  const winner=overallMargin>0?g.home:overallMargin<0?g.away:null;
   let explanation='';
   if(model?.winner){
     const w=model.winner, other=w===model.a?model.h:model.a;
@@ -36,9 +38,14 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
     ].sort((a,b)=>b[0]-a[0]);
     explanation=label(w.team)+' gains the most from '+factors[0][1]+' (+'+factors[0][0].toFixed(1)+' points of margin).';
   }
-  return <>{model?<><p className="model-call"><small>Model Pick</small><b>{model.winner?label(model.winner.team)+' by '+Math.abs(model.margin).toFixed(1):'Projected Tie'}</b></p>
+  if(model?.blend){
+    const weight=Math.round(100*model.blend.weight);
+    const marketNote='The overall projection gives team data '+(100-weight)+'% weight and the market spread and total '+weight+'%.';
+    explanation=(winner && winner===model.winner?.team?explanation+' ':winner?'The market adjustment shifts the projected margin toward '+label(winner)+'. ':'')+marketNote;
+  }
+  return <>{model?<><p className="model-call"><small>Overall Pick</small><b>{winner?label(winner)+' by '+Math.abs(overallMargin).toFixed(1):'Projected Tie'}</b></p>
     <h4 className="report-heading">Projected Score</h4>
-    <div className="score-pair">{[model.a,model.h].map(s=><div key={s.team} data-winner={model.winner?.team===s.team}><small>{label(s.team)}</small><strong>{s.score.toFixed(1)}</strong></div>)}</div>
+    <div className="score-pair">{[model.a,model.h].map((s,i)=><div key={s.team} data-winner={winner===s.team}><small>{label(s.team)}</small><strong>{model.overall[i].toFixed(1)}</strong></div>)}</div>
     <h4 className="report-heading">Why This Pick</h4>
     <p className="report-explanation">{explanation || 'The two projected scores are level at one decimal place.'}</p>
     {!college && model.a.injuries+model.h.injuries>0 && <p className="report-note">Confirmed absences reduce {g.away} by {model.a.injuries.toFixed(2)} and {g.home} by {model.h.injuries.toFixed(2)} points.</p>}
@@ -52,7 +59,7 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
         ['Venue Adjustment',s=>signed(s.court)],
         ...Object.keys({...model.a.parts,...model.h.parts}).map(k=>[k,s=>signed(s.parts[k]||0)]),
         ...(!college?[['Injury Adjustment',s=>signed(-s.injuries)]]:[]),
-        ['Projected Score',s=>s.score.toFixed(1)]
+        ['Team Projection',s=>s.score.toFixed(1)]
       ].map(([name,value])=><tr key={name}><th>{name}</th><td>{value(model.a)}</td><td>{value(model.h)}</td></tr>)}</tbody></table>
       <p className="report-note">Start with adjusted offense. Add how many points the opponent allows above or below the league average of {away.baseline.toFixed(1)}, then apply the listed adjustments. Figures are rounded for display.</p>
       {[model.a,model.h].map(s=><div className="team-history" key={s.team}><b>{label(s.team)} · {s.rating.games} Games</b><small>Adjusted points allowed {s.rating.defense.toFixed(1)} · Schedule strength {signed(s.rating.scheduleStrength)} pts versus average</small><small>Wins against {s.rating.wins.map(label).join(', ') || 'no opponents yet'}.</small></div>)}
@@ -70,7 +77,7 @@ function MarketComparison({game,blend}){
         <tr><th>Spread</th><td>{Number.isFinite(game.homeSpread)?priceText(-game.homeSpread):'—'}</td><td>{priceText(game.homeSpread)}</td></tr>
         {blend && <tr><th>Market-Informed Score</th><td>{blend.away.toFixed(1)}</td><td>{blend.home.toFixed(1)}</td></tr>}
       </tbody></table>
-    {blend && <p className="report-note">This score gives the market {(100*blend.weight).toFixed(1)}% weight, fitted on 2024 games. The Model Pick uses the team projection.</p>}
+    {blend && <p className="report-note">This score gives the market {(100*blend.weight).toFixed(1)}% weight, fitted on 2024 games. This weighting is included in the overall pick.</p>}
   </details>;
 }
 
