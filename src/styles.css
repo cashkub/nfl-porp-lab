@@ -635,3 +635,13 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .player-photo-large {width:clamp(42px,5vw,66px);height:clamp(42px,5vw,66px);background:#e0e8f0;color:#263a4c;font-size:18px;letter-spacing:0}
 .player-title {display:flex;align-items:center;gap:5px}
 .compact-pick .player-photo {height:23px;width:23px}
+
+.sport-cards .sport-card {
+  background-image:linear-gradient(90deg,#08111ce0 0%,#08111c73 39%,transparent 75%),var(--home-photo);
+  background-size:cover;
+  background-position:center,var(--home-crop);
+}
+.sport-cards .nfl {--home-photo:url('/home-nfl.webp');--home-crop:50% 23%}
+.sport-cards .nba {--home-photo:url('/home-nba.webp');--home-crop:50% 8%}
+.sport-cards .cfb {--home-photo:url('/home-cfb.webp');--home-crop:50% 66%}
+.sport-cards .cbb {--home-photo:url('/home-cbb.webp');--home-crop:50% 60%}
