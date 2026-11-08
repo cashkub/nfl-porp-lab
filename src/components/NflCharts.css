@@ -5,7 +5,7 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .chart-lab header{align-items:center;justify-content:space-between;padding:1.25rem 0;border-bottom:1px solid var(--lab-rule)}
 .chart-lab header a{display:flex;align-items:center;gap:.5rem;color:#eac8ff;text-decoration:none;font-weight:750}
 .chart-lab header img{width:2rem}.chart-lab h1,.chart-lab h2,.lab-rate strong{font:italic 800 2rem/1 LabDisplay,system-ui;margin:0}
-.chart-lab h1{font-size:clamp(3.2rem,7vw,5.2rem);margin:1.6rem 0;text-transform:uppercase;color:#f3faff}
+.chart-lab h1{font-size:clamp(3.4rem,7.5vw,5.6rem);margin:1.6rem 0;text-transform:uppercase;color:#f3faff}
 .chart-lab h1 em{color:#72ddff;text-shadow:0 0 13px #3686b986}
 .lab-controls{display:grid;grid-template-columns:2fr 1.5fr repeat(3,1fr);gap:.6rem;margin-bottom:1rem}
 .lab-controls label{display:grid;gap:.3rem;min-width:0;color:#c8ddeb;font-size:.76rem;font-weight:650}
@@ -16,7 +16,7 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .lab-player .player-photo{float:left;margin:.1rem 1rem .45rem 0;width:4.3rem;height:4.3rem}
 .lab-player small,.lab-rate span{color:#c8ddeb;font-size:.8rem}.lab-rate{flex-direction:column;gap:.3rem;flex-shrink:0}
 .lab-rate strong{font-size:clamp(2.6rem,7vw,4.4rem);color:#c6efff}
-.lab-block h2{font-size:1.8rem;color:#f0f8ff}.lab-block h3{color:#b8e5ff}
+.lab-block h2{font-size:clamp(2rem,3vw,2.2rem);color:#f0f8ff}.lab-block h3{color:#b8e5ff}
 .lab-splits{gap:1rem}.lab-splits>section{flex:1;min-width:0}
 .lab-block dl{margin:.7rem 0 0}.lab-block dl>div{display:flex;align-items:center;justify-content:space-between;gap:.5rem;border-top:1px solid var(--lab-rule);padding:.6rem 0}
 .lab-block dt{color:#acc6db}.lab-block dd{margin:0;font-weight:bold}
@@ -106,7 +106,7 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 body:has(.chart-lab){background-color:#1c102e;background-blend-mode:luminosity}
 .chart-lab{--lab-rule:#534463;--violet:#c49bff}
 .chart-lab h1 em{color:var(--violet);text-shadow:0 0 16px #a251e974}
-.lab-block{background:#171321f7}.chart-lab .lab-block h3{color:#d9beff}
+.lab-block{background:#171321f7}.chart-lab .lab-block h3{color:#d9beff;font-size:clamp(1.17rem,2vw,1.35rem);font-weight:800}
 .lab-controls.primary-controls,.lab-controls.secondary-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
 .primary-controls .chart-filter,.secondary-controls .chart-filter{grid-column:auto}
 @media(min-width:621px){.extra-filters{display:grid;grid-template-columns:1.3fr 1.7fr;gap:.6rem}.lab-controls.secondary-controls{grid-template-columns:repeat(4,minmax(0,1fr))}.chart-slate{grid-template-columns:1fr 1.5fr 1fr}}
@@ -134,7 +134,7 @@ body:has(.chart-lab){background-color:#1c102e;background-blend-mode:luminosity}
 .zone-split ul{display:flex;flex-wrap:wrap;gap:.45rem 1rem;padding:0;list-style:none;font-size:.85rem}
 .zone-split li{display:flex;align-items:center;gap:.25rem}.zone-split li i{width:.55rem;height:.55rem;border-radius:50%}
 @media(max-width:620px){
-  .chart-lab header{padding:.7rem 0}.chart-lab h1{font-size:2.75rem;margin:.85rem 0}
+  .chart-lab header{padding:.7rem 0}.chart-lab h1{font-size:3rem;margin:.85rem 0}
   .lab-controls.primary-controls{margin-bottom:.45rem}
   .filter-toggle{display:flex;align-items:center;gap:.5rem;width:100%;min-height:44px;padding:.45rem .65rem;margin-bottom:.45rem;border:1px solid var(--lab-rule);border-radius:.45rem;background:#251e31;color:#e8d6ff;text-align:left}
   .filter-toggle span{font-size:.75rem}.filter-toggle::after{content:'⌄';margin-left:auto}.filter-toggle[aria-expanded=true]::after{transform:rotate(180deg)}
@@ -145,3 +145,8 @@ body:has(.chart-lab){background-color:#1c102e;background-blend-mode:luminosity}
 }
 .line-caption{white-space:nowrap}.player-numbers button{font-size:.77rem;line-height:1.1}
 .lab-controls.primary-controls .chart-filter,.lab-controls.secondary-controls .chart-filter{grid-column:auto}
+
+.chart-lab :is(h1,.lab-block h2){-webkit-text-stroke:.35px currentColor}
+.chart-lab .chart-filter label{font-size:.85rem;font-weight:800}
+.chart-slate .chart-filter:first-child select{font-weight:800;text-align:center;color:#eadcff;border-color:#9273b5}
+.margin-bars .bar-space strong{width:max-content;max-width:100%;margin-inline:auto;padding:.05rem .32rem;border:1px solid color-mix(in srgb,var(--outcome) 65%,transparent);border-radius:.3rem;background:#211a2b;font-weight:800;font-variant-numeric:tabular-nums}
