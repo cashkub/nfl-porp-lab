@@ -8,20 +8,27 @@ const gameKey = game => [gameDay(game), game.away, game.home].join('|');
 export function useGameFilter(sport, season, schedule) {
   const key = sport + ':' + season;
   const [, redraw] = useState(0);
-  const {date='', match=''} = selections.get(key) || {};
+  const saved = selections.get(key);
+  const today = easternDate.format(new Date());
+  const end = new Date(today + 'T12:00:00Z');
+  end.setUTCDate(end.getUTCDate() + (sport === 'nfl' ? 6 : 1));
+  const lastDay = end.toISOString().slice(0,10);
   const byDate = useMemo(() => {
     const groups = new Map();
     for (const game of schedule || []) {
       if (!Number.isFinite(Date.parse(game.kickoff))) continue;
       const day = gameDay(game);
+      if (day < today || day > lastDay) continue;
       if (!groups.has(day)) groups.set(day, []);
       groups.get(day).push(game);
     }
     return groups;
-  }, [schedule]);
+  }, [schedule,today,lastDay]);
   const days = [...byDate.keys()].sort();
+  const date = byDate.has(saved?.date) ? saved.date : '';
   const slate = date ? byDate.get(date) || [] : schedule || [];
-  const game = match && slate.find(g => gameKey(g) === match);
+  const game = date && saved?.match && slate.find(g => gameKey(g) === saved.match);
+  const match = game ? saved.match : '';
   const teams = new Set((game ? [game] : date ? slate : []).flatMap(g => [g.away,g.home]));
   function select(date, match='') {
     selections.set(key, {date,match});
