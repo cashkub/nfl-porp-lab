@@ -36,11 +36,13 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
     ].sort((a,b)=>b[0]-a[0]);
     explanation=label(w.team)+' gains the most from '+factors[0][1]+' (+'+factors[0][0].toFixed(1)+' points of margin).';
   }
-  return <>{model?<><div className="score-pair">{[model.a,model.h].map(s=><div key={s.team} data-winner={model.winner?.team===s.team}><small>{label(s.team)}</small><strong>{s.score.toFixed(1)}</strong></div>)}</div>
-    <p className="model-call"><small>Model Pick</small><b>{model.winner?label(model.winner.team)+' by '+Math.abs(model.margin).toFixed(1):'Projected Tie'}</b></p>
-    <p>{explanation || 'The two projected scores are level at one decimal place.'}</p>
+  return <>{model?<><p className="model-call"><small>Model Pick</small><b>{model.winner?label(model.winner.team)+' by '+Math.abs(model.margin).toFixed(1):'Projected Tie'}</b></p>
+    <h4 className="report-heading">Projected Score</h4>
+    <div className="score-pair">{[model.a,model.h].map(s=><div key={s.team} data-winner={model.winner?.team===s.team}><small>{label(s.team)}</small><strong>{s.score.toFixed(1)}</strong></div>)}</div>
+    <h4 className="report-heading">Why This Pick</h4>
+    <p className="report-explanation">{explanation || 'The two projected scores are level at one decimal place.'}</p>
     {!college && model.a.injuries+model.h.injuries>0 && <p className="report-note">Confirmed absences reduce {g.away} by {model.a.injuries.toFixed(2)} and {g.home} by {model.h.injuries.toFixed(2)} points.</p>}
-    {!college && g.context && <NflConditions game={g} model={model}/>}
+    {!college && <MarketComparison game={g} blend={model.blend}/>}
     {college && Math.min(away.games,home.games)<5 && <small>Early Season · {away.games} and {home.games} games in the sample.</small>}
     <details className="report-fold"><summary>Offense &amp; Defense Breakdown</summary>
       <table className="model-table"><caption>How the Score Is Built</caption><thead><tr><th>Points Per Game</th><th>{label(g.away)}</th><th>{label(g.home)}</th></tr></thead><tbody>
@@ -55,8 +57,21 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
       <p className="report-note">Start with adjusted offense. Add how many points the opponent allows above or below the league average of {away.baseline.toFixed(1)}, then apply the listed adjustments. Figures are rounded for display.</p>
       {[model.a,model.h].map(s=><div className="team-history" key={s.team}><b>{label(s.team)} · {s.rating.games} Games</b><small>Adjusted points allowed {s.rating.defense.toFixed(1)} · Schedule strength {signed(s.rating.scheduleStrength)} pts versus average</small><small>Wins against {s.rating.wins.map(label).join(', ') || 'no opponents yet'}.</small></div>)}
     </details></>:<p>Projection Pending · {college?'Each team needs a completed game before the selected day.':'Each team needs three completed games.'}</p>}
-    {!college && <><p className="market-line">Moneyline · {g.away} {priceText(g.awayPrice)} / {g.home} {priceText(g.homePrice)}<br/>Market Spread · {g.home} {priceText(g.homeSpread)}</p><InjuryReport game={g}/></>}
+    {!college && !model && <MarketComparison game={g}/>}
+    {!college && model && g.context && <NflConditions game={g} model={model}/>}
+    {!college && <InjuryReport game={g}/>}
   </>;
+}
+
+function MarketComparison({game,blend}){
+  return <details className="report-fold"><summary>Sportsbook Lines &amp; Market Comparison</summary>
+    <table className="model-table"><thead><tr><th>Market</th><th>{game.away}</th><th>{game.home}</th></tr></thead>
+      <tbody><tr><th>Moneyline</th><td>{priceText(game.awayPrice)}</td><td>{priceText(game.homePrice)}</td></tr>
+        <tr><th>Spread</th><td>{Number.isFinite(game.homeSpread)?priceText(-game.homeSpread):'—'}</td><td>{priceText(game.homeSpread)}</td></tr>
+        {blend && <tr><th>Market-Informed Score</th><td>{blend.away.toFixed(1)}</td><td>{blend.home.toFixed(1)}</td></tr>}
+      </tbody></table>
+    {blend && <p className="report-note">This score gives the market {(100*blend.weight).toFixed(1)}% weight, fitted on 2024 games. The Model Pick uses the team projection.</p>}
+  </details>;
 }
 
 function NflConditions({game,model}){
@@ -74,16 +89,18 @@ function NflConditions({game,model}){
     })}
     <p>{c.stadium} · {c.roof} · {c.surface || 'Surface unavailable'}</p>
     <p>{w?<>{w.temp ?? '—'} °F · Wind {w.wind ?? '—'} mph · Rain chance {w.rain ?? '—'}%. Forecast for the kickoff hour, retrieved {new Date(w.asOf).toLocaleString()}. {['open','outdoors'].includes(c.roof)?'Wind above 8 mph and temperatures below 40°F enter the score estimate.':'Roof status unconfirmed. Outside weather has no score adjustment.'} <a href="https://open-meteo.com/">Open-Meteo</a></>:['closed','dome'].includes(c.roof)?'Enclosed venue · No outdoor weather adjustment.':'Kickoff forecast unavailable · No weather adjustment.'}</p>
-    </details>{model.blend && <p className="market-line"><b>Market-Informed Score</b><br/>{game.away} {model.blend.away.toFixed(1)} · {game.home} {model.blend.home.toFixed(1)}<br/><small>{(100*model.blend.weight).toFixed(1)}% market weight fitted on 2024 games. The Model Pick above uses team data independently.</small></p>}</>;
+    </details></>;
 }
 
-export function PickReport({number,name,onOpen,side,line,metric,price,hits,total,average,rank,results,reason}){
+export function PickReport({number,name,onOpen,side,line,metric,price,hits,total,average,rank,results,reason,role,context}){
   return <><div className="pick-player"><span>#{number}</span><button className="board-player" onClick={onOpen}>{name}</button></div>
     <p className="pick-line"><strong>{side==='over'?'Over':'Under'} {line} {metric}</strong><small>{price}</small></p>
     <dl className="pick-metrics"><div><dt>Hit Rate</dt><dd><HitRate rate={hits/total}/></dd></div><div><dt>Game Avg</dt><dd>{average.toFixed(1)}</dd></div><div><dt title="#1 allows the most">Defense Rank</dt><dd>{rank?'#'+rank:'—'}</dd></div></dl>
-    <small>Recent Games · {hits} of {total} Hit · Oldest First</small>
+    <div className="pick-reason"><h4 className="report-heading">Why It Ranks</h4><p>{reason}</p></div>
+    <details className="report-fold pick-evidence"><summary>Game History{role || context?' & Player Context':''}</summary>
+    <small>{hits} of {total} Hit · Oldest First</small>
     <div className="pick-history">{results.map((v,i)=>{
       const outcome=v===line?'Push':(side==='over'?v>line:v<line)?'Hit':'Miss';
       return <span key={i} style={{'--bar-height':Math.max(4,Math.abs(v)/Math.max(1,...results.map(Math.abs))*26)+'px'}} data-outcome={outcome} title={outcome+' · '+v} aria-label={outcome+' · '+v}>{v}</span>;
-    })}</div><p className="pick-reason"><b>Why It Ranks</b>{reason}</p><button className="outline-button" onClick={onOpen}>Open Analyzer <ArrowUpRight size={16} aria-hidden="true"/></button></>;
+    })}</div>{role && <p><b>Usage</b> {role}</p>}{context && <p><b>Matchup Context</b> {context}</p>}</details><button className="outline-button" onClick={onOpen}>Open Analyzer <ArrowUpRight size={16} aria-hidden="true"/></button></>;
 }

@@ -550,3 +550,17 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .record-result[data-result=Correct] {color:var(--rate-high)}
 .record-result[data-result=Incorrect] {color:var(--rate-low)}
 .app :is(.sport-card,.back-sports,.board-player,.theme-button):focus-visible {outline:3px solid var(--sport-accent);outline-offset:3px}
+
+.report-heading {font-size:.84rem;line-height:1.35;margin:14px 0 5px;color:var(--ink)}
+.report-explanation,.pick-reason p {margin:4px 0 12px;line-height:1.5}
+.matchup-grid .model-call {justify-content:space-between;border-radius:6px;margin:12px 0}
+.matchup-grid .score-pair {margin:5px 0 12px}
+.research-card .report-fold {padding:0;margin:0;border-top:1px solid var(--rule)}
+.report-fold > summary {padding:12px 0;font-size:.88rem}
+.report-fold[open] {padding-bottom:12px}
+.report-fold > summary:focus-visible {outline:2px solid var(--sport-accent);outline-offset:2px}
+.pick-evidence b {display:block}
+.picks-grid .pick-evidence {margin:0 0 12px}
+.picks-grid .pick-metrics {margin-bottom:0}
+.picks-grid .research-card > h3 {font-size:.94rem;color:var(--muted);margin:3px 0 14px}
+@media(min-width:1200px){.picks-grid {grid-template-columns:repeat(auto-fit,minmax(325px,1fr))}}
