@@ -6,6 +6,7 @@ import {priceText} from '../lib/bookLine.js';
 export function useArchive(file){
   const [state,setState]=useState({});
   useEffect(()=>{
+    if(!file)return;
     const ctrl=new AbortController();
     fetch(import.meta.env.BASE_URL+'data/'+file,{signal:ctrl.signal,cache:'no-cache'})
       .then(r=>{if(!r.ok)throw Error();return r.json()})
@@ -15,8 +16,10 @@ export function useArchive(file){
   return state.file===file?state:{};
 }
 const dayfmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
-export default function TrackedPicks({sport,record=false,onOpen}){
-  const {rows,error}=useArchive(sport+'-picks.json'),[date,setDate]=useState('');
+export default function TrackedPicks({sport,record=false,onOpen,archive}){
+  const fetched=useArchive(archive?null:sport+'-picks.json');
+  const {rows,error}=archive || fetched;
+  const [date,setDate]=useState('');
   const dates=[...new Set(rows?.map(r=>r.date))].sort();
   const today=dayfmt.format(new Date());
   const selected=date || (record?'all':dates.find(d=>d>=today)||dates.at(-1));
