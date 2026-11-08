@@ -14,7 +14,7 @@ const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
 const day = date => new Date(date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const gameTime = date => new Date(date).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
 
-export default function PropsBoard({gameFilter,initialRanked=false,games,schedule,players,season,now,onOpen}) {
+export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Matchup Player Props' : 'Props Board',initialRanked=false,games,schedule,players,season,now,onOpen}) {
   const [team,setTeam] = useState('');
   const [stat,setStat] = useState('');
   const [side,setSide] = useState(initialRanked ? 'both' : 'over');
@@ -76,8 +76,8 @@ export default function PropsBoard({gameFilter,initialRanked=false,games,schedul
       }));
     });});
   },[slate,players,season,side,stat,touchdown]);
-  const matchup = gameFilter.game;
-  const visibleGames = slate.filter(g=>!gameFilter.date || day(g.kickoff)===gameFilter.date);
+  const matchup = fixedGame || gameFilter.game;
+  const visibleGames = slate.filter(g=>fixedGame || !gameFilter.date || day(g.kickoff)===gameFilter.date);
   const choices = matchup ? [matchup.away,matchup.home] : [...new Set(visibleGames.flatMap(g=>[g.home,g.away]))].sort();
   const currentTeam = choices.includes(team) ? team : '';
   const included = new Set(visibleGames.filter(g=>!matchup || (g.home===matchup.home && g.away===matchup.away && day(g.kickoff)===day(matchup.kickoff))));
@@ -103,12 +103,11 @@ export default function PropsBoard({gameFilter,initialRanked=false,games,schedul
     setAscending(key === sort ? !ascending : !['rate','over','under'].includes(key));
     setSort(key);setLimit(30);
   }
-  const title = 'Props Board';
   function filter(setter,event) {setter(event.target.value);setLimit(30);}
   return <section className="panel props-board" aria-label={title}>
     <header><h1>{title}</h1><p>{touchdown?'DraftKings Lines and Research Presets':'DraftKings Pregame Snapshots'} · {filtered.length} {side==='both' ? 'prop sides' : 'props'}</p></header>
     <div className="board-controls">
-      <GameFilter filter={gameFilter} onChange={()=>{setTeam('');setLimit(30);}}/>
+      {!fixedGame && <GameFilter filter={gameFilter} onChange={()=>{setTeam('');setLimit(30);}}/>}
       <label>Team<FilterMenu value={currentTeam} onChange={e=>filter(setTeam,e)}><option value="">{matchup ? "Both Teams" : "All Teams"}</option>{choices.map(t=><option key={t}>{t}</option>)}</FilterMenu></label>
       <label>Stat<FilterMenu value={stat} onChange={e=>filter(setStat,e)}><option value="">All Stats</option>{Object.entries(METRICS).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</FilterMenu></label>
       <label>Last 10 Side<FilterMenu value={side} onChange={e=>filter(setSide,e)}><option value="both">Both Sides</option><option value="over">Over</option><option value="under">Under</option></FilterMenu></label>

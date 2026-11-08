@@ -1,20 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 920" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 800" fill="none">
   <defs>
-    <pattern id="yard" width="72" height="360" patternUnits="userSpaceOnUse">
-      <path stroke="#9ce5ff" stroke-width="2" d="M1 0v360M15 106v10m14-10v10m14-10v10m14-10v10M15 244v10m14-10v10m14-10v10m14-10v10"/>
+    <pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse">
+      <path d="M25 0H0v25" stroke="#b9d9ff" opacity=".09"/>
     </pattern>
+    <pattern id="yards" width="60" height="320" patternUnits="userSpaceOnUse">
+      <path d="M0 0v320m30-320v320" stroke="#7cdfff" stroke-width="1.4"/>
+      <path d="M6 130v5m6-5v5m6-5v5m6-5v5m12-5v5m6-5v5m6-5v5m6-5v5M6 185v5m6-5v5m6-5v5m6-5v5m12-5v5m6-5v5m6-5v5m6-5v5" stroke="#a4eeff" stroke-width="2"/>
+    </pattern>
+    <filter id="glow" x="-12%" y="-15%" width="124%" height="130%">
+      <feGaussianBlur stdDeviation="3"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <g id="numbers" font-family="Arial,sans-serif" font-size="19" font-weight="700" text-anchor="middle" fill="#aeeeff">
+      <text x="60" y="291">10</text><text x="120" y="291">20</text><text x="180" y="291">30</text><text x="240" y="291">40</text><text x="300" y="291">50</text><text x="360" y="291">40</text><text x="420" y="291">30</text><text x="480" y="291">20</text><text x="540" y="291">10</text>
+    </g>
+    <g id="field">
+      <rect x="-60" width="720" height="320" stroke="#8fe5ff" stroke-width="2.5"/>
+      <rect width="600" height="320" fill="url(#yards)" stroke="#a8f1ff" stroke-width="2"/>
+      <use xlink:href="#numbers"/><use xlink:href="#numbers" transform="translate(600 320) rotate(180)"/>
+      <path d="M98 235h73l70-74h50m-12-10 13 10-13 10" stroke="#c5f7ff" stroke-width="2.5" stroke-dasharray="7 5"/>
+      <circle cx="89" cy="235" r="6" stroke="#c5f7ff" stroke-width="2"/>
+    </g>
+    <g id="key" stroke="#caaeff" stroke-width="2">
+      <path d="M0 24h46a141 141 0 0 1 0 272H0M0 112h114v96H0"/>
+      <circle cx="114" cy="160" r="36"/><path d="M24 142v36m8-42a24 24 0 0 1 0 48"/>
+      <circle cx="32" cy="160" r="5"/>
+    </g>
+    <g id="court" stroke="#cfb5ff" stroke-width="2">
+      <rect width="600" height="320"/><path d="M300 0v320"/><circle cx="300" cy="160" r="38"/>
+      <use xlink:href="#key"/><use xlink:href="#key" transform="translate(600 320) rotate(180)"/>
+    </g>
   </defs>
-  <g transform="translate(-122 203) rotate(-18)" opacity=".46">
-    <rect width="648" height="360" stroke="#b5e8ff" stroke-width="3" fill="url(#yard)"/>
-    <path d="M72 307h83l92-92h61m-15-12 16 12-16 12" stroke="#b7f2ff" stroke-width="3" stroke-dasharray="12 5"/>
-  </g>
-  <g transform="translate(1120 120) rotate(16)" stroke="#d9c2ff" stroke-width="2.5" opacity=".47">
-    <rect x="-236" y="-150" width="472" height="650"/>
-    <path d="M-236 175h472M-206-150v45a206 206 0 0 0 412 0v-45M-76-150V22H76v-172"/>
-    <circle cy="22" r="63"/><circle cy="175" r="47"/><path d="M-30-114h60"/><circle cy="-102" r="10"/>
-  </g>
-  <g transform="translate(965 830) rotate(-19)" stroke="#ffccae" stroke-width="2.6" opacity=".52">
-    <path d="M-240-175h480v350h-480zM-240-146h56a165 165 0 0 1 0 292h-56M-240-56h119V56h-119"/>
-    <circle cx="-121" r="52"/><path d="M-218-21v42"/><circle cx="-204" r="9"/>
-  </g>
+  <rect width="1200" height="800" fill="url(#grid)"/>
+  <g filter="url(#glow)" opacity=".56"><use xlink:href="#field" transform="translate(-155 126) rotate(-16) scale(.86)"/></g>
+  <g filter="url(#glow)" opacity=".46"><use xlink:href="#court" transform="translate(808 -112) rotate(18) scale(1.04)"/></g>
+  <g filter="url(#glow)" opacity=".50"><use xlink:href="#court" transform="translate(667 485) rotate(-15) scale(.9)"/></g>
+  <g filter="url(#glow)" opacity=".45"><use xlink:href="#field" transform="translate(-215 643) rotate(12) scale(.85)"/></g>
 </svg>

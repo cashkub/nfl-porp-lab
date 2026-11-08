@@ -21,7 +21,7 @@ small { text-transform: uppercase; font: 650 .66rem/1.4 system-ui; letter-spacin
 .action { display: inline-flex; gap: 1.4rem; align-items: center; background: var(--fire); color: #241418; padding: .8rem 1.15rem; font-weight: 750; border-radius: 2px }
 .action b { font-size: 1.25em }
 .hero-copy p { max-width: 19rem; text-shadow: 0 1px 4px #000 }
-body { background-image:url('./assets/playbook.svg'),linear-gradient(100deg,#09162b55,#10142b8c 52%,#20112f4d),url('./assets/field-and-court.jpg'); background-size:cover; background-position:center; background-repeat:no-repeat }
+body { background-image:url('./assets/playbook.svg'),radial-gradient(ellipse at 0% 8%,#103150,transparent 58%),radial-gradient(ellipse at 100% 75%,#302044,transparent 65%); background-color:#0d1425; background-size:100% auto,cover,cover; background-position:center top; background-repeat:repeat-y,no-repeat,no-repeat }
 h1 em { color:#e7fcff; -webkit-text-stroke:1.5px #65eaff; paint-order:stroke fill; text-shadow:2px 3px #144b76,0 0 10px #16acffae,0 0 26px #2383ffad }
 .leagues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(.55rem,1.5vw,1rem) }
 .frame { --accent:#54dcff; position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid var(--accent); border-radius:5px; background:#152237; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 27%,transparent) }
@@ -46,7 +46,7 @@ a:focus-visible,summary:focus-visible { outline:3px solid white; outline-offset:
   .frame { height:clamp(10.5rem,44vw,14rem) }
   .frame::before { background-position:70% center }
   .shortcut { font-size:.69rem }
-  body { background-size:155% auto,cover,auto max(44vh,19rem); background-position:center top,center,center bottom; background-color:#102239 }
+  body { background-size:185% auto,cover,cover; background-position:center 1rem,center,center }
 }
 @media (prefers-reduced-motion:no-preference) {
   @view-transition { navigation:auto }

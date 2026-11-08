@@ -1,3 +1,4 @@
+import NflGames from './components/NflGames.jsx';
 import FilterMenu from './components/FilterMenu.jsx';
 import PlayerStepper from './components/PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './components/GameFilter.jsx';
@@ -119,7 +120,7 @@ function GameLog({ multi, games, metric, line, direction }) {
 function activePage(hash=window.location.hash) {
   const manual=hash.slice(1).match(/^(nba|cfb)(-home|-top-eight|-games|-props|-record)?$/);
   if(manual)return manual[1]+(manual[2]==='-top-eight'?'-top':manual[2] || '');
-  return ({'#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
+  return ({'#nfl-games':'nfl-games','#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
     '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'board',
     '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#model-record':'model-record','#cbb-record':'cbb-record','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-props'})[hash] || 'home';
 }
@@ -130,6 +131,7 @@ export default function App() {
   const sport = ['cbb','nba','cfb'].find(s=>page.startsWith(s)) || 'nfl';
   const manualLeague = sport!=='nfl';
   const nflTool = !launch && !manualLeague;
+  const previewTools=nflTool && new URLSearchParams(window.location.search).get('view')==='nfl';
   const [initialCbb,setInitialCbb] = useState({});
   const [dark,setDark] = useState(() => {
     try { return localStorage.getItem('propbets-theme') !== 'light'; } catch { return true; }
@@ -273,9 +275,10 @@ export default function App() {
     
     <header className="topbar">
       <div className="shell topbar-inner">
-        <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
+        <a className="brand" href={previewTools?'/preview/nfl/':'/'} aria-label={previewTools?"NFL preview menu":"PropBets home"}><img className="brand-mark" src={import.meta.env.BASE_URL + (previewTools?"preview/assets/mark.svg":"favicon.svg?v=3")} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        {!launch && <nav className="view-tabs" aria-label="Sport Tools"><a href={'#'+sport+'-home'}>{sport.toUpperCase()}</a>{toolsBySport[sport].map(([label,path])=><a key={path} href={'#'+path} aria-current={activePage('#'+path)===page?'page':undefined}>{label}</a>)}</nav>}
+        {previewTools && <nav className="nfl-preview-nav" aria-label="NFL preview tools"><a href="/preview/nfl/">NFL menu</a>{[['Charts','analyzer'],['Prop Lists','props'],['Top Looks','top-eight'],['Games','nfl-games'],['Model Record','model-record']].map(([label,route])=><a href={'#'+route} key={route} aria-current={activePage('#'+route)===page?'page':undefined}>{label}</a>)}</nav>}
+        {!launch && !previewTools && <nav className="view-tabs" aria-label="Sport Tools"><a href={'#'+sport+'-home'}>{sport.toUpperCase()}</a>{toolsBySport[sport].map(([label,path])=><a key={path} href={'#'+path} aria-current={activePage('#'+path)===page?'page':undefined}>{label}</a>)}</nav>}
         <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
         {!launch && <div className={`data-status ${!manualLeague && isDemo ? 'status-demo' : ''}`}><span className="status-light" />{manualLeague ? (sport==='cfb'?'CFBFASTR DATA':'HOOPR DATA') : loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>}
       </div>
@@ -283,16 +286,17 @@ export default function App() {
     <main className={page==='analyzer'||page===sport?'shell analyzer-shell':'shell'} id="analyzer">
       {launch ? <SportHome sport={page==='home'?null:sport}/> :
        manualLeague && page===sport ? <CbbAnalyzer key={sport} initial={initialCbb.sport===sport?initialCbb:{}}/> :
-       (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
-       page==='nfl-top' ? <TrackedPicks sport="nfl" onOpen={r=>{
+       (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} initialTab={previewTools?'props':'games'} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
+       page==='nfl-top' ? <TrackedPicks sport="nfl" title={previewTools?"Top Looks":undefined} onOpen={r=>{
          const p=players.find(p=>p.id===r.playerId);
          if(!p)return;
          openFromBoard(p,{metric:r.metric,point:r.line},r.side,{...r,lines:[]});
        }}/> :
+       page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        manualLeague && page===sport+'-games' ? <CbbGames key={sport}/> :
        manualLeague ? <CbbBoard top={page===sport+'-top'} key={page} initialRanked={window.location.hash==='#cbb-best'} onOpen={pick=>{setInitialCbb({...pick,sport});window.location.hash=sport;}}/> :
-       page!=='analyzer' ? <PropsBoard gameFilter={gameFilter} key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+       page!=='analyzer' ? <PropsBoard title={previewTools?"Prop Lists":undefined} gameFilter={gameFilter} key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header team-banner" style={{'--team-color':teamColor(player?.team)}} aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>

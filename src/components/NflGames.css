@@ -1,0 +1,15 @@
+.nfl-game {margin:1rem 0;border:1px solid var(--rule);border-radius:.75rem;overflow:hidden}
+.nfl-match-button {width:100%;display:grid;grid-template-columns:1fr auto;gap:.6rem 1rem;text-align:left;background:var(--canvas);color:var(--ink);border:0;padding:1rem}
+.nfl-game-date {grid-column:1/-1;font-size:.82rem;color:var(--muted)}
+.nfl-game-pair {grid-column:1/-1;display:flex;align-items:center;gap:1rem}
+.nfl-game-team {display:grid;grid-template-columns:auto auto;align-items:center;column-gap:.5rem;border-bottom:3px solid var(--club);padding-bottom:.35rem}
+.nfl-game-team img {width:2.6rem;height:2.6rem;object-fit:contain;grid-row:span 2}
+.nfl-game-team span,.nfl-game-market,.nfl-game-action {font-size:.8rem}
+.nfl-game-action {color:var(--sport-accent);font-weight:700}
+.nfl-match-detail {padding:1rem;border-top:1px solid var(--rule);min-width:0}
+.nfl-match-detail .props-board {margin-top:1.25rem}
+.nfl-preview-nav {display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;max-width:100%;padding:.5rem 0}
+.nfl-preview-nav a {font-size:.82rem;padding:.4rem .55rem;text-decoration:none;border-radius:.4rem}
+.nfl-preview-nav a[aria-current=page] {color:var(--sport-accent);background:var(--sport-wash)}
+@media(max-width:550px){.nfl-match-button {grid-template-columns:1fr}.nfl-game-pair {gap:.65rem}.nfl-match-detail {padding:.6rem}}
+@media(max-width:650px){.nfl-preview-nav{grid-column:1/-1;grid-row:2;gap:.15rem}.nfl-preview-nav a{padding:.4rem;font-size:.74rem}}

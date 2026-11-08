@@ -45,8 +45,8 @@ function PerformanceSummary({games,picks,period,sport}){
       values={([label,g])=>[label,winRate(g.overall),winRate(g.selected)]} renderRow={([label,group])=><tr key={label}><th scope="row">{label}</th><td>{recordCell(group.overall)}</td><td>{recordCell(group.selected)}</td></tr>}/></div>
     <small>Win rates use decided picks. Overall includes the full published archive.</small></section>;
 }
-export default function ModelRecord({validation,sport='nfl'}){
-  const [tab,setTab]=useState('games');
+export default function ModelRecord({validation,sport='nfl',initialTab='games'}){
+  const [tab,setTab]=useState(initialTab);
   const periodName=(sport==='nba'||sport==='cbb')?'Date':'Week';
   const [period,setPeriod]=useState('all');
   const picks=useArchive(sport+'-picks.json');

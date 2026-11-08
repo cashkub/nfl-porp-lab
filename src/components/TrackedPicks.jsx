@@ -22,7 +22,7 @@ export function useArchive(file){
   return state.file===file?state:{};
 }
 const dayfmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
-export default function TrackedPicks({sport,record=false,onOpen,archive,touchdownRecord=false,children}){
+export default function TrackedPicks({sport,title,record=false,onOpen,archive,touchdownRecord=false,children}){
   const fetched=useArchive(archive?null:sport+'-picks.json');
   const {rows:allRows,error}=archive || fetched;
   const [showScorers,setShowScorers]=useState(false);
@@ -40,7 +40,7 @@ export default function TrackedPicks({sport,record=false,onOpen,archive,touchdow
   const shown=inPeriod.sort((a,b)=>b.date.localeCompare(a.date)||a.rank-b.rank);
   const count=status=>shown.filter(r=>(r.result||'Pending')===status).length;
   const hits=count('Hit'),misses=count('Miss');
-  return <section className="panel props-board top-props"><h1>{sport.toUpperCase()} {scorers && record?'Touchdown Scorers Record':record?'Top Props Record':'Top Props'}</h1>
+  return <section className="panel props-board top-props"><h1>{sport.toUpperCase()} {scorers && record?'Touchdown Scorers Record':record?'Top Props Record':title || 'Top Props'}</h1>
     {children}
     {!record && <div className="picks-toolbar">
       {sport==='nfl' && <div className="pick-switch" role="group" aria-label="Pick List">{[[false,'All Props',ListOrdered],[true,'Touchdown Scorers',Target]].map(([active,label,Icon])=><button type="button" key={label} aria-pressed={scorers===active} onClick={()=>setShowScorers(active)}><Icon size={16} aria-hidden="true"/>{label}</button>)}</div>}
