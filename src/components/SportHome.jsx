@@ -28,5 +28,10 @@ export default function SportHome({sport}) {
     <div className="sport-cards">{['nfl','nba','cfb','cbb'].map(s=><a className={'sport-card '+s} href={'#'+s+'-home'} key={s}>
       <div><small>{sportNames[s]}</small><h2>{s.toUpperCase()}</h2></div>
       <span className="sport-enter">Explore {s.toUpperCase()} <ArrowUpRight size={18}/></span>
-    </a>)}</div></section>;
+    </a>)}</div>
+    <div style={{textAlign:'right'}}>
+      <a href={import.meta.env.BASE_URL+'preview/'} aria-label="Open the new site preview" title="New site preview"
+        style={{display:'inline-block',padding:'12px',fontSize:'12px',color:'var(--muted)',textDecoration:'none'}}>v2</a>
+    </div>
+  </section>;
 }
