@@ -306,6 +306,38 @@ def recent_usage_shares(players, season, week):
     return shares
 
 
+def add_offensive_snaps(payload, previous):
+    base = "https://github.com/nflverse/nflverse-data/releases/download"
+    def rows(path):
+        with urllib.request.urlopen(f"{base}/{path}", timeout=45) as response:
+            return list(csv.DictReader(io.TextIOWrapper(response, encoding="utf-8-sig")))
+
+    def key(player_id, game):
+        return player_id, game["gameId"], normalize_team(game["team"])
+
+    snaps = {key(p["id"], g): g["usage"]["offenseSnapRate"]
+             for p in previous.get("players", []) for g in p["games"]
+             if "offenseSnapRate" in g.get("usage", {})}
+    try:
+        ids = {r["pfr_id"]: r["gsis_id"] for r in rows("players/players.csv")
+               if r["pfr_id"] and r["gsis_id"]}
+        for season in payload["seasons"]:
+            try:
+                for r in rows(f"snap_counts/snap_counts_{season}.csv"):
+                    rate = market_number(r["offense_pct"])
+                    if r["pfr_player_id"] in ids and rate is not None and 0 <= rate <= 1:
+                        snaps[ids[r["pfr_player_id"]], r["game_id"], normalize_team(r["team"])] = rate
+            except (OSError, ValueError, KeyError) as exc:
+                print(f"{season} snap counts unavailable: {exc}")
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"Snap count player IDs unavailable: {exc}")
+    for player in payload["players"]:
+        for game in player["games"]:
+            rate = snaps.get(key(player["id"], game))
+            if rate is not None:
+                game["usage"]["offenseSnapRate"] = rate
+
+
 def main() -> int:
     records = []
     failed = []
@@ -394,6 +426,7 @@ def main() -> int:
             for item in records:
                 if item["id"] in finals: item["final"]=finals[item["id"]]
             record_path.write_text(json.dumps(records,separators=(",",":"))+"\n")
+    add_offensive_snaps(payload, json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {})
     save_if_changed(payload)
     return 0
 

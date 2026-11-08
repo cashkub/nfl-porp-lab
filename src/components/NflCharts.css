@@ -102,3 +102,46 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .workload-usage p,.workload-usage dd small {color:#acc6db;font-size:.8rem}
 .workload-usage p {margin:0}
 .workload-usage dd small {margin-right:.5rem;font-weight:500}
+
+body:has(.chart-lab){background-color:#1c102e;background-blend-mode:luminosity}
+.chart-lab{--lab-rule:#534463;--violet:#c49bff}
+.chart-lab h1 em{color:var(--violet);text-shadow:0 0 16px #a251e974}
+.lab-block{background:#171321f7}.chart-lab .lab-block h3{color:#d9beff}
+.lab-controls.primary-controls,.lab-controls.secondary-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+.primary-controls .chart-filter,.secondary-controls .chart-filter{grid-column:auto}
+@media(min-width:621px){.extra-filters{display:grid;grid-template-columns:1.3fr 1.7fr;gap:.6rem}.lab-controls.secondary-controls{grid-template-columns:repeat(4,minmax(0,1fr))}.chart-slate{grid-template-columns:1fr 1.5fr 1fr}}
+.chart-lab :is(.chart-filter select,.chart-step-buttons button,.line-compare button,.kickoff-conditions>div,.log-body dl>div,.log-table th:first-child){background:#261f34;border-color:var(--lab-rule)}
+.chart-lab :is(button,summary,select,input):focus-visible{outline:2px solid var(--violet);outline-offset:2px}
+.chart-lab .line-control{border:0;margin:0 0 .7rem}
+.line-control summary{background:linear-gradient(105deg,#3d245a,#231c34);box-shadow:inset 3px 0 var(--violet)}
+.line-edit,.player-numbers button{background:#d1aeff;color:#251131}
+.line-stepper,.line-stepper input,.line-stepper button,.line-reset,.bar-report{background:#30233f;color:#eee6fa;border-color:#6e5482}
+.line-compare button[aria-pressed=true]{background:#432c60;border-color:var(--violet);box-shadow:inset 0 -2px var(--violet)}
+.filter-toggle{display:none}
+.lab-player{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem 1rem;background:linear-gradient(110deg,color-mix(in srgb,var(--club) 18%,#271b33),#1c1727 65%)}
+.player-identity{display:flex;align-items:center;gap:.8rem;min-width:0}
+.lab-player .player-photo{float:none;flex:none;margin:0}
+.lab-player h2{font-size:clamp(1.8rem,3.5vw,3rem)}
+.player-next{margin:.25rem 0 0}
+.player-numbers{display:grid;grid-template-columns:repeat(3,1fr);text-align:center}
+.player-numbers>div{display:grid;align-content:center;justify-items:center;gap:.2rem;padding:.2rem .65rem;border-left:1px solid var(--lab-rule)}
+.player-numbers b{font-size:1.35rem}.player-numbers button{border:0;border-radius:.35rem;padding:.45rem .55rem;font-weight:750}
+.player-prices{grid-column:1/-1}
+.margin-bars .bar-space{background-color:#171220}.margin-bars [data-result=Unrated]{--outcome:#b991fa}
+.margin-bars [aria-pressed=true]{box-shadow:inset 0 -2px var(--violet)}.margin-bars [aria-pressed=true] .bar-space{background-color:#392746}
+.bar-space::after{border-color:#dfc7ff}.chart-reference{position:absolute;right:1px;bottom:var(--target);z-index:1;padding:.12rem .25rem;background:#46305e;color:white;border-radius:.2rem;transform:translateY(100%);font-weight:bold;text-transform:uppercase}
+.plot-heading small{color:#d9c9e7}.zone-track{height:.8rem;display:flex;overflow:hidden;border-radius:1rem;background:#272231}
+.zone-split ul{display:flex;flex-wrap:wrap;gap:.45rem 1rem;padding:0;list-style:none;font-size:.85rem}
+.zone-split li{display:flex;align-items:center;gap:.25rem}.zone-split li i{width:.55rem;height:.55rem;border-radius:50%}
+@media(max-width:620px){
+  .chart-lab header{padding:.7rem 0}.chart-lab h1{font-size:2.75rem;margin:.85rem 0}
+  .lab-controls.primary-controls{margin-bottom:.45rem}
+  .filter-toggle{display:flex;align-items:center;gap:.5rem;width:100%;min-height:44px;padding:.45rem .65rem;margin-bottom:.45rem;border:1px solid var(--lab-rule);border-radius:.45rem;background:#251e31;color:#e8d6ff;text-align:left}
+  .filter-toggle span{font-size:.75rem}.filter-toggle::after{content:'⌄';margin-left:auto}.filter-toggle[aria-expanded=true]::after{transform:rotate(180deg)}
+  .extra-filters[data-open=false]{display:none}
+  .lab-player{grid-template-columns:1fr;padding:.8rem}.lab-player .player-photo{width:3rem;height:3rem}
+  .player-numbers{border-top:1px solid var(--lab-rule);padding-top:.5rem}.player-numbers>div:first-child{border:0}
+  .player-numbers>div{padding:.15rem .25rem}.player-numbers button{min-height:36px}
+}
+.line-caption{white-space:nowrap}.player-numbers button{font-size:.77rem;line-height:1.1}
+.lab-controls.primary-controls .chart-filter,.lab-controls.secondary-controls .chart-filter{grid-column:auto}
