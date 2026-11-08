@@ -251,7 +251,7 @@ export default function App() {
   }).format(new Date(upcoming.kickoff));
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
-  return <div className="app">
+  return <div className="app" data-sport={page==='home'?undefined:cbb?'cbb':'nfl'}>
     
     <header className="topbar">
       <div className="shell topbar-inner">

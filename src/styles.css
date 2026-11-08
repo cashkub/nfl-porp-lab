@@ -506,3 +506,47 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 @media (max-width: 620px) {
   .college-settings {padding:0}
 }
+
+/* Use sport colors for navigation and selections, and outcome colors for grades. */
+.app {
+  --sport-accent:#14638d;
+  --sport-outline:color-mix(in srgb,var(--sport-accent) 38%,var(--rule));
+  --sport-wash:color-mix(in srgb,var(--sport-accent) 9%,var(--canvas));
+}
+.app[data-sport=cbb] {--sport-accent:#984917}
+[data-theme=dark] .app {--sport-accent:#81cef5}
+[data-theme=dark] .app[data-sport=cbb] {--sport-accent:#ffc08a}
+
+.sport-cards .nfl {border-color:#74c9ee}
+.sport-cards .cbb {border-color:#f4b17b}
+.sport-cards .sport-enter {border-color:currentColor}
+.sport-cards .nfl .sport-enter {color:#b6e6ff}
+.sport-cards .cbb .sport-enter {color:#ffdcba}
+.tool-cards a {border:1px solid var(--sport-outline);border-inline-start:4px solid var(--sport-accent)}
+.tool-cards a > svg {color:var(--sport-accent)}
+.tool-cards a > svg:first-child {box-sizing:content-box;padding:7px;border-radius:9px;background:var(--sport-wash)}
+@media(min-width:651px){
+  .tool-cards {grid-template-columns:repeat(6,minmax(0,1fr))}
+  .tool-cards a {grid-column:span 2}
+  .tool-cards a:nth-last-child(-n+2) {grid-column:span 3}
+}
+@media(max-width:650px){
+  .tool-cards a {padding-left:66px}
+  .tool-cards a > svg:first-child {top:15px}
+  .view-tabs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:100%}
+  .view-tabs a {padding:7px 4px}
+}
+.view-tabs a[aria-current=page] {color:var(--sport-accent);background:var(--sport-wash);box-shadow:inset 0 0 0 1px var(--sport-outline)}
+.analyzer-shell .chart-panel,.props-board {border-color:var(--sport-outline)}
+.props-board > h1,.chart-top h2 {border-inline-start:3px solid var(--sport-accent);padding-inline-start:10px}
+.props-board > .board-controls {padding:12px;border:1px solid var(--sport-outline);border-radius:10px;background:var(--sport-wash)}
+.props-board .game-log th {background:var(--sport-wash);color:var(--ink)}
+.props-board .game-log tbody tr:hover {background:var(--sport-wash)}
+.pick-player > span {padding:4px 8px;border-radius:7px;color:var(--sport-accent);background:var(--sport-wash);border:1px solid var(--sport-outline)}
+.score-pair > [data-winner=true] {box-shadow:inset 0 3px var(--sport-accent);background:var(--sport-wash)}
+.model-call {padding:9px 12px;border-inline-start:3px solid var(--sport-accent);background:var(--sport-wash)}
+.model-call small {color:var(--sport-accent)}
+.record-result {font-weight:650;color:var(--muted)}
+.record-result[data-result=Correct] {color:var(--rate-high)}
+.record-result[data-result=Incorrect] {color:var(--rate-low)}
+.app :is(.sport-card,.back-sports,.board-player,.theme-button):focus-visible {outline:3px solid var(--sport-accent);outline-offset:3px}

@@ -36,7 +36,7 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
     ].sort((a,b)=>b[0]-a[0]);
     explanation=label(w.team)+' gains the most from '+factors[0][1]+' (+'+factors[0][0].toFixed(1)+' points of margin).';
   }
-  return <>{model?<><div className="score-pair">{[model.a,model.h].map(s=><div key={s.team}><small>{label(s.team)}</small><strong>{s.score.toFixed(1)}</strong></div>)}</div>
+  return <>{model?<><div className="score-pair">{[model.a,model.h].map(s=><div key={s.team} data-winner={model.winner?.team===s.team}><small>{label(s.team)}</small><strong>{s.score.toFixed(1)}</strong></div>)}</div>
     <p className="model-call"><small>Model Pick</small><b>{model.winner?label(model.winner.team)+' by '+Math.abs(model.margin).toFixed(1):'Projected Tie'}</b></p>
     <p>{explanation || 'The two projected scores are level at one decimal place.'}</p>
     {!college && model.a.injuries+model.h.injuries>0 && <p className="report-note">Confirmed absences reduce {g.away} by {model.a.injuries.toFixed(2)} and {g.home} by {model.h.injuries.toFixed(2)} points.</p>}
