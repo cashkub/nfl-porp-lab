@@ -1,4 +1,5 @@
 import React from 'react';
+import {ArrowUpRight} from 'lucide-react';
 import {projection} from '../lib/projection.js';
 import {priceText} from '../lib/bookLine.js';
 import HitRate from './HitRate.jsx';
@@ -83,6 +84,6 @@ export function PickReport({number,name,onOpen,side,line,metric,price,hits,total
     <small>Recent Games · {hits} of {total} Hit · Oldest First</small>
     <div className="pick-history">{results.map((v,i)=>{
       const outcome=v===line?'Push':(side==='over'?v>line:v<line)?'Hit':'Miss';
-      return <span key={i} data-outcome={outcome} title={outcome+' · '+v} aria-label={outcome+' · '+v}>{v}</span>;
-    })}</div><p className="pick-reason"><b>Why It Ranks</b>{reason}</p><button className="outline-button" onClick={onOpen}>Open Analyzer →</button></>;
+      return <span key={i} style={{'--bar-height':Math.max(4,Math.abs(v)/Math.max(1,...results.map(Math.abs))*26)+'px'}} data-outcome={outcome} title={outcome+' · '+v} aria-label={outcome+' · '+v}>{v}</span>;
+    })}</div><p className="pick-reason"><b>Why It Ranks</b>{reason}</p><button className="outline-button" onClick={onOpen}>Open Analyzer <ArrowUpRight size={16} aria-hidden="true"/></button></>;
 }

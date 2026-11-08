@@ -475,3 +475,21 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .college-analyzer .match-header {background-image:linear-gradient(105deg,#201622,#663723)}.analysis-rail .usage-bars small {font-size:9px}
 
 .analyzer-bottom {display:grid;gap:16px;margin-top:18px}
+
+.picks-toolbar,.pick-switch,.week-control,.pick-switch button,.picks-grid .outline-button {display:flex;align-items:center;gap:8px}
+.picks-toolbar {justify-content:space-between;flex-wrap:wrap;padding-block:12px;border-bottom:1px solid var(--rule)}
+.pick-switch {gap:3px;padding:3px;border:1px solid var(--rule);border-radius:12px;background:var(--canvas)}
+.pick-switch button {border:0;border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:.88rem;font-weight:650;min-height:40px;padding:8px 12px;cursor:pointer}
+.pick-switch button[aria-pressed=true],.board-sort .outline-button[aria-pressed=true] {background:var(--blue);color:var(--canvas)}
+.week-control {flex-wrap:wrap;font-size:.85rem;font-weight:650}.week-control svg {color:var(--blue)}
+.week-control select {border:1px solid var(--rule);border-radius:8px;color:var(--ink);background:var(--ice);min-height:42px;padding:6px 10px;font-size:16px}
+.ranking-info {color:var(--muted);font-size:.85rem;margin:12px 0 20px}.ranking-info summary {cursor:pointer}
+.daily-picks h2 {display:flex;align-items:center;gap:14px;font-size:1.1rem}.daily-picks h2:after {content:'';height:1px;flex:1;background:var(--rule)}
+.daily-picks .picks-grid {margin-top:12px}.picks-grid .research-card {border-radius:14px;background-color:var(--canvas)}
+.picks-grid .pick-player {align-items:baseline}.pick-player>span {font-variant-numeric:tabular-nums}
+.picks-grid .pick-line {margin:8px 0}.pick-metrics dd {font-variant-numeric:tabular-nums}.pick-reason {font-size:.88rem}
+.pick-history {align-items:flex-end}.pick-history span {display:flex;flex-direction:column-reverse;align-items:center;gap:3px;min-width:14px;padding:0 2px;border:0}.pick-history span:before {content:'';width:100%;height:var(--bar-height);background:currentColor;opacity:.7;border-radius:3px 3px 0 0}
+.picks-grid .outline-button {border-radius:8px;justify-content:space-between;width:100%;min-height:40px;color:var(--blue);font-weight:700}.picks-grid .outline-button+small {margin-top:8px;font-size:.72rem}
+.app :is(.outline-button,.view-tabs a,.tool-cards a,.pick-switch button):focus-visible {outline:3px solid var(--blue);outline-offset:3px}
+.app .outline-button:hover {border-color:var(--blue)}.game-log tbody tr:nth-child(even) {background:color-mix(in srgb,var(--ice) 35%,transparent)}
+@media(max-width:540px){.picks-toolbar {align-items:stretch}.pick-switch,.week-control {width:100%}.pick-switch button {flex:1;justify-content:center}.week-control select {flex:1;min-width:0}}
