@@ -134,6 +134,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   const defense=defenses.find(d=>d.team===game.opponent);
   const totalGames=defenses.reduce((n,row)=>n+row.games,0);
   const leagueMean=totalGames?defenses.reduce((n,row)=>n+row.total,0)/totalGames:null;
+  const redZone=game.context?.redZoneDefense?.[game.opponent];
   const against=history.filter(g=>g.opponent===game.opponent);
   const headToHead=summarize(against,metric,line,direction);
   const unit=chartMarkets[metric].unit;
@@ -145,6 +146,9 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
       <div><dt>League average allowed to {player.position}s</dt><dd>{formatNumber(leagueMean)} {unit}</dd></div>
       <div><dt>Player vs. {game.opponent} in selected history</dt><dd>{against.length?(line==null?'':headToHead.hits+'/'+against.length+' hits · ')+formatNumber(headToHead.average)+' '+unit+' avg':'No meetings'}</dd></div></dl>
     <p className="method">{game.season} defense ranks · Rank 1 allows the most {chartMarkets[metric].label.toLowerCase()} to the entire position group.{defense?' Based on '+defense.games+' opponent games.':''}</p>
+    <h3>{game.opponent} Red Zone Defense</h3>
+    <dl><div><dt>Touchdown Rate Allowed</dt><dd>{redZone?.trips ? (100*redZone.touchdowns/redZone.trips).toFixed(1)+'%' : '—'}</dd></div></dl>
+    <p className="method">{redZone ? redZone.touchdowns+' TDs Allowed On '+redZone.trips+' Red Zone Trips · '+redZone.games+' Games With Play Data Before Week '+game.week : 'No Earlier Red Zone Play Data Available.'}</p>
     <h3>Last Three Games Against {player.position}s</h3>
     {prior.length?<div className="history-scroll"><table><thead><tr><th>Game</th><th>Offense</th><th>Group Total</th><th>Leading Player</th></tr></thead><tbody>
       {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td>{g.team}</td><td>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}

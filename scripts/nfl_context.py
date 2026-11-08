@@ -74,17 +74,21 @@ def enrich(payload,schedule_text):
     with ThreadPoolExecutor(max_workers=4) as pool:
         weather={r['game_id']:w for (_,r),w in zip(near,pool.map(forecast,near))}
     chances = {}
+    red_zone = {}
     logs = {}
     for year in payload['seasons']:
         pbp_url = f'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{year}.csv.gz'
         season_chances = {}
         try:
             with urlopen(pbp_url, timeout=65) as response:
-                season_logs = plays(response.read(), season_chances, include_efficiency=(year == season))
+                season_logs = plays(response.read(), season_chances, include_efficiency=(year == season),
+                                    red_zone=red_zone if year == season else None)
             chances.update(season_chances)
             if year == season:
                 logs = season_logs
         except (OSError,ValueError,KeyError) as exc:
+            if year == season:
+                red_zone.clear()
             print(f'{year} play-by-play unavailable: {exc}')
     completed = {r['game_id'] for r in csv.DictReader(io.StringIO(schedule_text))
                  if number(r.get('result')) is not None}
@@ -102,6 +106,14 @@ def enrich(payload,schedule_text):
         info={'stadium':r['stadium'],'roof':r['roof'] or 'Unconfirmed','surface':r['surface'],
               'weather':w,'total':number(r.get('total_line')),'marketWeight':config['marketWeight']}
         for side in ('away','home'):
+            team = r[side+'_team']
+            prior = [red_zone[(past['game_id'],team)] for past in rows
+                     if past['game_id'] in completed and int(past['week']) < int(r['week'])
+                     and (past['game_id'],team) in red_zone]
+            if prior:
+                info.setdefault('redZoneDefense', {})[g[side]] = {
+                    'games': len(prior), 'trips': sum(len(drives) for drives in prior),
+                    'touchdowns': sum(sum(drives.values()) for drives in prior)}
             unavailable={p['id'] for p in g.get('injuries',{}).get(g[side],[]) if (p.get('gameStatus') or '').lower()=='out'}
             chart=[q for q in depths.get(r[side+'_team'],depths.get(g[side],[])) if q['id'] not in unavailable]
             p=form.matchup(r,side,w if r['roof'] in ('open','outdoors') else None,chart)

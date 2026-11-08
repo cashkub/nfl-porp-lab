@@ -13,12 +13,20 @@ def number(value):
         return None
 
 
-def plays(data, scoring_chances=None, include_efficiency=True):
+def plays(data, scoring_chances=None, include_efficiency=True, red_zone=None):
     games = defaultdict(dict)
     with gzip.GzipFile(fileobj=io.BytesIO(data)) as f:
         for p in csv.DictReader(io.TextIOWrapper(f, encoding='utf-8-sig')):
             team = p['posteam']
             typ = 'pass' if p['qb_dropback'] in ('1','1.0') else 'rush'
+            if red_zone is not None and p['play_type'] in ('run','pass','field_goal','punt','qb_kneel','qb_spike'):
+                defense = p.get('defteam')
+                drive = number(p.get('fixed_drive'))
+                distance = number(p.get('yardline_100'))
+                if defense and team and drive and distance is not None and number(p.get('two_point_attempt')) != 1:
+                    trips = red_zone.setdefault((p['game_id'], defense), {})
+                    if 0 < distance <= 20:
+                        trips[drive] = p['fixed_drive_result'] == 'Touchdown'
             if scoring_chances is not None and team and p['play_type'] in ('pass','run') and p['qb_kneel'] not in ('1','1.0') and p['qb_spike'] not in ('1','1.0') and p.get('two_point_attempt') not in ('1','1.0'):
                 game_chances = scoring_chances.setdefault((p['game_id'],team), {})
                 distance = number(p.get('yardline_100'))
