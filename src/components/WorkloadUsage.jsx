@@ -1,9 +1,9 @@
 import React, {useMemo} from 'react';
 
 const metrics = [
-  ['targets', 'Target Share'],
-  ['carries', 'Rush Attempt Share'],
   ['attempts', 'Pass Attempt Share'],
+  ['carries', 'Rush Attempt Share'],
+  ['targets', 'Target Share'],
   ['touches', 'Total Touch Share'],
 ];
 

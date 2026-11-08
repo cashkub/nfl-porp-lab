@@ -30,14 +30,12 @@ function TeamLogo({team}) {
   return code?<img key={code} className="chart-logo" alt="" src={'https://a.espncdn.com/i/teamlogos/nfl/500/'+code+'.png'} onError={e=>{e.currentTarget.hidden=true}}/>:null;
 }
 
-function boxScoreFields(g) {
-  return [['Pass Yards',g.stats.passingYards],['Rush Yards',g.stats.rushingYards],['Receiving Yards',g.stats.receivingYards],
-        ['Offensive Snap %',formatRate(g.usage?.offenseSnapRate)],['Pass Attempts',g.usage?.attempts],['Carries',g.usage?.carries],['Targets',g.usage?.targets],
-        ['Receptions',g.stats.receptions],['Pass TDs',g.stats.passingTDs],['TDs Scored',g.stats.scoredTDs]];
-}
-
-function PlayerBoxScore({game}) {
-  return <dl>{boxScoreFields(game).map(([label,stat])=><div key={label}><dt>{label}</dt><dd>{stat ?? '—'}</dd></div>)}</dl>;
+function PlayerBoxScore({game,position,metric}) {
+  const keys=logColumns(position,[game],metric);
+  return <dl>{keys.map(key=>{
+    const [label,read]=logFields[key];
+    return <div key={key}><dt>{label}</dt><dd>{read(game) ?? '—'}</dd></div>;
+  })}<div><dt>Offensive Snap %</dt><dd>{formatRate(game.usage?.offenseSnapRate)}</dd></div></dl>;
 }
 
 function lineResult(value,line,direction) {
@@ -77,7 +75,7 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
       <TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@ ':'vs '}{r.game.opponent}</b><span className="chart-rank" style={defenseRankStyle(r.defense?.rank,r.teams)}>DEF {r.defense?'#'+r.defense.rank:'—'}</span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
       <span className="game-volume">{usageFields.map(([key,label])=><span key={key}><b>{r.game.usage?.[key] ?? '—'}</b> {label.toLowerCase()}</span>)}<span>Off. Snaps <b>{formatRate(r.game.usage?.offenseSnapRate)}</b></span></span>
     </button>)}</div></div>
-    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF #{active.defense.rank} of {active.teams}</b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'} Rank 1 allows the most to the position before that week.</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
+    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF #{active.defense.rank} of {active.teams}</b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'} Rank 1 allows the most to the position before that week.</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
 }
 
 function ControlLabel({children}) {
@@ -202,21 +200,28 @@ const logFields={
   receivingYards:['Receiving Yards',g=>g.stats.receivingYards],
   receptions:['Receptions',g=>g.stats.receptions],
   targets:['Targets',g=>g.usage?.targets],
+  scrimmageYards:['Rushing + Receiving Yards',g=>g.stats.scrimmageYards],
   scoredTDs:['TDs Scored',g=>g.stats.scoredTDs],
 };
-const passing=['passingYards','attempts','passingTDs'];
-const receiving=['receivingYards','receptions','targets'];
-const rushing=['rushingYards','rushingAttempts'];
+const passing=['attempts','passingYards','passingTDs'];
+const rushing=['rushingAttempts','rushingYards'];
+const receiving=['receptions','targets','receivingYards'];
+
+function statOrder(position){
+  const skill=[...rushing,...receiving,'scrimmageYards','scoredTDs'];
+  return position==='QB'?[...passing,...skill]:[...skill,...passing];
+}
 
 function logColumns(position,games,metric){
-  let fields;
-  if(position==='QB')fields=[...passing,...rushing,'scoredTDs'];
-  else if(position==='RB' || position==='FB')fields=[...rushing,...receiving,'scoredTDs'];
-  else if(position==='WR' || position==='TE'){
-    fields=[...receiving,'scoredTDs'];
-    if(games.some(g=>logFields.rushingAttempts[1](g)>0 || g.stats.rushingYards))fields.push(...rushing);
-  }else fields=Object.keys(logFields).filter(key=>games.some(g=>logFields[key][1](g)));
-  return fields.filter(key=>key!==metric).map(key=>logFields[key]);
+  return statOrder(position).filter(key=>{
+    if(key===metric || key==='scoredTDs')return true;
+    if(key==='scrimmageYards')return false;
+    if(passing.includes(key) && position==='QB')return true;
+    if(rushing.includes(key) && ['QB','RB','FB'].includes(position))return true;
+    if(receiving.includes(key) && ['WR','TE','RB','FB'].includes(position))return true;
+    const group=rushing.includes(key)?rushing:receiving.includes(key)?receiving:passing;
+    return games.some(g=>group.some(k=>Boolean(logFields[k][1](g))));
+  });
 }
 
 function GameLog({player,currentSeason,line,direction,metric}) {
@@ -234,13 +239,14 @@ function GameLog({player,currentSeason,line,direction,metric}) {
     </ChartSelect>
     <p>{games.length} {games.length===1?'Game':'Games'} · Home And Away · {market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
     {ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
-      <th>Week</th><th>Opponent</th><th>{market.label}</th><th>Result</th>{columns.map(([label])=><th key={label}>{label}</th>)}<th>Date</th>
+      <th>Week</th><th>Opponent</th>{columns.map(key=><th key={key}>{logFields[key][0]}</th>)}<th>Result</th><th>Date</th>
     </tr></thead><tbody>{ordered.map(g=>{
       const v=g.stats[metric] ?? 0;
       const {margin,outcome}=lineResult(v,line,direction);
       return <tr key={g.gameId}><th scope="row">{g.week}</th><td><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></td>
-        <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}{margin!=null && ' '+marginNumber.format(margin)}</span></td>
-        {columns.map(([label,read])=><td key={label}>{read(g) ?? '—'}</td>)}<td>{gameDate(g)}</td></tr>;
+        {columns.map(key=><td key={key}>{key===metric?<b>{v}</b>:logFields[key][1](g) ?? '—'}</td>)}
+        <td><span className="log-outcome" data-result={outcome}>{outcome}{margin!=null && ' '+marginNumber.format(margin)}</span></td>
+        <td>{gameDate(g)}</td></tr>;
     })}</tbody></table></div>}
     {!games.length && <p>No Recorded Games For This Year.</p>}
   </section>;
@@ -266,7 +272,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls primary-controls">
       <ChartSelect label="Player" value={player.id} onChange={onPlayer}>{roster.map(p=><option key={p.id} value={p.id}>{p.name} · {p.team}</option>)}</ChartSelect>
-      <ChartSelect label="Market" value={metric} onChange={onMetric}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
+      <ChartSelect label="Market" value={metric} onChange={onMetric}>{statOrder(player.position).filter(m=>markets.includes(m)).map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
     </div>
     <button type="button" className="filter-toggle chart-disclosure" aria-controls="chart-filters" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(!filtersOpen)}>
       <ControlLabel>Filters</ControlLabel>
