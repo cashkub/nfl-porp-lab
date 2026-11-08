@@ -181,9 +181,10 @@ export default function App() {
   const multi = season === 'ALL';
   const seasonLabel = multi ? 'All Seasons' : String(season);
   const seasonPlayers = useMemo(() => players.flatMap(p => {
-    const latest = (p.games || []).reduce((last, game) =>
-      (season === 'ALL' || game.season === season) && (!last || game.season > last.season || (game.season === last.season && game.week >= last.week)) ? game : last, null);
-    return latest ? [{ ...p, team: latest.team || p.team }] : [];
+    const history=getPlayerGames(p,season);
+    if(!availableStats(METRICS,history).length)return [];
+    const latest=history.at(-1);
+    return [{...p,team:latest.team || p.team}];
   }), [players, season]);
   const teams = useMemo(() => [...new Set(seasonPlayers.map(p => p.team).filter(Boolean))].sort(), [seasonPlayers]);
   const activeTeam = teams.includes(team) ? team : 'ALL';

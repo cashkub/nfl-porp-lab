@@ -3,7 +3,7 @@ import StatCard from './StatCard.jsx';
 import {availableStats} from '../lib/availableStats.js';
 import {UsageTrends} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import HitRate, {rateStyle} from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
 import {filteredWindow, summarize} from '../lib/stats.js';
@@ -42,7 +42,8 @@ export default function CbbAnalyzer({initial = {}}) {
   const team=teams.some(([id])=>id===selection) ? selection : (teams.find(([,name])=>name==='Illinois Fighting Illini') || teams[0])?.[0];
   const roster=useCbbFile(team ? season+'/'+team+'.json' : null);
   const [athlete,setAthlete]=useState(initial.player || '');
-  const player=roster.data?.find(p=>p.id===athlete) || roster.data?.[0];
+  const eligible=useMemo(()=>(roster.data || []).filter(p=>availableStats(markets,p.games).length),[roster.data]);
+  const player=eligible.find(p=>p.id===athlete) || eligible[0];
   const [requestedMetric,setMetric]=useState(initial.metric || 'points');
   const statOptions=availableStats(markets,player?.games || []);
   const metric=statOptions.includes(requestedMetric)?requestedMetric:statOptions[0] || 'points';
@@ -64,7 +65,7 @@ export default function CbbAnalyzer({initial = {}}) {
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>
       <ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/>
       <label>Team<select value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
-      <label>Player<select value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{roster.data?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <label>Player<select value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</select></label>
       <label>Location<select value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</select></label>
       <label>Games<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></select></label>
