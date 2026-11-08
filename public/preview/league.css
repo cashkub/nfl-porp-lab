@@ -18,29 +18,30 @@ small,summary span { text-transform: uppercase; font: 650 .66rem/1.4 system-ui; 
 .action { display: inline-flex; gap: 1.4rem; align-items: center; background: var(--fire); color: #241418; padding: .8rem 1.15rem; font-weight: 750; border-radius: 2px }
 .action b { font-size: 1.25em }
 .hero-copy p { max-width: 19rem; text-shadow: 0 1px 4px #000 }
-body { background-image: url('./assets/playbook.svg'), radial-gradient(ellipse at 80% 6%,#452b34 0, transparent 60%), linear-gradient(130deg,#191c24,#171319 65%,#281d22); background-size: cover; background-position:center; }
-h1 em { -webkit-text-stroke: 1px #ffae86; paint-order: stroke fill; text-shadow: 2px 3px #703d36 }
+body { background-image:url('./assets/playbook.svg'), radial-gradient(ellipse at 4% 0%,#154269,transparent 54%), radial-gradient(ellipse at 94% 82%,#56265c,transparent 58%), linear-gradient(128deg,#111f35,#22203d 62%,#291c39); background-size:cover; background-position:center }
+h1 em { color:#e7fcff; -webkit-text-stroke:1.5px #65eaff; paint-order:stroke fill; text-shadow:2px 3px #144b76,0 0 10px #16acffae,0 0 26px #2383ffad }
 .leagues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(.55rem,1.5vw,1rem) }
-.frame { --accent:#ff985e; position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid #8d7a7380; border-radius:4px; background:#020202 }
-.frame::before { content:''; position:absolute; top:5%; right:1%; height:90%; max-width:98%; aspect-ratio:3/2; z-index:-1; background:url('./assets/league-balls.jpg') var(--ball-position) / 200% 200% no-repeat }
-.nfl { --ball-position:0% 0%; view-transition-name:nfl-feature }
-.cfb { --ball-position:100% 0%; --accent:#b5d6ac }
-.nba { --ball-position:0% 100%; --accent:#abcdeb }
-.cbb { --ball-position:100% 100%; --accent:#d0b6ed }
+.frame { --accent:#54dcff; position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid var(--accent); border-radius:5px; background:#152237; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 27%,transparent) }
+.frame::before { content:''; position:absolute; inset:0; z-index:-2; background:var(--scene) center 42% / cover no-repeat }
+.frame::after { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(36deg,#0c1228c9,transparent 55%); box-shadow:inset 0 0 17px color-mix(in srgb,var(--accent) 21%,transparent) }
+.nfl { --scene:url('./assets/nfl-action.jpg'); view-transition-name:nfl-feature }
+.cfb { --scene:url('./assets/cfb-action.jpg'); --accent:#b7ff58 }
+.nba { --scene:url('./assets/nba-action.jpg'); --accent:#ffab50 }
+.cbb { --scene:url('./assets/cbb-action.jpg'); --accent:#f49cff }
 a.frame,.frame summary { display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; padding:clamp(.9rem,2.2vw,1.8rem) }
 .frame summary { cursor:pointer; height:100%; list-style:none }
 .frame summary::-webkit-details-marker { display:none }
-.frame strong { margin:.18rem 0 .65rem; font-size:clamp(3.4rem,6.8vw,6.2rem); line-height:.88; color:#fff5e8; letter-spacing:-.025em; -webkit-text-stroke:2px var(--accent); paint-order:stroke fill; text-shadow:2px 3px #171119,3px 4px var(--accent) }
-.cue { position:absolute; top:.8rem; right:.9rem; color:var(--accent); font:500 1.2rem/1 system-ui }
+.frame strong { margin:.18rem 0 .65rem; font-size:clamp(3.4rem,6.8vw,6.2rem); line-height:.88; color:#fff5e8; letter-spacing:-.025em; -webkit-text-stroke:2px var(--accent); paint-order:stroke fill; text-shadow:2px 3px #111b32,3px 4px var(--accent),0 0 10px var(--accent),0 0 22px color-mix(in srgb,var(--accent) 58%,transparent) }
+.cue { position:absolute; top:.8rem; right:.9rem; color:var(--accent); font:600 1rem/1 system-ui; display:grid; place-items:center; width:1.65rem; height:1.65rem; border-radius:50%; border:1px solid currentColor; background:#132037c9 }
 .shortcut { font:700 .77rem/1.2 system-ui; padding:.5rem .65rem; border-radius:2px; position:absolute; left:clamp(.9rem,2.2vw,1.8rem); bottom:clamp(.9rem,2.2vw,1.8rem); background:var(--accent); color:#19141c }
 details[open] strong { transform:translateY(-2rem) }
 details[open] .cue { transform:rotate(45deg) }
 a:focus-visible,summary:focus-visible { outline:3px solid white; outline-offset:-4px }
 @media (max-width:600px) {
   .frame { height:clamp(10.5rem,44vw,14rem) }
-  .frame::before { height:auto; width:98%; top:8% }
+  .frame::before { background-position:70% center }
   .shortcut { font-size:.69rem }
-  body { background-size:auto 100%,cover,cover }
+  body { background-size:auto 100%,cover,cover,cover }
 }
 @media (prefers-reduced-motion:no-preference) {
   @view-transition { navigation:auto }
