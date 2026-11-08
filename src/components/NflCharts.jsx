@@ -212,9 +212,9 @@ function logColumns(position,games,metric){
   return fields.filter(key=>key!==metric).map(key=>logFields[key]);
 }
 
-function GameLog({player,line,direction,metric}) {
-  const [year,setYear]=useState('ALL');
-  const years=[...new Set(player.games.map(g=>g.season))].sort((a,b)=>b-a);
+function GameLog({player,currentSeason,line,direction,metric}) {
+  const [year,setYear]=useState(String(currentSeason));
+  const years=[...new Set([currentSeason,...player.games.map(g=>g.season)])].sort((a,b)=>b-a);
   const games=getPlayerGames(player,year);
 
   const market=chartMarkets[metric];
@@ -223,7 +223,7 @@ function GameLog({player,line,direction,metric}) {
   return <section className="lab-block player-log" aria-label="Game Log">
     <h2>Game Log</h2>
     <ChartSelect label="Game Log Year" value={year} onChange={setYear}>
-      <option value="ALL">All Years</option>{years.map(y=><option key={y} value={y}>{y}</option>)}
+      {years.map(y=><option key={y} value={y}>{y}</option>)}
     </ChartSelect>
     <p>{games.length} {games.length===1?'Game':'Games'} · Home And Away · {market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
     {ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
@@ -280,6 +280,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
         <div><small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-prop">
           <strong>{line==null?'No Line Selected':direction+' '+line}</strong><span>{chartMarkets[metric].label}</span>
           {line!=null && <small>{manual?'Custom Line': 'DraftKings'}</small>}
+          {upcoming && <small className="prop-matchup">Prop Matchup · Week {upcoming.week} · {upcoming.venue==='Away'?'at':'vs.'} {upcoming.opponent}</small>}
           {quote && line===quote.point && <div className="prop-prices" aria-label="DraftKings odds">
             {['over','under'].map(side=><span key={side} data-selected={side===direction}>{side} <b>{priceText(quote[side])}</b></span>)}
           </div>}
@@ -301,7 +302,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div><dt>{usage.label} · last {recentUsage.length} recorded</dt><dd>{recentUsage.length?formatNumber(recentUsage.reduce((a,b)=>a+b,0)/recentUsage.length):'—'} per game</dd></div>
       {['H','A'].map(v=>{const s=summarize(splitGames.filter(g=>g.venue===v),metric,line,direction);return <div key={v}><dt>Selected history · {v==='H'?'home':'away'} hits</dt><dd style={line==null?undefined:rateStyle(s.rate)}>{line==null?'—':s.hits+'/'+s.total+' · '+formatRate(s.rate)}</dd></div>})}
     </dl><WorkloadUsage players={players} games={displayed} position={player.position}/></section>
-    <GameLog key={player.id} player={player} line={line} direction={direction} metric={metric}/>
+    <GameLog key={player.id} player={player} currentSeason={Math.max(...seasons)} line={line} direction={direction} metric={metric}/>
     </>}
   </main>;
 }

@@ -242,3 +242,5 @@ body:has(.chart-lab){background-color:#1c102e;background-blend-mode:luminosity}
 .chart-lab .line-compare button[aria-pressed=true]{box-shadow:inset 0 -3px var(--violet),var(--glow-shadow)}
 
 .player-log>.chart-filter{display:inline-grid;width:9rem;vertical-align:middle;margin:.15rem 0 .35rem}
+
+.player-prop .prop-matchup{flex-basis:100%;color:#eedcff;font-weight:700}
