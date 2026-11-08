@@ -1,3 +1,4 @@
+import GameFilter, {useGameFilter} from './GameFilter.jsx';
 import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {teamColor} from '../lib/teamColors.js';
@@ -24,43 +25,49 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
   const season=year || index.data?.seasons[0];
   const meta=useCbbFile(season ? season+'/teams.json' : null);
   const board=useCbbFile(season ? season+'/board.json' : null);
-  const schedule=useCbbFile(top && season ? season+'/schedule.json':null);
+  const schedule=useCbbFile(season ? season+'/schedule.json':null);
   const [team,setTeam]=useState(''),[search,setSearch]=useState('');
   const [metric,setMetric]=useState(fallback),[line,setLine]=useState(markets[fallback].defaultLine);
   const [side,setSide]=useState('over'),[minimum,setMinimum]=useState(top?2:1),[limit,setLimit]=useState(40);
   const [conference,setConference]=useState('');
-  const teams=Object.entries(meta.data?.teams || {}).filter(([id])=>!conference || meta.data?.conferences?.[id]===conference).sort((a,b)=>a[1].localeCompare(b[1]));
+  const gameFilter=useGameFilter(sport,season,schedule.data);
+  const teams=Object.entries(meta.data?.teams || {}).filter(([id])=>top || gameFilter.allows(id)).filter(([id])=>!conference || meta.data?.conferences?.[id]===conference).sort((a,b)=>a[1].localeCompare(b[1]));
   const rows=useMemo(()=>{
     const results=[];
     for(const p of board.data || []){
+      if(!top && !gameFilter.allows(p.team)) continue;
       if(conference && meta.data?.conferences?.[p.team] !== conference) continue;
       if((team&&p.team!==team)||!p.name?.toLowerCase().includes(search.trim().toLowerCase())) continue;
-      const values=p.recent[metric];
-      if(!values?.length || (sport==='cfb' && cfbRoleGames(p,metric)<minimum) || values.length<minimum) continue;
-      const hits=values.filter(n=>isHit(n,line,side)).length;
-      results.push({p,hits,total:values.length,rate:hits/values.length,avg:values.reduce((a,b)=>a+b,0)/values.length});
+      for (const category of metric ? [metric] : Object.keys(markets)) {
+      const threshold = metric ? line : markets[category].defaultLine;
+      const values=p.recent[category];
+      if(!values?.length || (sport==='cfb' && cfbRoleGames(p,category)<minimum) || values.length<minimum) continue;
+      const hits=values.filter(n=>isHit(n,threshold,side)).length;
+      results.push({p,metric:category,line:threshold,hits,total:values.length,rate:hits/values.length,avg:values.reduce((a,b)=>a+b,0)/values.length});
+      }
     }
     return results;
-  },[sport,board.data,meta.data,conference,team,search,metric,line,side,minimum]);
+  },[top,gameFilter.date,gameFilter.match,schedule.data,sport,board.data,meta.data,conference,team,search,metric,line,side,minimum]);
   const failed=[index,meta,board].find(x=>x.error);
   if(top && !custom)return <><TrackedPicks sport={sport} onOpen={r=>onOpen({player:r.playerId,team:r.team,season:r.season,metric:r.metric,line:r.line,side:r.side})}/><button className="outline-button" onClick={()=>setCustom(true)}>Explore Custom Lines</button></>;
   return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top Props</button>}<header><h1>{sport.toUpperCase()} {top?'Custom Line Research':'Props Board'}</h1>
-    <p>Manual Lines · Last 10 Recorded Games · {rows.length} Players</p></header>
+    <p>Manual Lines · Last 10 Recorded Games · {rows.length} Props</p></header>
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{seasonLabel(sport,y)}</option>)}</select></label>
       {sport!=='nba' && <ConferenceFilter metadata={meta.data} value={conference} onChange={value=>{setConference(value);setTeam('');setLimit(40);}}/>}
-      <label>Team<select value={team} onChange={e=>{setTeam(e.target.value);setLimit(40)}}><option value="">All Teams</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
-      <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></label>
+      {!top && <GameFilter filter={gameFilter} onChange={()=>{setConference('');setTeam('');setSearch('');setMetric('');setLimit(40);}}/>}
+      <label>Team<select value={team} onChange={e=>{setTeam(e.target.value);setLimit(40)}}><option value="">{gameFilter.game && !top ? "Both Teams" : "All Teams"}</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
+      <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);if(e.target.value)setLine(markets[e.target.value].defaultLine);}}>{!top && <option value="">All Stats</option>}{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></label>
       <label>Side<select value={side} onChange={e=>setSide(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
       {!top && <label>Sort By<select value={sort.column} onChange={e=>{const column=Number(e.target.value);setSort({column,asc:column<3});}}>{['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])].map((name,i)=><option key={name} value={i}>{name}</option>)}</select></label>}
       <label>{sport==='cfb'?'Min. Games With Role':'Minimum Games'}<select value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</select></label>
       <label>Player<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find Player"/></label>
-    </div><div className="cbb-line"><LineSelect key={metric} markets={markets} metric={metric} value={line} onChange={setLine}/></div>
+    </div>{metric && <div className="cbb-line"><LineSelect key={metric} markets={markets} metric={metric} value={line} onChange={setLine}/></div>}
     {failed ? <p role="status">Box Scores Unavailable. <button onClick={failed.reload}>Retry</button></p> : !board.data || !meta.data ? <p role="status">Loading Player Results…</p> :
     top ? <CollegePicks rows={rows} schedule={schedule} meta={meta.data} metric={metric} line={line} side={side} onOpen={p=>onOpen({player:p.id,team:p.team,season,metric,line,side})}/> :
     <div className="board-scroll"><SortableTable headers={['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])]} rows={rows} sort={sort} onSort={setSort} limit={limit} descending={[3,4,5]}
-      values={({p,avg,rate})=>[p.name,meta.data.teams[p.team],line,avg,rate,sport==='cfb'?cfbRoleGames(p,metric):null]}
-      renderRow={({p,hits,total,rate,avg})=><tr key={p.team+'-'+p.id}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}><PlayerPhoto id={p.id} name={p.name}/> {p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td>{sport==='cfb' && <td>{cfbRoleGames(p,metric)} of {total}</td>}</tr>}/>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
+      values={({p,avg,rate,metric,line})=>[p.name,meta.data.teams[p.team],line,avg,rate,sport==='cfb'?cfbRoleGames(p,metric):null]}
+      renderRow={({p,hits,total,rate,avg,metric,line})=><tr key={p.team+'-'+p.id+'-'+metric}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}><PlayerPhoto id={p.id} name={p.name}/> {p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{markets[metric].label} · {side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td>{sport==='cfb' && <td>{cfbRoleGames(p,metric)} of {total}</td>}</tr>}/>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
     {!top && rows.length>limit && <button className="outline-button" onClick={()=>setLimit(n=>n+40)}>Show More Players</button>}
   </section>;
 }

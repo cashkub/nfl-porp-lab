@@ -1,3 +1,4 @@
+import GameFilter from './GameFilter.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import {availableStats} from '../lib/availableStats.js';
@@ -11,11 +12,9 @@ const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
 const day = date => new Date(date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const gameTime = date => new Date(date).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
 
-export default function PropsBoard({initialRanked=false,games,schedule,players,season,now,onOpen}) {
-  const [match,setMatch] = useState('');
+export default function PropsBoard({gameFilter,initialRanked=false,games,schedule,players,season,now,onOpen}) {
   const [team,setTeam] = useState('');
   const [stat,setStat] = useState('');
-  const [when,setWhen] = useState('');
   const [side,setSide] = useState(initialRanked ? 'both' : 'over');
   const [sort,setSort] = useState(initialRanked ? 'rate' : 'kickoff');
   const [ascending,setAscending] = useState(!initialRanked);
@@ -75,14 +74,14 @@ export default function PropsBoard({initialRanked=false,games,schedule,players,s
       }));
     });});
   },[slate,players,season,side,stat,touchdown]);
-  const visibleGames = slate.filter(g => !when || day(g.kickoff) === day(now));
-  const matchup = visibleGames.find(g => g.id === match);
-  const choices = matchup ? [matchup.away,matchup.home] :
-    [...new Set(visibleGames.flatMap(g=>[g.home,g.away]))].sort();
-  const currentTeam = choices.includes(team) ? team : matchup?.away || '';
+  const matchup = gameFilter.game;
+  const visibleGames = slate.filter(g=>!gameFilter.date || day(g.kickoff)===gameFilter.date);
+  const choices = matchup ? [matchup.away,matchup.home] : [...new Set(visibleGames.flatMap(g=>[g.home,g.away]))].sort();
+  const currentTeam = choices.includes(team) ? team : '';
+  const included = new Set(visibleGames.filter(g=>!matchup || (g.home===matchup.home && g.away===matchup.away && day(g.kickoff)===day(matchup.kickoff))));
   const filtered = rows.filter(({g,line,entry,summary}) =>
-    (!matchup || g.id === matchup.id) && (!currentTeam || entry?.team === currentTeam) &&
-    (!stat || line.metric === stat) && (!when || day(g.kickoff) === day(now)) &&
+    included.has(g) && (!currentTeam || entry?.team === currentTeam) &&
+    (!stat || line.metric === stat) &&
     playerKey(line.player).includes(playerKey(search)) &&
     (minimum==='0' || (summary && summary.total >= Number(minimum))));
   const sortValues = {
@@ -107,9 +106,8 @@ export default function PropsBoard({initialRanked=false,games,schedule,players,s
   return <section className="panel props-board" aria-label={title}>
     <header><h1>{title}</h1><p>{touchdown?'DraftKings Lines and Research Presets':'DraftKings Pregame Snapshots'} · {filtered.length} {side==='both' ? 'prop sides' : 'props'}</p></header>
     <div className="board-controls">
-      <label>Games<select value={when} onChange={e=>{filter(setWhen,e);setMatch('');setTeam('');}}><option value="">Upcoming</option><option value="today">Today (ET)</option></select></label>
-      <label>Matchup<select value={matchup?.id || ''} onChange={e=>{filter(setMatch,e);setTeam('');}}><option value="">All Matchups</option>{visibleGames.map(g=><option value={g.id} key={g.id}>{g.away} at {g.home}</option>)}</select></label>
-      <label>Team<select value={currentTeam} onChange={e=>filter(setTeam,e)}>{!matchup && <option value="">All Teams</option>}{choices.map(t=><option key={t}>{t}</option>)}</select></label>
+      <GameFilter filter={gameFilter} onChange={()=>{setTeam('');setLimit(30);}}/>
+      <label>Team<select value={currentTeam} onChange={e=>filter(setTeam,e)}><option value="">{matchup ? "Both Teams" : "All Teams"}</option>{choices.map(t=><option key={t}>{t}</option>)}</select></label>
       <label>Stat<select value={stat} onChange={e=>filter(setStat,e)}><option value="">All Stats</option>{Object.entries(METRICS).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</select></label>
       <label>Last 10 Side<select value={side} onChange={e=>filter(setSide,e)}><option value="both">Both Sides</option><option value="over">Over</option><option value="under">Under</option></select></label>
       <label>Minimum Games<select value={minimum} onChange={e=>filter(setMinimum,e)}><option value="0">Any</option>{[1,5,10].map(n=><option key={n}>{n}</option>)}</select></label>

@@ -1,3 +1,4 @@
+import GameFilter, {useGameFilter} from './GameFilter.jsx';
 import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {teamColor} from '../lib/teamColors.js';
@@ -41,7 +42,9 @@ export default function CbbAnalyzer({initial = {}}) {
   const season=year || index.data?.seasons[0];
   const source=useCbbFile(season ? season+'/teams.json' : null);
   const [conference,setConference]=useState('');
-  const teams=Object.entries(source.data?.teams || {}).filter(([id])=>!conference || source.data?.conferences?.[id]===conference).sort((a,b)=>a[1].localeCompare(b[1]));
+  const schedule=useCbbFile(season ? season+'/schedule.json':null);
+  const gameFilter=useGameFilter(sport,season,schedule.data);
+  const teams=Object.entries(source.data?.teams || {}).filter(([id])=>gameFilter.allows(id)).filter(([id])=>!conference || source.data?.conferences?.[id]===conference).sort((a,b)=>a[1].localeCompare(b[1]));
   const [selection,setSelection]=useState(initial.team || '');
   const team=teams.some(([id])=>id===selection) ? selection : (teams.find(([,name])=>name==='Illinois Fighting Illini') || teams[0])?.[0];
   const roster=useCbbFile(team ? season+'/'+team+'.json' : null);
@@ -73,6 +76,7 @@ export default function CbbAnalyzer({initial = {}}) {
     <div className="board-controls">
       <label className="extra-filter">Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{seasonLabel(sport,y)}</option>)}</select></label>
       <div className="extra-filter conference-field">{sport!=='nba' && <ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/>}</div>
+      {<GameFilter filter={gameFilter} onChange={()=>{setConference('');setSelection('');setAthlete('');}}/>}
       <label>Team<select value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
       <label>Player<select value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</select></label>
@@ -83,7 +87,7 @@ export default function CbbAnalyzer({initial = {}}) {
     <div className="cbb-line"><LineSelect key={metric} metric={metric} markets={markets} value={line} onChange={setLine}/></div>
     <small>Manual Line</small></div></aside>{statOptions.length>0 && !football && <><UsageTrends games={games} label="Minutes" value={g=>g.minutes}/><UsageTrends games={games} label="Shot Attempts" value={g=>g.shots}/></>}</div>
     <div className="results">{failed ? <p role="status">Box Scores Are Unavailable. <button onClick={failed.reload}>Retry</button></p> :
-      !roster.data ? <p role="status">Loading Box Scores…</p> :
+      !team && source.data ? <p>No Teams Match This Game Filter.</p> : !roster.data ? <p role="status">Loading Box Scores…</p> :
       !statOptions.length?<p>No recorded prop categories for this player and season.</p>:
       <><section className="hit-section"><h2>Hit Rates</h2><div className="stat-grid">{[['5','Last 5'],['10','Last 10'],['season','Full Season']].map(([key,label])=><StatCard key={key} label={label} summary={summarize(filteredWindow(history,key),metric,line,direction)} selected={period===key} onClick={()=>setPeriod(key)}/>)}</div></section>
       <section className="panel chart-panel"><div className="chart-top"><h2>Game-by-Game Performance</h2><small>{markets[metric].label}</small></div><PropChart college football={football} games={games.map(g=>({...g,gameId:g.id,venue:({Home:'H',Away:'A'})[g.venue] || '?'}))} markets={markets} rankCount={rankCount} metric={metric} direction={direction} line={line} defenses={Object.entries(source.data.ranks).map(([team,r])=>({team,rank:r[metric]}))}/></section>

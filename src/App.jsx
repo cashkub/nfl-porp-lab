@@ -1,3 +1,4 @@
+import GameFilter, {useGameFilter} from './components/GameFilter.jsx';
 import SortableTable from './components/SortableTable.jsx';
 import PlayerPhoto from './components/PlayerPhoto.jsx';
 import {ManualLeague} from './components/ManualLeague.jsx';
@@ -193,10 +194,15 @@ export default function App() {
     const latest=history.at(-1);
     return [{...p,team:latest.team || p.team}];
   }), [players, season]);
-  const teams = useMemo(() => [...new Set(seasonPlayers.map(p => p.team).filter(Boolean))].sort(), [seasonPlayers]);
+  const slateSeason = multi || page!=='analyzer' ? Math.max(...seasons) : season;
+  const nflSchedule = useMemo(()=>(data.schedule ?? initialSchedule).filter(g=>g.season===slateSeason),[data.schedule,slateSeason]);
+  const gameFilter = useGameFilter('nfl',slateSeason,nflSchedule);
+  const normalizeTeam = team => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[team] || team);
+  const scopedPlayers = seasonPlayers.filter(p=>gameFilter.allows(normalizeTeam(p.team)));
+  const teams = useMemo(() => [...new Set(scopedPlayers.map(p => p.team).filter(Boolean))].sort(), [scopedPlayers]);
   const activeTeam = teams.includes(team) ? team : 'ALL';
-  const roster = useMemo(() => activeTeam === 'ALL' ? seasonPlayers :
-    seasonPlayers.filter(p => p.team === activeTeam), [seasonPlayers, activeTeam]);
+  const roster = useMemo(() => activeTeam === 'ALL' ? scopedPlayers :
+    scopedPlayers.filter(p => p.team === activeTeam), [scopedPlayers, activeTeam]);
   const player = roster.find(p => p.id === selectedId) ||
     roster.find(p => ['WR','QB','RB','TE'].includes(p.position)) || roster[0];
   const statOptions=useMemo(()=>availableStats(METRICS,getPlayerGames(player,season)),[player,season]);
@@ -226,7 +232,7 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
   const scheduleSeason = multi ? Math.max(...seasons) : season;
-  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(data.schedule ?? initialSchedule, player?.team, scheduleSeason, now);
+  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(gameFilter.game ? [gameFilter.game] : nflSchedule, player?.team, scheduleSeason, gameFilter.game ? -Infinity : now);
   const quote = bookLine(bookGames, upcoming, player?.name, metric);
   const lineContext = [player?.id, metric, upcoming?.kickoff].join('|');
   const manual = custom?.context === lineContext;
@@ -244,7 +250,8 @@ export default function App() {
   function openFromBoard(p, market, side, game) {
     const latest = Math.max(...seasons);
     const history = getPlayerGames(p,latest);
-    const next = nextGame(data.schedule ?? initialSchedule,history.at(-1)?.team || p.team,latest,now);
+    if (!gameFilter.allows(normalizeTeam(history.at(-1)?.team || p.team))) gameFilter.select('');
+    const next = gameFilter.game && gameFilter.allows(normalizeTeam(history.at(-1)?.team || p.team)) ? gameFilter.game : nextGame(data.schedule ?? initialSchedule,history.at(-1)?.team || p.team,latest,now);
     boardSelection.current = p.id !== player?.id ? p.id : null;
     setTeam('ALL'); setSeason(latest); setVenue('ALL'); setOpponent('ALL');
     setSelectedId(p.id); setMetric(market.metric); setDirection(side); setWindowSize('10');
@@ -281,13 +288,13 @@ export default function App() {
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        manualLeague && page===sport+'-games' ? <CbbGames key={sport}/> :
        manualLeague ? <CbbBoard top={page===sport+'-top'} key={page} initialRanked={window.location.hash==='#cbb-best'} onOpen={pick=>{setInitialCbb({...pick,sport});window.location.hash=sport;}}/> :
-       page!=='analyzer' ? <PropsBoard key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+       page!=='analyzer' ? <PropsBoard gameFilter={gameFilter} key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header team-banner" style={{'--team-color':teamColor(player?.team)}} aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1 className="player-title">{player && <PlayerPhoto large id={player.id} name={player.name} url={player.photo}/>} {player?.name || 'Player props'}</h1>
           <p>{statOptions.length?<>{METRICS[metric].label} <b>{direction} {line}</b></>:'No recorded prop categories this season.'}</p>
-          {!isDemo && <div className="next-match"><span>Next Game</span>
+          {!isDemo && <div className="next-match"><span>{gameFilter.game ? 'Selected Game' : 'Next Game'}</span>
             {upcoming ? <><strong>vs {upcoming.name}</strong><small>{upcoming.venue} · {nextDate}{upcoming.timeKnown ? '' : ' · Time TBD'}</small></> :
               <small>No upcoming game listed for {scheduleSeason}.</small>}
           </div>}
@@ -314,12 +321,12 @@ export default function App() {
         <ChevronDown size={16}/>
       </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
         <div className="section-topline"><div><h2 id="controls-title">Prop Settings</h2></div><div className="controls-side"><span className="label-small">Season</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All Seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
-        <div className="controls-grid">
+        <div className="board-controls"><GameFilter filter={gameFilter} onChange={()=>setTeam('ALL')}/></div><div className="controls-grid">
           <div className="field"><label htmlFor="team">Team</label><div className="select-wrap large-select">
             <select id="team" value={activeTeam} onChange={e => { setTeam(e.target.value); setVenue('ALL'); setOpponent('ALL'); }}>
               <option value="ALL">All Teams</option>{teams.map(t => <option key={t}>{t}</option>)}
             </select><ChevronDown size={16}/></div></div>
-          <div className="field field-player"><label>Player <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL'} selected={player} season={season} onSelect={onSelectPlayer} /></div>
+          <div className="field field-player"><label>Player <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL' || Boolean(gameFilter.game)} selected={player} season={season} onSelect={onSelectPlayer} /></div>
           <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{statOptions.map(key=><option key={key} value={key}>{METRICS[key].label}</option>)}</select><ChevronDown size={16}/></div></div>
           <div className="field extra-filter"><label>Opponent</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
           <div className="field extra-filter"><label>Location</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
