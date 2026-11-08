@@ -47,6 +47,18 @@ if(sport==='nfl'){
     byName.set(key,byName.has(key)?null:{p,hist});
   }
   for(const r of archive)settle(r,logs.get(r.gameId+'|'+r.playerId)?.stats[r.metric],played.has(r.gameId));
+  const books=read('lines.json').games;
+  function touchdownQuote(row){
+    if(Date.parse(row.kickoff)<=now)return null;
+    const book=books.find(g=>g.home===row.home && g.away===row.away && Math.abs(Date.parse(g.kickoff)-Date.parse(row.kickoff))<12*3600000);
+    const quotes=book?.anytime?.filter(q=>playerKey(q.player)===playerKey(row.player) && Number.isFinite(q.price) && Date.parse(q.updated)<Date.parse(row.kickoff));
+    return quotes?.length===1?quotes[0]:null;
+  }
+  for(const row of archive){
+    if(row.kind!=='touchdown' || row.price!=null)continue;
+    const quote=touchdownQuote(row);
+    if(quote){row.price=quote.price;row.priceUpdated=quote.updated}
+  }
   // Consider the full ET game day before locking the touchdown leaderboard.
   const tomorrow=day(now+24*3600000);
   const latestWeek=new Map();
@@ -78,14 +90,15 @@ if(sport==='nfl'){
       const lastThree=values.slice(-3).filter(v=>v>0).length;
       const matchup=defenseRank?(16.5-defenseRank)/31:0;
       const score=.7*adjusted+.2*(lastThree+1)/7+.1*Math.min(1,workload/20)+.08*matchup-(status==='questionable'?.05:0);
+      const quote=touchdownQuote({...g,player:p.name});
       candidates.push({kind:'touchdown',gameId:g.id,kickoff:g.kickoff,date:day(g.kickoff),season,
         away:g.away,home:g.home,team,player:p.name,playerId:p.id,metric:'scoredTDs',label:'Touchdowns',
-        line:.5,side:'over',price:null,score,hits,total:values.length,average:mean(values),values,defenseRank,
+        line:.5,side:'over',price:quote?.price ?? null,priceUpdated:quote?.updated,score,hits,total:values.length,average:mean(values),values,defenseRank,
         role:workload.toFixed(1)+' carries + targets per game over the last three',context:injury?.status || '',
         model:'td-scorers.v1',saved});
     }
   }
-  for(const book of read('lines.json').games.filter(upcoming)){
+  for(const book of books.filter(upcoming)){
     const g=data.schedule?.find(g=>g.id&&g.home===book.home&&g.away===book.away&&Math.abs(Date.parse(g.kickoff)-Date.parse(book.kickoff))<12*3600000);
     if(!g||!upcoming(g))continue;
     for(const line of book.lines){
@@ -151,6 +164,10 @@ if(sport==='nfl'){
     const r=ratings.get(date),m=projection(g,r[g.away],r[g.home],true);
     if(m)tracked.set(g.id,{id:g.id,away:g.awayName,home:g.homeName,kickoff:g.kickoff,saved,stats:[m.a.score,m.h.score]});
   }
+  for(const item of tracked.values()){
+    const game=finals.get(item.id);
+    if(game && meta.colors)item.colors={[item.away]:meta.colors[game.away],[item.home]:meta.colors[game.home]};
+  }
   fs.writeFileSync(root+gp,JSON.stringify([...tracked.values()])+'\n');
 }
 const used=new Map();
@@ -160,7 +177,7 @@ for(const p of candidates.sort((a,b)=>b.score-a.score||a.player.localeCompare(b.
   const key=slateKey(p);
   if(!used.has(key))used.set(key,new Set());
   const slate=used.get(key);
-  if(slate.size>=8||slate.has(p.playerId))continue;
+  if(slate.size>=9||slate.has(p.playerId))continue;
   slate.add(p.playerId);p.rank=slate.size;archive.push(p);
 }
 fs.writeFileSync(root+path,JSON.stringify(archive)+'\n');

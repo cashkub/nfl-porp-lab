@@ -1,3 +1,4 @@
+import {teamColor} from './lib/teamColors.js';
 import TrackedPicks from './components/TrackedPicks.jsx';
 import StatCard from './components/StatCard.jsx';
 import {availableStats} from './lib/availableStats.js';
@@ -275,7 +276,7 @@ export default function App() {
        page==='cbb-games' ? <CbbGames/> :
        cbb ? <CbbBoard top={page==='cbb-top'} key={page} initialRanked={window.location.hash==='#cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
        page!=='analyzer' ? <PropsBoard key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
-      <section className="match-header" aria-label="Selected player and prop">
+      <section className="match-header team-banner" style={{'--team-color':teamColor(player?.team)}} aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
@@ -303,8 +304,8 @@ export default function App() {
       </section>
       {isDemo && <div className="demo-warning" role="status"><Info size={20} /><div><strong>Demo mode — not real NFL statistics.</strong><span>{error || 'This first-run preview uses fictional players and sample game logs.'} Run the <b>Update NFL Data</b> GitHub workflow after publishing to load actual player data.</span></div></div>}
       <div className="workspace"><div className="analysis-rail"><aside className="panel setup" aria-label="Prop Settings"><button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
-        <span>{settingsOpen ? 'Close Prop Settings' : 'Edit Player & Line'}</span>
-        <span className="phone-line">{direction} {line} <ChevronDown size={16}/></span>
+        <span>{settingsOpen ? 'Fewer Filters' : 'More Filters'}</span>
+        <ChevronDown size={16}/>
       </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
         <div className="section-topline"><div><h2 id="controls-title">Prop Settings</h2></div><div className="controls-side"><span className="label-small">Season</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All Seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
         <div className="controls-grid">
@@ -314,8 +315,8 @@ export default function App() {
             </select><ChevronDown size={16}/></div></div>
           <div className="field field-player"><label>Player <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL'} selected={player} season={season} onSelect={onSelectPlayer} /></div>
           <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{statOptions.map(key=><option key={key} value={key}>{METRICS[key].label}</option>)}</select><ChevronDown size={16}/></div></div>
-          <div className="field"><label>Opponent</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
-          <div className="field"><label>Location</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
+          <div className="field extra-filter"><label>Opponent</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
+          <div className="field extra-filter"><label>Location</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
         </div>
       </section>
       <section className="line-panel" aria-labelledby="line-title">

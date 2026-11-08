@@ -1,3 +1,4 @@
+import {teamColor} from '../lib/teamColors.js';
 import {availableStats} from '../lib/availableStats.js';
 import HitRate, {defenseRankStyle} from './HitRate.jsx';
 import React, {useMemo, useState} from 'react';
@@ -119,7 +120,7 @@ export default function PropsBoard({initialRanked=false,games,schedule,players,s
     </div>
     <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button></th>)}</tr></thead>
     <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,summary,pick})=><tr key={[g.id,line.player,line.metric,line.point,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
-      <td><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
+      <td className="team-edge" style={{'--team-color':teamColor(entry?.team)}}><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
       <td><strong>{pick==='over' ? 'Over ' : 'Under '}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
       <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td style={defenseRankStyle(rank)}>{rank ? '#'+rank : '—'}</td>
     </tr>)}</tbody></table></div>

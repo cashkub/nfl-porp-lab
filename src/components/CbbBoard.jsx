@@ -1,3 +1,4 @@
+import {teamColor} from '../lib/teamColors.js';
 import TrackedPicks from './TrackedPicks.jsx';
 import {PickReport} from './MatchReport.jsx';
 import {MatchCard} from './Research.jsx';
@@ -6,6 +7,7 @@ import React,{useMemo,useState} from 'react';
 import {useCbbFile,markets} from './CbbAnalyzer.jsx';
 import HitRate from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
+import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
 import {isHit} from '../lib/stats.js';
 
 export default function CbbBoard({initialRanked=false,top,onOpen}){
@@ -51,23 +53,28 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
     {failed ? <p role="status">Box Scores Unavailable. <button onClick={failed.reload}>Retry</button></p> : !board.data || !meta.data ? <p role="status">Loading Player Results…</p> :
     top ? <CollegePicks rows={rows} schedule={schedule} meta={meta.data} metric={metric} line={line} side={side} onOpen={p=>onOpen({player:p.id,team:p.team,season,metric,line,side})}/> :
     <div className="board-scroll"><table className="game-log"><thead><tr>{['Player','Team','Manual Line','Average','Hit Rate'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>
-      {rows.slice(0,limit).map(({p,hits,total,rate,avg})=><tr key={p.team+'-'+p.id}><td><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}>{p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td></tr>)}
+      {rows.slice(0,limit).map(({p,hits,total,rate,avg})=><tr key={p.team+'-'+p.id}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}>{p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td></tr>)}
     </tbody></table>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
     {!top && rows.length>limit && <button className="outline-button" onClick={()=>setLimit(n=>n+40)}>Show More Players</button>}
   </section>;
 }
 
 function CollegePicks({rows,schedule,meta,metric,line,side,onOpen}){
+  const [selectedDate,setSelectedDate]=useState('');
+  const upcoming=(schedule.data || []).filter(game=>!game.final && Date.parse(game.kickoff)>Date.now());
+  const dates=[...new Set(upcoming.map(game=>recordPeriod(game,'cbb')).filter(Boolean))].sort();
+  const date=dates.includes(selectedDate)?selectedDate:dates[0];
   const next=new Map();
-  for(const game of schedule.data || []){
-    const kickoff=Date.parse(game.kickoff);
-    if(game.final || kickoff<=Date.now() || kickoff>Date.now()+7*86400000)continue;
+  for(const game of upcoming){
+    if(recordPeriod(game,'cbb')!==date)continue;
     for(const team of [game.away,game.home])if(!next.has(team))next.set(team,game);
   }
   const score=r=>(r.hits+2)/(r.total+4);
   const picks=rows.filter(r=>next.has(r.p.team) && r.p.minutes>=15 && score(r)>.5)
-    .sort((a,b)=>score(b)-score(a) || b.p.minutes-a.p.minutes).slice(0,8);
-  return <><p>Upcoming Games · Manual Research Line · Ranked by recent hit rate with four games of 50% prior weight. Players must average at least 15 minutes.</p>
+    .sort((a,b)=>score(b)-score(a) || b.p.minutes-a.p.minutes).slice(0,9);
+  return <><div className="board-controls"><label>Game Date<select value={date || ''} disabled={!dates.length} onChange={e=>setSelectedDate(e.target.value)}>
+      {!dates.length && <option value="">No Dates Available</option>}{dates.map(d=><option key={d} value={d}>{periodLabel(d,'cbb')}</option>)}
+    </select></label></div><p>Manual Research Line · Ranked by recent hit rate with four games of 50% prior weight. Players must average at least 15 minutes.</p>
     <div className="research-grid picks-grid">{picks.map(({p,hits,total,avg},i)=>{
       const game=next.get(p.team),opp=game.home===p.team?game.away:game.home;
       const rank=meta.ranks?.[opp]?.[metric];

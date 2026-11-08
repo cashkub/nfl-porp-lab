@@ -1,3 +1,4 @@
+import {teamColor} from '../lib/teamColors.js';
 import {ChevronDown} from 'lucide-react';
 import PropChart from './PropChart.jsx';
 import StatCard from './StatCard.jsx';
@@ -61,21 +62,21 @@ export default function CbbAnalyzer({initial = {}}) {
   const failed=[index,source,roster].find(s=>s.error);
   const highest=Math.max(1,line,...games.map(g=>g.stats[metric]));
   const rankCount=Object.keys(source.data?.ranks || {}).length;
-  return <div className="college-analyzer"><section className="match-header"><div className="match-player"><div className="match-context">Men’s College Basketball · {season ? (season-1)+'–'+String(season).slice(-2):''}</div><h1>{player?.name || 'CBB Analyzer'}</h1><p>{source.data?.teams?.[team]} · {statOptions.length?markets[metric].label+' '+direction+' '+line:'Player Research'}</p></div><div className="match-form"><span>Hit Rate</span><strong><HitRate rate={statOptions.length?summary.rate:null}/></strong><small>{summary.total} matching games</small></div></section>
+  return <div className="college-analyzer"><section className="match-header team-banner" style={{'--team-color':teamColor(team,source.data?.colors || {})}}><div className="match-player"><div className="match-context">Men’s College Basketball · {season ? (season-1)+'–'+String(season).slice(-2):''}</div><h1>{player?.name || 'CBB Analyzer'}</h1><p>{source.data?.teams?.[team]} · {statOptions.length?markets[metric].label+' '+direction+' '+line:'Player Research'}</p></div><div className="match-form"><span>Hit Rate</span><strong><HitRate rate={statOptions.length?summary.rate:null}/></strong><small>{summary.total} matching games</small></div></section>
     <div className="workspace"><div className="analysis-rail"><aside className="panel setup college-settings" aria-label="Prop Settings">
       <button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="college-settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
-        <span>{settingsOpen?'Close Prop Settings':'Edit Player & Line'}</span>
-        <span className="phone-line">{direction} {line} <ChevronDown size={16}/></span>
+        <span>{settingsOpen?'Fewer Filters':'More Filters'}</span>
+        <ChevronDown size={16}/>
       </button>
       <div id="college-settings-fields" className={settingsOpen?'settings-fields expanded':'settings-fields'}><h2>Prop Settings</h2>
     <div className="board-controls">
-      <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>
-      <ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/>
+      <label className="extra-filter">Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>
+      <div className="extra-filter conference-field"><ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/></div>
       <label>Team<select value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
       <label>Player<select value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</select></label>
-      <label>Location<select value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</select></label>
-      <label>Games<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></select></label>
+      <label className="extra-filter">Location<select value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</select></label>
+      <label className="extra-filter">Games<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></select></label>
       <label>Side<select value={direction} onChange={e=>setDirection(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
     </div>
     <div className="cbb-line"><LineSelect key={metric} metric={metric} markets={markets} value={line} onChange={setLine}/></div>
