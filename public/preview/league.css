@@ -21,35 +21,32 @@ small,summary span { text-transform: uppercase; font: 650 .66rem/1.4 system-ui; 
 body { background-image: url('./assets/playbook.svg'), radial-gradient(ellipse at 80% 6%,#452b34 0, transparent 60%), linear-gradient(130deg,#191c24,#171319 65%,#281d22); background-size: cover; background-position:center; }
 h1 em { -webkit-text-stroke: 1px #ffae86; paint-order: stroke fill; text-shadow: 2px 3px #703d36 }
 .leagues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(.55rem,1.5vw,1rem) }
-.frame { --accent:#ff985e; position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid #8d7a7380; border-radius:4px; background:#1e1e25 }
-.frame::before { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,#100f17bd,transparent 80%),linear-gradient(0deg,#100d15aa,transparent 65%),var(--photo) center 40% / cover }
-.nfl { --photo:url('./assets/nfl-night.jpg'); view-transition-name:nfl-feature }
-.cfb { --photo:url('./assets/cfb-night.jpg'); --accent:#b5d6ac }
-.nba { --photo:url('./assets/nba-night.jpg'); --accent:#abcdeb }
-.cbb { --photo:url('./assets/cbb-night.jpg'); --accent:#d0b6ed }
+.frame { --accent:#ff985e; position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid #8d7a7380; border-radius:4px; background:#020202 }
+.frame::before { content:''; position:absolute; top:5%; right:1%; height:90%; max-width:98%; aspect-ratio:3/2; z-index:-1; background:url('./assets/league-balls.jpg') var(--ball-position) / 200% 200% no-repeat }
+.nfl { --ball-position:0% 0%; view-transition-name:nfl-feature }
+.cfb { --ball-position:100% 0%; --accent:#b5d6ac }
+.nba { --ball-position:0% 100%; --accent:#abcdeb }
+.cbb { --ball-position:100% 100%; --accent:#d0b6ed }
 a.frame,.frame summary { display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; padding:clamp(.9rem,2.2vw,1.8rem) }
 .frame summary { cursor:pointer; height:100%; list-style:none }
 .frame summary::-webkit-details-marker { display:none }
 .frame strong { margin:.18rem 0 .65rem; font-size:clamp(3.4rem,6.8vw,6.2rem); line-height:.88; color:#fff5e8; letter-spacing:-.025em; -webkit-text-stroke:2px var(--accent); paint-order:stroke fill; text-shadow:2px 3px #171119,3px 4px var(--accent) }
-.status,.shortcut { font:700 .78rem/1.2 system-ui; padding:.55rem .72rem; border-radius:2px }
-.status { background:#17151dd9; color:var(--accent); border:1px solid #ffffff45 }
-.nfl .status { background:var(--fire); border-color:transparent; color:#23131a }
-.status b { padding-left:.25rem }
-.shortcut { position:absolute; left:clamp(.9rem,2.2vw,1.8rem); bottom:clamp(.9rem,2.2vw,1.8rem); background:var(--accent); color:#19141c }
-details[open] .status { visibility:hidden }
+.cue { position:absolute; top:.8rem; right:.9rem; color:var(--accent); font:500 1.2rem/1 system-ui }
+.shortcut { font:700 .77rem/1.2 system-ui; padding:.5rem .65rem; border-radius:2px; position:absolute; left:clamp(.9rem,2.2vw,1.8rem); bottom:clamp(.9rem,2.2vw,1.8rem); background:var(--accent); color:#19141c }
+details[open] strong { transform:translateY(-2rem) }
+details[open] .cue { transform:rotate(45deg) }
 a:focus-visible,summary:focus-visible { outline:3px solid white; outline-offset:-4px }
 @media (max-width:600px) {
   .frame { height:clamp(10.5rem,44vw,14rem) }
-  .frame small { font-size:.59rem; letter-spacing:.08em }
-  .frame::before { background-position:center,center,66% center }
-  .status,.shortcut { font-size:.69rem }
+  .frame::before { height:auto; width:98%; top:8% }
+  .shortcut { font-size:.69rem }
   body { background-size:auto 100%,cover,cover }
 }
 @media (prefers-reduced-motion:no-preference) {
   @view-transition { navigation:auto }
-  .frame::before,.status { transition:transform .32s ease }
+  .frame::before,.frame strong,.cue { transition:transform .32s ease }
   .frame:is(:hover,:focus-within)::before { transform:scale(1.035) }
-  .frame:active .status { transform:translateY(2px) }
+  .frame:active::before { transform:scale(.985) }
   details[open] .shortcut { animation:reveal .22s ease-out }
   @keyframes reveal { from { opacity:0; transform:translateY(5px) } }
 }
