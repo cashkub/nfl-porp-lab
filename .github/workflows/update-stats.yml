@@ -3,7 +3,7 @@ name: Update NFL Data
 on:
   push:
     branches: [main]
-    paths: ['scripts/update_data.py', 'scripts/nfl_features.py', 'scripts/nfl_context.py', 'scripts/nfl_weights.json', 'scripts/record_nfl.mjs', 'scripts/track_picks.mjs', 'src/lib/projection.js']
+    paths: ['.github/workflows/update-stats.yml', 'scripts/update_data.py', 'scripts/nfl_features.py', 'scripts/nfl_context.py', 'scripts/nfl_weights.json', 'scripts/record_nfl.mjs', 'scripts/track_picks.mjs', 'src/lib/projection.js']
   schedule:
     - cron: '25 11,17,21 * * *'
   workflow_dispatch:
@@ -51,5 +51,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "data: refresh NFL player game logs"
-          git pull --rebase origin main
-          git push
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then exit 0; fi
+            sleep "$attempt"
+          done
+          exit 1
