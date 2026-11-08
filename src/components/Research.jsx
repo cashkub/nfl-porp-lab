@@ -1,5 +1,6 @@
-import React,{useState} from 'react';
-import {priceText} from '../lib/bookLine.js';
+import {MatchReport} from './MatchReport.jsx';
+import {collegeRatings} from '../lib/projection.js';
+import React,{useMemo,useState} from 'react';
 import {useCbbFile} from './CbbAnalyzer.jsx';
 
 const nflColors={ARI:'97233f',ATL:'a71930',BAL:'563a88',BUF:'1865bc',CAR:'0085ca',CHI:'c83803',CIN:'fb4f14',CLE:'ff3c00',DAL:'256594',DEN:'fb4f14',DET:'0076b6',GB:'237052',HOU:'aa192f',IND:'155aa8',JAX:'00999a',KC:'e31837',LAC:'0080c6',LAR:'245ed1',LV:'90959a',MIA:'008e97',MIN:'6937a0',NE:'ba2436',NO:'bba46b',NYG:'2245a0',NYJ:'158453',PHI:'00796c',PIT:'ffb612',SEA:'69be28',SF:'c62127',TB:'d50a0a',TEN:'4595d2',WAS:'773141'};
@@ -24,9 +25,14 @@ export function CbbGames(){
   const meta=useCbbFile(valid ? y+'/teams.json':null);
   const [conf,setConf]=useState('');
   const rows=(schedule.data || []).filter(g=>etDay(g.kickoff)===date && (!conf || [g.home,g.away].some(t=>meta.data?.conferences?.[t]===conf)));
+  const ratings=useMemo(()=>{
+    const finals=(schedule.data || []).filter(g=>g.final && etDay(g.kickoff)<date);
+    return collegeRatings(finals,Date.now());
+  },[schedule.data,date]);
   const error=index.error?index:schedule.error?schedule:null;
   return <section className="panel props-board"><h1>CBB Games</h1><div className="board-controls"><label>Game Date (ET)<input type="date" value={date} onChange={e=>{if(e.target.value)setDate(e.target.value)}}/></label><label>Conference<select value={conf} onChange={e=>setConf(e.target.value)}><option value="">All Conferences</option>{[...new Set(Object.values(meta.data?.conferences || {}))].sort().map(c=><option key={c}>{c}</option>)}</select></label><button className="outline-button" onClick={()=>setDate(etDay(Date.now()))}>Today</button></div>
-    <div className="research-grid">{rows.map(g=><MatchCard key={g.id} game={g} colors={meta.data?.colors || {}}>{g.final && <strong>{g.awayScore} – {g.homeScore}</strong>}</MatchCard>)}</div>
+    <p className="report-note">Pregame estimates use scoring and points allowed against past opponents, blended with four league-average games. Home court adds three points of margin. Neutral games have no home adjustment. Only finals from earlier dates enter the model.</p>
+    <div className="research-grid matchup-grid">{rows.map(g=><MatchCard key={g.id} game={g} colors={meta.data?.colors || {}}>{g.final && <b>Final · {g.awayScore} – {g.homeScore}</b>}<MatchReport game={g} college away={ratings[g.away]} home={ratings[g.home]} names={{...meta.data?.teams,[g.away]:g.awayName,[g.home]:g.homeName}}/></MatchCard>)}</div>
     {!rows.length && <p>{error?<button onClick={error.reload}>Schedule Unavailable · Retry</button>:!index.data || valid&&!schedule.data?'Loading Games…':'No Scheduled Games for This Selection.'}</p>}</section>;
 }
 
@@ -37,19 +43,10 @@ export function Moneylines({games,now,updated}){
   const week=weeks.includes(selection)?selection:weeks[0];
   return <section className="panel props-board"><h1>NFL Moneylines</h1><p>Market Snapshot · {updated}</p>
     <div className="board-controls"><label>Game Week<select value={week || ''} onChange={e=>setSelection(e.target.value)}>{weeks.map(w=><option key={w}>{w}</option>)}</select></label></div>
-    <div className="research-grid">{upcoming.filter(g=>g.season+' · Week '+g.week===week).map(g=>{
-      const a=g.awayRating,h=g.homeRating;
-      const ready=a?.games>=3 && h?.games>=3;
-      const home=ready?h.offense+a.defense-h.baseline+(g.neutral?0:.75):0;
-      const away=ready?a.offense+h.defense-h.baseline-(g.neutral?0:.75):0;
-      const margin=Number((home-away).toFixed(1));
-      return <MatchCard key={g.kickoff+g.home} game={g}><strong>{ready?(margin===0?'Model Projects a Tie':(margin>0?g.home:g.away)+' by '+Math.abs(margin)):'Projection Pending'}</strong>
-        {ready && <p>Projected Score · {g.away} {away.toFixed(1)} / {g.home} {home.toFixed(1)}</p>}
-        <p>Moneyline · {g.away} {priceText(g.awayPrice)} / {g.home} {priceText(g.homePrice)}<br/>Market Spread · {g.home} {priceText(g.homeSpread)}</p>
-        {ready && <details><summary>Offense &amp; Defense Breakdown</summary>{[[g.away,a,g.home,h],[g.home,h,g.away,a]].map(([team,r,opp,o])=><p key={team}><b>{team}</b> scores {r.offense.toFixed(1)} adjusted points per game. {opp} allows {o.defense.toFixed(1)}. Across {r.games} games, {team} faced opponents averaging {priceText(r.scheduleStrength)} points relative to league average. Wins against {r.wins.join(', ') || 'no opponents yet'}.</p>)}</details>}
-        <details><summary>Injury Report</summary>{[g.away,g.home].map(t=><p key={t}><b>{t}</b> · {g.injuries?.[t]?.map(x=>x.name+' ('+x.status+')').join(' · ') || 'No weekly report available.'}</p>)}<a href="https://www.nfl.com/injuries/">Official NFL Injury Report ↗</a></details></MatchCard>;
-    })}</div>{!upcoming.length && <p>No Upcoming Games Available.</p>}
-    <p className="board-foot">The model adjusts scoring and points allowed for opponent strength, blends each team with four league-average games and gives the home team 1.5 points outside neutral venues. Projections start after three games per team. Injuries are shown for context. Prices come from the nflverse schedule snapshot. A dash indicates an unavailable price.</p></section>;
+    <div className="research-grid matchup-grid">{upcoming.filter(g=>g.season+' · Week '+g.week===week).map(g=>
+      <MatchCard key={g.kickoff+g.home} game={g}><MatchReport game={g} away={g.awayRating} home={g.homeRating}/></MatchCard>
+    )}</div>{!upcoming.length && <p>No Upcoming Games Available.</p>}
+    <p className="board-foot">The model adjusts scoring and points allowed for opponent strength, blends each team with four league-average games and gives the home team 1.5 points outside neutral venues. Projections start after three games per team. Confirmed Out players reduce projected offense in proportion to their share of team workload over the previous four team games. A full share of pass attempts is worth 3 points, carries 1 point and targets 1 point. These are heuristic weights. Other designations and players without measured offensive usage receive no deduction. Prices come from the nflverse schedule snapshot. A dash indicates an unavailable price.</p></section>;
 }
 
 export function UsageTrends({games,label,value}){

@@ -1,3 +1,4 @@
+import {PickReport} from './MatchReport.jsx';
 import {MatchCard} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
 import React,{useMemo,useState} from 'react';
@@ -62,9 +63,9 @@ function CollegePicks({rows,schedule,meta,metric,line,side,onOpen}){
   const picks=rows.filter(r=>next.has(r.p.team) && r.p.minutes>=15 && score(r)>.5)
     .sort((a,b)=>score(b)-score(a) || b.p.minutes-a.p.minutes).slice(0,5);
   return <><p>Upcoming Games · Manual Research Line · Ranked by recent hit rate with four games of 50% prior weight. Players must average at least 15 minutes.</p>
-    <div className="research-grid">{picks.map(({p,hits,total,avg})=>{
+    <div className="research-grid">{picks.map(({p,hits,total,avg},i)=>{
       const game=next.get(p.team),opp=game.home===p.team?game.away:game.home;
       const rank=meta.ranks?.[opp]?.[metric];
-      return <MatchCard key={p.team+p.id} game={game} colors={meta.colors || {}}><button className="board-player" onClick={()=>onOpen(p)}>{p.name}</button><p><b>{side==='over'?'Over':'Under'} {line} {markets[metric].label}</b></p><p>Hit in {hits} of {total} games, averaging {avg.toFixed(1)} in {p.minutes} minutes per game. {rank?'Opponent ranks #'+rank+' in '+markets[metric].label.toLowerCase()+' allowed (#1 allows the most).':''}</p></MatchCard>;
+      return <MatchCard key={p.team+p.id} game={game} colors={meta.colors || {}}><PickReport number={i+1} name={p.name} side={side} line={line} metric={markets[metric].label} price="Manual Line" hits={hits} total={total} average={avg} rank={rank} results={p.recent[metric]} reason={'At this line, the sample-adjusted hit rate is '+(100*(hits+2)/(total+4)).toFixed(1)+'%. '+p.name+' averaged '+p.minutes+' minutes per game.'} onOpen={()=>onOpen(p)}/></MatchCard>;
     })}</div>{!picks.length && <p>{schedule.error?<button onClick={schedule.reload}>Schedule Unavailable · Retry</button>:schedule.data?'No Upcoming Players Meet These Filters.':'Loading Schedule…'}</p>}</>;
 }

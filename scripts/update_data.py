@@ -19,7 +19,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -271,6 +271,26 @@ def save_if_changed(payload: dict, dest: Path = OUTPUT) -> bool:
     return True
 
 
+def recent_usage_shares(players, season, week):
+    """Calculate workload shares using each team's last four completed regular-season games."""
+    totals, individuals = defaultdict(lambda: defaultdict(Counter)), defaultdict(lambda: defaultdict(Counter))
+    for player in players:
+        for g in player["games"]:
+            if g["season"] != season or g["week"] >= week:
+                continue
+            team, number = normalize_team(g["team"]), g["week"]
+            usage = {k:g.get("usage", {}).get(k, 0) for k in ("attempts", "carries", "targets")}
+            totals[team][number].update(usage)
+            individuals[(team, player["id"])][number].update(usage)
+    shares = {}
+    for (team, player), by_week in individuals.items():
+        weeks = sorted(totals[team])[-4:]
+        team_sum = sum((totals[team][w] for w in weeks), Counter())
+        used = sum((by_week[w] for w in weeks), Counter())
+        shares[(team,player)] = {k:used[k]/n for k,n in team_sum.items() if n}
+    return shares
+
+
 def main() -> int:
     records = []
     failed = []
@@ -319,13 +339,27 @@ def main() -> int:
                 if not name or not status or status in ("NA", "None"):
                     continue
                 key = (normalize_team(row.get("team")), str(row.get("week")))
-                item = {"name":name, "status":status, "date":row.get("date_modified") or ""}
+                item = {"name":name, "status":status, "date":row.get("date_modified") or "",
+                        "id":row.get("gsis_id"), "position":row.get("position"),
+                        "gameStatus":row.get("report_status"), "practice":row.get("practice_status"),
+                        "injury":row.get("report_primary_injury") or row.get("practice_primary_injury")}
                 if item["date"] >= reports[key].get(name, {}).get("date", ""):
                     reports[key][name] = item
+        usage_by_week = {}
         for game in payload.get("schedule", []):
             if game["season"] == season:
                 game["injuries"] = {team:list(reports[(team, game["week"])].values())
                                     for team in (game["home"],game["away"])}
+                for team, players in game["injuries"].items():
+                    for item in players:
+                        if (item["gameStatus"] or "").lower() != "out":
+                            continue
+                        week = int(game["week"])
+                        if week not in usage_by_week:
+                            usage_by_week[week] = recent_usage_shares(payload["players"], season, week)
+                        shares = usage_by_week[week].get((team,item["id"]), {})
+                        item["deduction"] = round(3*shares.get("attempts",0) + shares.get("carries",0)
+                                                  + shares.get("targets",0), 2)
     except (OSError, ValueError) as exc:
         print(f"Injury reports unavailable: {exc}", file=sys.stderr)
     save_if_changed(payload)

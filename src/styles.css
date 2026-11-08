@@ -451,3 +451,15 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .research-card p,.usage-trend p {line-height:1.5}.research-card details {border-top:1px solid var(--rule);margin-top:10px;padding-top:10px}.research-card summary {cursor:pointer;font-weight:650}
 .usage-trend {margin:16px 0}.usage-bars {display:flex;align-items:end;gap:4px}.usage-bars div {flex:1;text-align:center;min-width:0}.usage-bars i {display:block;margin:4px auto;width:65%;max-width:40px;border-radius:3px;background:var(--blue)}.usage-bars small {display:block;overflow-wrap:anywhere;font-size:10px}
 .view-tabs {max-width:100%;min-width:0;flex-wrap:wrap}.research-card a {color:var(--blue)}.board-controls input[type=date] {min-width:0;font-size:16px}
+
+.matchup-grid {grid-template-columns:repeat(auto-fit,minmax(min(100%,390px),1fr));align-items:start}
+.score-pair,.pick-metrics {display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.score-pair {grid-template-columns:1fr 1fr;margin:12px 0}.score-pair>div,.pick-metrics>div {background:var(--canvas);padding:10px 12px;min-width:0}
+.score-pair small,.score-pair strong,.report-sub,.team-history small,.pick-reason b {display:block}.score-pair strong {font-size:1.75rem;font-variant-numeric:tabular-nums}
+.model-call,.pick-line,.pick-player {display:flex;align-items:center;gap:10px;flex-wrap:wrap}.model-call small,.pick-line small,.pick-player>span {font-size:.78rem;font-weight:700;color:var(--blue)}
+.model-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:.83rem;font-variant-numeric:tabular-nums}.model-table caption,.report-team h4 {text-align:left;margin:12px 0 5px;font-weight:750}
+.model-table th,.model-table td {padding:7px 4px;border-bottom:1px solid var(--rule);text-align:right;overflow-wrap:anywhere}.model-table th:first-child {width:46%;text-align:left}.model-table tbody th {font-weight:500}
+.team-history,.report-note,.market-line {font-size:.85rem}.team-history {padding:8px 0}.team-history small {margin-top:4px}
+.report-team ul {padding:0;margin:0;list-style:none}.report-team li {display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8px;border-top:1px solid var(--rule);padding:8px 0;font-size:.85rem}.report-status {text-align:right}.report-status span {font-weight:650}.report-status [data-status="0"] {color:var(--rate-low)}.report-status [data-status="1"],.report-status [data-status="2"] {color:var(--rate-mid)}
+.pick-player .board-player {font-size:1.2rem}.pick-line {justify-content:space-between}.pick-metrics {grid-template-columns:repeat(3,1fr);margin:12px 0}.pick-metrics dt {color:var(--muted);font-size:.72rem}.pick-metrics dd {margin:3px 0 0;font-size:1.15rem;font-weight:700}
+.pick-history {display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}.pick-history span {padding:3px 5px;font-size:.75rem;border-bottom:2px solid var(--rule);font-weight:650}.pick-history [data-outcome=Hit] {color:var(--rate-high);border-color:currentColor}.pick-history [data-outcome=Miss] {color:var(--rate-low);border-color:currentColor}
