@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import HitRate, {defenseRankStyle} from './HitRate.jsx';
 import React, {useState} from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -15,9 +16,9 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
   return <section className="panel matchup" aria-labelledby="matchup-title">
     <div className="matchup-head"><div><h2 id="matchup-title">Matchup Research</h2>
       <p>{season === 'ALL' ? 'All Seasons' : season} · {METRICS[metric].label} allowed Per Game to all opposing {position || '—'}s combined</p></div>
-      <div className="select-wrap"><select aria-label="Defense to research" value={row?.team || ''} onChange={e=>setSelection(e.target.value)}>
+      <div className="select-wrap"><FilterMenu aria-label="Defense to research" value={row?.team || ''} onChange={e=>setSelection(e.target.value)}>
         <option value="">Choose a Defense</option>{rows.map(r=>r.team).sort().map(t=><option key={t}>{t}</option>)}
-      </select><ChevronDown size={14}/></div></div>
+      </FilterMenu><ChevronDown size={14}/></div></div>
     {row ? <>
       <div className="scout-grid">
         <div><small>{row.team} allowed</small><strong>{formatNumber(row.average)} <em>{unit}</em></strong><span>{row.games} games</span></div>

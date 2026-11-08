@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import PlayerStepper from './PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './GameFilter.jsx';
 import SortableTable from './SortableTable.jsx';
@@ -75,15 +76,15 @@ export default function CbbAnalyzer({initial = {}}) {
       </button>
       <div id="college-settings-fields" className={settingsOpen?'settings-fields expanded':'settings-fields'}><h2>Prop Settings</h2>
     <div className="board-controls">
-      <label className="extra-filter">Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{seasonLabel(sport,y)}</option>)}</select></label>
+      <label className="extra-filter">Season<FilterMenu value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{seasonLabel(sport,y)}</option>)}</FilterMenu></label>
       <div className="extra-filter conference-field">{sport!=='nba' && <ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/>}</div>
       {<GameFilter filter={gameFilter} onChange={()=>{setConference('');setSelection('');setAthlete('');}}/>}
-      <label>Team<select value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
-      <div className="stepper-field"><label htmlFor="analyzer-player">Player</label><PlayerStepper choices={eligible.map(p=>p.id)} value={player?.id} onSelect={setAthlete}><select id="analyzer-player" value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></PlayerStepper></div>
-      <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</select></label>
-      <label className="extra-filter">Location<select value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</select></label>
-      <label className="extra-filter">Games<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></select></label>
-      <label>Side<select value={direction} onChange={e=>setDirection(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
+      <label>Team<FilterMenu value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</FilterMenu></label>
+      <div className="stepper-field"><label htmlFor="analyzer-player">Player</label><PlayerStepper choices={eligible.map(p=>p.id)} value={player?.id} onSelect={setAthlete}><FilterMenu id="analyzer-player" value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</FilterMenu></PlayerStepper></div>
+      <label>Stat<FilterMenu value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</FilterMenu></label>
+      <label className="extra-filter">Location<FilterMenu value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</FilterMenu></label>
+      <label className="extra-filter">Games<FilterMenu value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></FilterMenu></label>
+      <label>Side<FilterMenu value={direction} onChange={e=>setDirection(e.target.value)}><option value="over">Over</option><option value="under">Under</option></FilterMenu></label>
     </div>
     <div className="cbb-line"><LineSelect key={metric} metric={metric} markets={markets} value={line} onChange={setLine}/></div>
     <small>Manual Line</small></div></aside>{statOptions.length>0 && !football && <><UsageTrends games={games} label="Minutes" value={g=>g.minutes}/><UsageTrends games={games} label="Shot Attempts" value={g=>g.shots}/></>}</div>

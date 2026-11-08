@@ -1,0 +1,30 @@
+.app .filter-trigger {
+  position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-width:0;
+  min-height:42px;padding:8px 26px;border-radius:10px;border:1px solid var(--sport-outline);
+  background:var(--picker-fill);color:var(--ink);font:inherit;font-size:14px;font-weight:650;line-height:1.25;text-align:center;
+}
+.filter-trigger span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .filter-trigger svg {display:block;position:absolute;right:8px;color:var(--sport-accent);pointer-events:none}
+.app .filter-trigger[aria-expanded=true] {border-color:var(--sport-accent);box-shadow:0 0 0 2px var(--sport-wash)}
+.filter-trigger[aria-expanded=true] svg {transform:rotate(180deg)}
+.filter-trigger:disabled {cursor:default;opacity:.65}
+.app .filter-popup {
+  position:fixed;z-index:1000;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;
+  border:1px solid var(--sport-outline);border-radius:13px;padding:5px;background:var(--canvas);
+  box-shadow:0 12px 32px rgb(0 0 0 / 25%);color:var(--ink);font-size:14px;font-weight:550;
+}
+.filter-popup [role=option] {
+  display:grid;place-items:center;position:relative;min-height:40px;padding:8px 25px;text-align:center;
+  border-radius:8px;line-height:1.3;overflow-wrap:anywhere;cursor:pointer;
+}
+.filter-popup [aria-selected=true] {background:var(--sport-wash);font-weight:750}
+.filter-popup .active {box-shadow:inset 0 0 0 1px var(--sport-outline);background:var(--picker-fill)}
+.filter-popup svg {position:absolute;right:8px;color:var(--sport-accent)}
+.week-control .filter-trigger,.board-sort .filter-trigger {width:auto;flex:1}
+@media(max-width:650px),(pointer:coarse) {
+  .app .filter-trigger,.filter-popup [role=option] {min-height:44px;font-size:16px}
+}
+.filter-trigger span {white-space:normal;overflow-wrap:anywhere}
+.app .select-wrap > .filter-trigger + svg {display:none}
+.app .player-stepper > .filter-trigger {height:100%;padding-inline:20px}
+.app .player-stepper > .filter-trigger svg {right:4px}

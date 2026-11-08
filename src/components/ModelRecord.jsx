@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import SortableTable from './SortableTable.jsx';
 import HitRate from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
@@ -56,7 +57,7 @@ export default function ModelRecord({validation,sport='nfl'}){
   const graded=(rows || []).filter(r=>r.final && r.overall);
   const decided=graded.filter(r=>margin(r.final) && margin(r.overall));
   const right=decided.filter(r=>outcome(r)==='Correct').length;
-  const selector=<div className="board-controls"><label>Game {periodName}<select aria-label={'Game '+periodName} value={period} onChange={e=>setPeriod(e.target.value)}><option value="all">All {periodName}s</option>{periods.map(w=><option value={w} key={w}>{periodLabel(w,sport)}</option>)}</select></label></div>;
+  const selector=<div className="board-controls"><label>Game {periodName}<FilterMenu aria-label={'Game '+periodName} value={period} onChange={e=>setPeriod(e.target.value)}><option value="all">All {periodName}s</option>{periods.map(w=><option value={w} key={w}>{periodLabel(w,sport)}</option>)}</FilterMenu></label></div>;
   const nearest=[...(games || []),...(picks.rows || [])].filter(r=>Number.isFinite(Date.parse(r.kickoff)))
     .sort((a,b)=>Math.abs(Date.parse(a.kickoff)-Date.now())-Math.abs(Date.parse(b.kickoff)-Date.now()))[0];
   const summaryPeriod=period==='all'?(nearest?recordPeriod(nearest,sport):periods[0]):period;

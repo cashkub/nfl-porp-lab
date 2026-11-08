@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import {BoardPlayerPicker} from './PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './GameFilter.jsx';
 import SortableTable from './SortableTable.jsx';
@@ -55,14 +56,14 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
   return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top Props</button>}<header><h1>{sport.toUpperCase()} {top?'Custom Line Research':'Props Board'}</h1>
     <p>Manual Lines · Last 10 Recorded Games · {rows.length} Props</p></header>
     <div className="board-controls">
-      <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{seasonLabel(sport,y)}</option>)}</select></label>
+      <label>Season<FilterMenu value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{seasonLabel(sport,y)}</option>)}</FilterMenu></label>
       {sport!=='nba' && <ConferenceFilter metadata={meta.data} value={conference} onChange={value=>{setConference(value);setTeam('');setLimit(40);}}/>}
       {!top && <GameFilter filter={gameFilter} onChange={()=>{setConference('');setTeam('');setSearch('');setMetric('');setLimit(40);}}/>}
-      <label>Team<select value={team} onChange={e=>{setTeam(e.target.value);setLimit(40)}}><option value="">{gameFilter.game && !top ? "Both Teams" : "All Teams"}</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
-      <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);if(e.target.value)setLine(markets[e.target.value].defaultLine);}}>{!top && <option value="">All Stats</option>}{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></label>
-      <label>Side<select value={side} onChange={e=>setSide(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
-      {!top && <label>Sort By<select value={sort.column} onChange={e=>{const column=Number(e.target.value);setSort({column,asc:column<3});}}>{['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])].map((name,i)=><option key={name} value={i}>{name}</option>)}</select></label>}
-      <label>{sport==='cfb'?'Min. Games With Role':'Minimum Games'}<select value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</select></label>
+      <label>Team<FilterMenu value={team} onChange={e=>{setTeam(e.target.value);setLimit(40)}}><option value="">{gameFilter.game && !top ? "Both Teams" : "All Teams"}</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</FilterMenu></label>
+      <label>Stat<FilterMenu value={metric} onChange={e=>{setMetric(e.target.value);if(e.target.value)setLine(markets[e.target.value].defaultLine);}}>{!top && <option value="">All Stats</option>}{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label>
+      <label>Side<FilterMenu value={side} onChange={e=>setSide(e.target.value)}><option value="over">Over</option><option value="under">Under</option></FilterMenu></label>
+      {!top && <label>Sort By<FilterMenu value={sort.column} onChange={e=>{const column=Number(e.target.value);setSort({column,asc:column<3});}}>{['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])].map((name,i)=><option key={name} value={i}>{name}</option>)}</FilterMenu></label>}
+      <label>{sport==='cfb'?'Min. Games With Role':'Minimum Games'}<FilterMenu value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</FilterMenu></label>
       <BoardPlayerPicker names={candidates.map(r=>r.p.name)} value={search} onSelect={value=>{setSearch(value);setLimit(40);}}/>
     </div>{metric && <div className="cbb-line"><LineSelect key={metric} markets={markets} metric={metric} value={line} onChange={setLine}/></div>}
     {failed ? <p role="status">Box Scores Unavailable. <button onClick={failed.reload}>Retry</button></p> : !board.data || !meta.data ? <p role="status">Loading Player Results…</p> :
@@ -88,9 +89,9 @@ function CollegePicks({rows,schedule,meta,metric,line,side,onOpen}){
   const score=r=>(r.hits+2)/(r.total+4);
   const picks=rows.filter(r=>next.has(r.p.team) && (sport==='cfb' || r.p.minutes>=15) && score(r)>.5)
     .sort((a,b)=>score(b)-score(a) || b.p.minutes-a.p.minutes).slice(0,9);
-  return <><div className="board-controls"><label>Game {sport==='cfb'?'Week':'Date'}<select value={date || ''} disabled={!dates.length} onChange={e=>setSelectedDate(e.target.value)}>
+  return <><div className="board-controls"><label>Game {sport==='cfb'?'Week':'Date'}<FilterMenu value={date || ''} disabled={!dates.length} onChange={e=>setSelectedDate(e.target.value)}>
       {!dates.length && <option value="">No Dates Available</option>}{dates.map(d=><option key={d} value={d}>{periodLabel(d,sport)}</option>)}
-    </select></label></div><p>Manual Research Line · Ranked by recent hit rate with four games of 50% prior weight. {sport!=='cfb' && 'Players must average at least 15 minutes.'}</p>
+    </FilterMenu></label></div><p>Manual Research Line · Ranked by recent hit rate with four games of 50% prior weight. {sport!=='cfb' && 'Players must average at least 15 minutes.'}</p>
     <div className="research-grid picks-grid">{picks.map(({p,hits,total,avg},i)=>{
       const game=next.get(p.team),opp=game.home===p.team?game.away:game.home;
       const rank=meta.ranks?.[opp]?.[metric];

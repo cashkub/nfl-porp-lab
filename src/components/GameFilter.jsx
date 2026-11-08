@@ -1,8 +1,17 @@
+import FilterMenu from './FilterMenu.jsx';
 import React, {useMemo, useState} from 'react';
 
 const selections = new Map();
 const easternDate = new Intl.DateTimeFormat('en-CA', {timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit'});
 export const gameDay = game => easternDate.format(new Date(game.kickoff));
+const readableDay = new Intl.DateTimeFormat('en-US', {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+function dateLabel(day) {
+  const date = new Date(day + 'T12:00:00Z');
+  const today = easternDate.format(new Date());
+  const offset = Math.round((date - new Date(today + 'T12:00:00Z')) / 86400000);
+  const prefix = offset === 0 ? 'Today · ' : offset === 1 ? 'Tomorrow · ' : '';
+  return prefix + readableDay.format(date);
+}
 const gameKey = game => [gameDay(game), game.away, game.home].join('|');
 
 export function useGameFilter(sport, season, schedule) {
@@ -41,11 +50,11 @@ export default function GameFilter({filter, onChange, names={}}) {
   const {date, match, days, slate, select} = filter;
   function change(day, game='') { select(day,game); onChange?.(); }
   return <>
-    <label>Game Date (ET)<select value={date} onChange={e=>change(e.target.value)}>
-      <option value="">All Dates</option>{days.map(d=><option key={d}>{d}</option>)}
-    </select></label>
-    <label>Game<select disabled={!date} value={match} onChange={e=>change(date,e.target.value)}>
+    <label>Game Date (ET)<FilterMenu value={date} onChange={e=>change(e.target.value)}>
+      <option value="">All Dates</option>{days.map(d=><option key={d} value={d}>{dateLabel(d)}</option>)}
+    </FilterMenu></label>
+    <label>Game<FilterMenu disabled={!date} value={match} onChange={e=>change(date,e.target.value)}>
       <option value="">{date ? 'All Games' : 'Select a Date First'}</option>{date && slate.map(g=><option key={gameKey(g)} value={gameKey(g)}>{g.awayName || names[g.away] || g.away} at {g.homeName || names[g.home] || g.home}{!date && ' · '+gameDay(g)}</option>)}
-    </select></label>
+    </FilterMenu></label>
   </>;
 }

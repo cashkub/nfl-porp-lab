@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import {BoardPlayerPicker} from './PlayerStepper.jsx';
 import GameFilter from './GameFilter.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -108,14 +109,14 @@ export default function PropsBoard({gameFilter,initialRanked=false,games,schedul
     <header><h1>{title}</h1><p>{touchdown?'DraftKings Lines and Research Presets':'DraftKings Pregame Snapshots'} · {filtered.length} {side==='both' ? 'prop sides' : 'props'}</p></header>
     <div className="board-controls">
       <GameFilter filter={gameFilter} onChange={()=>{setTeam('');setLimit(30);}}/>
-      <label>Team<select value={currentTeam} onChange={e=>filter(setTeam,e)}><option value="">{matchup ? "Both Teams" : "All Teams"}</option>{choices.map(t=><option key={t}>{t}</option>)}</select></label>
-      <label>Stat<select value={stat} onChange={e=>filter(setStat,e)}><option value="">All Stats</option>{Object.entries(METRICS).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</select></label>
-      <label>Last 10 Side<select value={side} onChange={e=>filter(setSide,e)}><option value="both">Both Sides</option><option value="over">Over</option><option value="under">Under</option></select></label>
-      <label>Minimum Games<select value={minimum} onChange={e=>filter(setMinimum,e)}><option value="0">Any</option>{[1,5,10].map(n=><option key={n}>{n}</option>)}</select></label>
+      <label>Team<FilterMenu value={currentTeam} onChange={e=>filter(setTeam,e)}><option value="">{matchup ? "Both Teams" : "All Teams"}</option>{choices.map(t=><option key={t}>{t}</option>)}</FilterMenu></label>
+      <label>Stat<FilterMenu value={stat} onChange={e=>filter(setStat,e)}><option value="">All Stats</option>{Object.entries(METRICS).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</FilterMenu></label>
+      <label>Last 10 Side<FilterMenu value={side} onChange={e=>filter(setSide,e)}><option value="both">Both Sides</option><option value="over">Over</option><option value="under">Under</option></FilterMenu></label>
+      <label>Minimum Games<FilterMenu value={minimum} onChange={e=>filter(setMinimum,e)}><option value="0">Any</option>{[1,5,10].map(n=><option key={n}>{n}</option>)}</FilterMenu></label>
       <BoardPlayerPicker names={candidates.map(r=>r.line.player)} value={search} onSelect={value=>{setSearch(value);setLimit(30);}}/>
     </div>
     <div className="board-sort">
-      <label>Sort By <select value={sort} onChange={e=>changeSort(e.target.value)}>{Object.entries({kickoff:'Kickoff',player:'Player',category:'Stat Category',line:'Prop Line',over:'Over Price',under:'Under Price',rate:'Last 10 Hit Rate',rank:'Defense Rank'}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
+      <label>Sort By <FilterMenu value={sort} onChange={e=>changeSort(e.target.value)}>{Object.entries({kickoff:'Kickoff',player:'Player',category:'Stat Category',line:'Prop Line',over:'Over Price',under:'Under Price',rate:'Last 10 Hit Rate',rank:'Defense Rank'}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</FilterMenu></label>
       <button className="outline-button" type="button" onClick={()=>changeSort(sort)}>{ascending ? '↑ Ascending' : '↓ Descending'}</button>
     </div>
     <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button></th>)}</tr></thead>

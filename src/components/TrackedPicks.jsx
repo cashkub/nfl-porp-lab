@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import SortableTable from './SortableTable.jsx';
 import HitRate,{defenseRankStyle} from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
@@ -44,7 +45,7 @@ export default function TrackedPicks({sport,record=false,onOpen,archive,touchdow
     {!record && <div className="picks-toolbar">
       {sport==='nfl' && <div className="pick-switch" role="group" aria-label="Pick List">{[[false,'All Props',ListOrdered],[true,'Touchdown Scorers',Target]].map(([active,label,Icon])=><button type="button" key={label} aria-pressed={scorers===active} onClick={()=>setShowScorers(active)}><Icon size={16} aria-hidden="true"/>{label}</button>)}</div>}
       <label className="week-control"><CalendarDays size={17} aria-hidden="true"/>Game {periodName}
-        <select aria-label={'Game '+periodName} value={selected} disabled={!periods.length} onChange={e=>setPeriod(e.target.value)}>{!periods.length&&<option value="">No {periodName}s Available</option>}{periods.map(w=><option key={w} value={w}>{periodLabel(w,sport)}</option>)}</select>
+        <FilterMenu aria-label={'Game '+periodName} value={selected} disabled={!periods.length} onChange={e=>setPeriod(e.target.value)}>{!periods.length&&<option value="">No {periodName}s Available</option>}{periods.map(w=><option key={w} value={w}>{periodLabel(w,sport)}</option>)}</FilterMenu>
       </label>
     </div>}
     <details className="ranking-info"><summary>How Picks Are Ranked</summary><p>{scorers?'Scoring frequency, recent carries and targets, opponent defense, and reported availability determine the daily touchdown rankings.':'The model ranks up to nine picks per slate using recent hit rates, last-three form, and opponent defense.'} {!scorers && (sport==='nfl'?'NFL rankings also account for usage changes, questionable designations, and the DraftKings price. Out and doubtful players are excluded at publication.':sport==='cfb'?'Football rankings use manual lines and offensive box scores.':'Basketball rankings use manual lines and require 15 minutes per game.')} Picks lock at publication.</p></details>

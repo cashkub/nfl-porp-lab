@@ -1,3 +1,4 @@
+import FilterMenu from './components/FilterMenu.jsx';
 import PlayerStepper from './components/PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './components/GameFilter.jsx';
 import SortableTable from './components/SortableTable.jsx';
@@ -323,15 +324,15 @@ export default function App() {
         <span>{settingsOpen ? 'Fewer Filters' : 'More Filters'}</span>
         <ChevronDown size={16}/>
       </button><div id="settings-fields" className={settingsOpen ? 'settings-fields expanded' : 'settings-fields'}><section className="controls-panel" aria-labelledby="controls-title">
-        <div className="section-topline"><div><h2 id="controls-title">Prop Settings</h2></div><div className="controls-side"><span className="label-small">Season</span><div className="select-wrap"><select value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All Seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</select><ChevronDown size={15}/></div></div></div>
+        <div className="section-topline"><div><h2 id="controls-title">Prop Settings</h2></div><div className="controls-side"><span className="label-small">Season</span><div className="select-wrap"><FilterMenu value={season} onChange={e=>onSeasonChange(e.target.value)} aria-label="Season"><option value="ALL">All Seasons</option>{seasons.map(y=><option key={y} value={y}>{y}</option>)}</FilterMenu><ChevronDown size={15}/></div></div></div>
         <div className="board-controls"><GameFilter filter={gameFilter} onChange={()=>setTeam('ALL')}/></div><div className="controls-grid">
           <div className="field"><label htmlFor="team">Team</label><div className="select-wrap large-select">
-            <select id="team" value={activeTeam} onChange={e => { setTeam(e.target.value); setVenue('ALL'); setOpponent('ALL'); }}>
+            <FilterMenu id="team" value={activeTeam} onChange={e => { setTeam(e.target.value); setVenue('ALL'); setOpponent('ALL'); }}>
               <option value="ALL">All Teams</option>{teams.map(t => <option key={t}>{t}</option>)}
-            </select><ChevronDown size={16}/></div></div>
+            </FilterMenu><ChevronDown size={16}/></div></div>
           <div className="field field-player"><label>Player <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL' || Boolean(gameFilter.game)} selected={player} season={season} onSelect={onSelectPlayer} /></div>
-          <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{statOptions.map(key=><option key={key} value={key}>{METRICS[key].label}</option>)}</select><ChevronDown size={16}/></div></div>
-          <div className="field extra-filter"><label>Opponent</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
+          <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><FilterMenu value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{statOptions.map(key=><option key={key} value={key}>{METRICS[key].label}</option>)}</FilterMenu><ChevronDown size={16}/></div></div>
+          <div className="field extra-filter"><label>Opponent</label><div className="select-wrap large-select"><FilterMenu value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</FilterMenu><ChevronDown size={16}/></div></div>
           <div className="field extra-filter"><label>Location</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
         </div>
       </section>

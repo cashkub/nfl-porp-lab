@@ -1,3 +1,4 @@
+import FilterMenu from './FilterMenu.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {useLeague} from './ManualLeague.jsx';
 import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
@@ -79,7 +80,7 @@ export function CbbGames(){
   const [showAll,setShowAll]=useState(false);
   const featured=featuredGames(rows,g=>projection(g,ratingsFor(g)[g.away],ratingsFor(g)[g.home],true));
   const error=index.error?index:schedule.error?schedule:null;
-  return <section className="panel props-board"><h1>{sport.toUpperCase()} Games</h1><div className="board-controls">{football?<label>Game Week<select value={week} onChange={e=>setWeek(e.target.value)}>{weeks.map(w=><option key={w} value={w}>{periodLabel(w,sport)}</option>)}</select></label>:<label>Game Date (ET)<input type="date" value={date} onChange={e=>{if(e.target.value)setDate(e.target.value)}}/></label>}{sport!=='nba' && <label>Conference<select value={conf} onChange={e=>setConf(e.target.value)}><option value="">All Conferences</option>{[...new Set(Object.values(meta.data?.conferences || {}))].sort().map(c=><option key={c}>{c}</option>)}</select></label>}{!football && <button className="outline-button" onClick={()=>setDate(etDay(Date.now()))}>Today</button>}</div>
+  return <section className="panel props-board"><h1>{sport.toUpperCase()} Games</h1><div className="board-controls">{football?<label>Game Week<FilterMenu value={week} onChange={e=>setWeek(e.target.value)}>{weeks.map(w=><option key={w} value={w}>{periodLabel(w,sport)}</option>)}</FilterMenu></label>:<label>Game Date (ET)<input type="date" value={date} onChange={e=>{if(e.target.value)setDate(e.target.value)}}/></label>}{sport!=='nba' && <label>Conference<FilterMenu value={conf} onChange={e=>setConf(e.target.value)}><option value="">All Conferences</option>{[...new Set(Object.values(meta.data?.conferences || {}))].sort().map(c=><option key={c}>{c}</option>)}</FilterMenu></label>}{!football && <button className="outline-button" onClick={()=>setDate(etDay(Date.now()))}>Today</button>}</div>
     <p className="report-note">Pregame estimates use scoring and points allowed against past opponents, blended with four league-average games. {sport==='cbb'?'Home court adds three points of margin.':'The home advantage is estimated from earlier games this season.'} Neutral games have no home adjustment. Only finals from earlier dates enter the model.</p>
     <button type="button" className="outline-button" aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>{showAll?'Show Top 9 Game Winners':'Show All Matchups'}</button>
     {!showAll && <p>Top Game Winners · Ranked by projected margin · {featured.length} picks</p>}
@@ -96,7 +97,7 @@ export function Moneylines({games,now,updated}){
   const featured=featuredGames(slate,g=>projection(g,g.awayRating,g.homeRating));
   const [showAll,setShowAll]=useState(false);
   return <section className="panel props-board"><h1>NFL Moneylines</h1><p>Market Snapshot · {updated}</p>
-    <div className="board-controls"><label>Game Week<select value={week || ''} onChange={e=>setSelection(e.target.value)}>{weeks.map(w=><option key={w}>{w}</option>)}</select></label></div>
+    <div className="board-controls"><label>Game Week<FilterMenu value={week || ''} onChange={e=>setSelection(e.target.value)}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label></div>
     <button type="button" className="outline-button" aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>{showAll?'Show Top 9 Game Winners':'Show All Matchups'}</button>
     {!showAll && <p>Top Game Winners · Ranked by projected margin · {featured.length} picks</p>}
     <div className="research-grid matchup-grid">{(showAll?slate:featured).map((g,i)=>
