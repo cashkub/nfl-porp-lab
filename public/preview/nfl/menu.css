@@ -9,3 +9,6 @@
 .research-menu a:is(:hover,:focus-visible) {border-color:#93e9ff;box-shadow:0 0 12px #44bdfa44}
 @media(max-width:650px){.research-menu{grid-template-columns:1fr}.research-menu a{padding:.9rem}.research-menu strong{font-size:1.65rem}}
 @media(prefers-reduced-motion:no-preference){.research-menu a{transition:transform .18s,border-color .18s}.research-menu a:active{transform:scale(.985)}}
+.research-menu button:disabled {display:grid;grid-template-columns:2.5rem 1fr auto;gap:.9rem;align-items:center;padding:1rem 1.2rem;text-align:left;border:1px solid #425167;border-radius:.55rem;background:#132034eb;color:#b3bfcc;cursor:default}
+.research-menu button:disabled svg,.research-menu button:disabled b {color:#899bb1;stroke:currentColor}
+.research-menu .current-tool {grid-column:1/-1;border-color:#84dfff;box-shadow:inset 4px 0 #70d9ff;background:linear-gradient(110deg,#17435b,#182236)}
