@@ -3,14 +3,28 @@ export function projection(game, away, home, college=false) {
   if (!(away?.games >= minimum && home?.games >= minimum)) return null;
   const venue = game.neutral ? 0 : college ? 1.5 : 0.75;
   function side(team, rating, opponent, court) {
-    const injuries = (game.injuries?.[team] || []).reduce((sum, p) => sum + (p.deduction || 0), 0);
+    const profile=college?null:game.context?.[team===game.home?'home':'away'];
+    const reports=game.injuries?.[team] || [];
+    const out=reports.some(p=>p.id && p.id===profile?.qbId && p.gameStatus?.toLowerCase()==='out');
+    const swap=out && profile?.backupKnown;
+    const injuries=reports.reduce((sum,p)=>sum+(swap && p.id===profile.qbId?0:p.deduction || 0),0);
+    const parts={...profile?.parts};
+    if(swap)parts['QB Replacement']=profile.backupDelta;
+    const advanced=Object.values(parts).reduce((sum,v)=>sum+v,0);
     const defense = opponent.defense - rating.baseline;
-    const score = Number((rating.offense + defense + court - injuries).toFixed(1));
-    return {team, rating, defense, court, injuries, score};
+    const score = Number((rating.offense + defense + court - injuries + advanced).toFixed(1));
+    return {team, rating, defense, court, injuries, score, profile, parts, swap};
   }
   const a = side(game.away, away, home, -venue), h = side(game.home, home, away, venue);
   const margin = Number((h.score - a.score).toFixed(1));
-  return {a, h, margin, winner:margin > 0 ? h : margin < 0 ? a : null};
+  let blend=null;
+  const ctx=game.context;
+  if(!college && a.profile && h.profile && Number.isFinite(game.homeSpread) && Number.isFinite(ctx.total)){
+    const weight=ctx.marketWeight;
+    const predicted=(s,spread)=>Number(((1-weight)*s.score+weight*(ctx.total+spread)/2).toFixed(1));
+    blend={away:predicted(a,game.homeSpread),home:predicted(h,-game.homeSpread),weight};
+  }
+  return {a, h, margin, blend, winner:margin > 0 ? h : margin < 0 ? a : null};
 }
 
 // Fit scoring and points allowed jointly. Four average games shrink small samples.

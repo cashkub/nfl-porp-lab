@@ -469,3 +469,9 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .picks-grid .outline-button {align-self:flex-start;margin-top:auto}
 @media(min-width:680px) {.picks-grid {grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:1200px) {.picks-grid {grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+@media(min-width:1000px){.analyzer-shell {width:100%;max-width:1780px;padding-inline:clamp(16px,2vw,36px)}.analyzer-shell .workspace {grid-template-columns:minmax(290px,28%) minmax(0,1fr)}.analyzer-shell .rail-graphics {position:static}.analysis-rail>.research-card {margin-top:16px}}
+.college-settings {padding:18px}.college-settings .board-controls {display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.college-settings select {width:100%;min-width:0}.college-settings .cbb-line {margin-bottom:8px}
+.college-analyzer .match-header {background-image:linear-gradient(105deg,#201622,#663723)}.analysis-rail .usage-bars small {font-size:9px}
+
+.analyzer-bottom {display:grid;gap:16px;margin-top:18px}

@@ -44,7 +44,7 @@ def build(season):
         'home_conference_id','away_conference_id','groups_id','groups_name','groups_is_conference','date','home_color','away_color','home_display_name','away_display_name','home_score','away_score','status_type_completed'])
     neutral = {str(g['game_id']) for g in fixtures if g['neutral_site']}
     columns = ['game_id','game_date','athlete_id','athlete_display_name','team_id','team_display_name',
-               'opponent_team_id','opponent_team_abbreviation','home_away','minutes','field_goals_attempted','did_not_play',*STATS.values()]
+               'opponent_team_id','opponent_team_abbreviation','home_away','minutes','field_goals_attempted','three_point_field_goals_attempted','did_not_play',*STATS.values()]
     rows = read_source('player_box','player_box',season,columns)
     rosters = defaultdict(dict)
     teams, allowed, seen = {}, defaultdict(dict), set()
@@ -66,7 +66,7 @@ def build(season):
         p = rosters[team].setdefault(player, {'id':player,'name':row['athlete_display_name'],'games':[]})
         p['games'].append({'id':game,'date':str(row['game_date'])[:10], 'opponent':opp,
                            'abbr':row['opponent_team_abbreviation'] or opp,'venue':venue,
-                           'minutes':row['minutes'],'shots':row['field_goals_attempted'],'stats':stats})
+                           'minutes':row['minutes'],'shots':row['field_goals_attempted'],'threeAttempts':row['three_point_field_goals_attempted'],'stats':stats})
     if not teams:
         raise ValueError(f'No usable player games for {season}')
     ranks = {}

@@ -1,0 +1,45 @@
+{
+  "weights": {
+    "Pass Offense": 3.110985718329464,
+    "Run Offense": 2.022840083373334,
+    "Pass Defense Faced": -5.819383001364568,
+    "Run Defense Faced": -1.144350977274259,
+    "Possessions": -0.2256578443456716,
+    "Quarterback": 10.477398532742024,
+    "Rest": 0.01496783258042448,
+    "Wind": -0.2317004545685795,
+    "Cold": -0.05090093692735529
+  },
+  "centers": {
+    "Pass Offense": 0.04078766081257884,
+    "Run Offense": -0.06826482399092247,
+    "Pass Defense Faced": 0.0404413203126958,
+    "Run Defense Faced": -0.06654198824063723,
+    "Possessions": 10.626002039549512,
+    "Quarterback": -0.015035118786254279,
+    "Rest": 0.0,
+    "Wind": 0.0,
+    "Cold": 0.0
+  },
+  "intercept": 0.2807196468016511,
+  "marketWeight": 0.9653264279107214,
+  "validation": {
+    "Base": {
+      "scoreMAE": 7.42,
+      "marginMAE": 10.4
+    },
+    "Stats": {
+      "scoreMAE": 7.43,
+      "marginMAE": 10.51
+    },
+    "Market": {
+      "scoreMAE": 7.2,
+      "marginMAE": 9.92
+    },
+    "Blend": {
+      "scoreMAE": 7.2,
+      "marginMAE": 9.93
+    }
+  },
+  "games": 224
+}

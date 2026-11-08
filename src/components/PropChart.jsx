@@ -1,10 +1,10 @@
-import {defenseRankStyle} from './HitRate.jsx';
+import {rateStyle} from './HitRate.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isHit, METRICS } from '../lib/stats.js';
 
 import { usageFor } from '../lib/bookLine.js';
 
-export default function PropChart({ multi, defenses, games, metric, line, direction }) {
+export default function PropChart({ multi, defenses, games, metric, line, direction, markets=METRICS, college=false, rankCount=32 }) {
   const [active, setActive] = useState(null);
   const scroll = useRef(null);
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
           <div className="chart-axis" aria-hidden="true">
             {ticks.map(f => <span key={f} style={{ bottom: `${f*100}%` }}>{Math.round(f*max)}</span>)}
           </div>
-          <div className="chart-plot" role="group" aria-label={`Game-by-game ${METRICS[metric].label.toLowerCase()} bar chart`}>
+          <div className="chart-plot" role="group" aria-label={`Game-by-game ${markets[metric].label.toLowerCase()} bar chart`}>
             {ticks.map(f => <div key={f} className="chart-gridline" style={{ bottom: `${f*100}%` }} />)}
             <div className="chart-target" style={{ bottom: `${linePct}%` }}>
               <span>{direction.toUpperCase()} {line}</span>
@@ -40,6 +40,8 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
                 const rank = defenses.find(row => row.team === game.opponent)?.rank;
                 const rankLabel = rank ? `Defense rank #${rank}` : 'Defense rank unavailable';
                 const outcome = value === line ? 'push' : hit ? 'hit' : 'miss';
+                const matchup=college?game.abbr:game.opponent;
+                const gameLabel=college?game.date:game.season+' Week '+game.week;
                 const id = `${game.season}-${game.week}-${game.gameId}-${idx}`;
                 return (
                   <div className="chart-column" key={id}>
@@ -47,13 +49,13 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
                       type="button"
                       className={`chart-bar chart-bar-${outcome} ${active === id ? 'chart-bar-active' : ''}`}
                       style={{ height: `${Math.max(1.5, value/max*100)}%` }}
-                      aria-label={`${game.season} Week ${game.week} ${game.venue==='H'?'home vs':'away at'} ${game.opponent}: ${value} ${METRICS[metric].label}; ${outcome}. ${rankLabel}`}
-                      title={`${game.season} Week ${game.week} ${game.venue==='H'?'vs':'at'} ${game.opponent} • ${value} ${METRICS[metric].unit} • ${outcome.toUpperCase()} • ${rankLabel}`}
+                      aria-label={`${gameLabel} ${game.venue==='H'?'home vs':'away at'} ${matchup}: ${value} ${markets[metric].label}; ${outcome}. ${rankLabel}`}
+                      title={`${gameLabel} ${game.venue==='H'?'vs':'at'} ${matchup} • ${value} ${markets[metric].unit} • ${outcome.toUpperCase()} • ${rankLabel}`}
                       onClick={() => setActive(old => old === id ? null : id)}
                     >
                       <span className="chart-bar-value">{value}</span>
                     </button>
-                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {game.opponent}</span><small>{multi && `${String(game.season).slice(-2)} · `}W{game.week}</small><small className="usage-label" title={usage.label}>{game.usage?.[usage.key] ?? '—'} {usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small><b className="chart-defense" style={defenseRankStyle(rank)} title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
+                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {matchup}</span><small>{college?game.date.slice(5):(multi?String(game.season).slice(-2)+' · ':'')+'W'+game.week}</small><small className="usage-label" title={college?'Minutes':usage.label}>{college?game.minutes:game.usage?.[usage.key] ?? '—'} {college?'min':usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small><b className="chart-defense" style={rank && rankCount>1?rateStyle((rankCount-rank)/(rankCount-1)):undefined} title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
                   </div>
                 );
               })}

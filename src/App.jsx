@@ -1,7 +1,10 @@
-import HitRate, {rateStyle} from './components/HitRate.jsx';
+import StatCard from './components/StatCard.jsx';
+import {availableStats} from './lib/availableStats.js';
+import ModelRecord from './components/ModelRecord.jsx';
+import HitRate from './components/HitRate.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowDown, ArrowUpRight, BarChart3, Check, ChevronDown,
+  ArrowDown, ArrowUpRight, BarChart3, ChevronDown,
   ChevronRight, Info, Search, ShieldCheck,
   
 } from 'lucide-react';
@@ -83,15 +86,6 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
   </div>;
 }
 
-function StatCard({ label, summary, emphasized = false, selected, onClick }) {
-  return <button type="button" onClick={onClick} aria-pressed={selected} className={`stat-card ${selected ? 'stat-card-selected' : ''} ${emphasized ? 'stat-card-featured' : ''}`}>
-    <div className="stat-card-heading"><span>{label}</span>{selected && <Check size={16} className="selected-check" />}</div>
-    <div className="stat-card-number"><HitRate rate={summary.rate}/></div>
-    <div className="stat-card-footer"><span>{summary.hits} of {summary.total} games</span></div>
-    <div className="rate-track" aria-hidden="true"><i style={{...rateStyle(summary.rate), width: `${(summary.rate || 0) * 100}%`}} /></div>
-  </button>;
-}
-
 function Insights({ games, metric, line, direction }) {
   const summaries = summarize(games, metric, line, direction);
   const lastThree = summarize(games.slice(-3), metric, line, direction);
@@ -127,7 +121,7 @@ function GameLog({ multi, games, metric, line, direction }) {
 function activePage(hash=window.location.hash) {
   return ({'#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
     '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'best',
-    '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[hash] || 'home';
+    '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#model-record':'model-record','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[hash] || 'home';
 }
 
 export default function App() {
@@ -155,7 +149,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [season, setSeason] = useState(2026);
   const [team, setTeam] = useState('ALL');
-  const [metric, setMetric] = useState('receivingYards');
+  const [requestedMetric, setMetric] = useState('receivingYards');
   const [custom, setCustom] = useState(null);
   const [bookGames, setBookGames] = useState([]);
   useEffect(() => {
@@ -208,6 +202,8 @@ export default function App() {
     seasonPlayers.filter(p => p.team === activeTeam), [seasonPlayers, activeTeam]);
   const player = roster.find(p => p.id === selectedId) ||
     roster.find(p => ['WR','QB','RB','TE'].includes(p.position)) || roster[0];
+  const statOptions=useMemo(()=>availableStats(METRICS,getPlayerGames(player,season)),[player,season]);
+  const metric=statOptions.includes(requestedMetric)?requestedMetric:statOptions[0] || 'receivingYards';
   useEffect(() => {
     if (boardSelection.current === player?.id) { boardSelection.current=null; return; }
     const key = preferredMetric(player?.position);
@@ -276,9 +272,10 @@ export default function App() {
         {!launch && <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{cbb ? 'HOOPR DATA' : loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>}
       </div>
     </header>
-    <main className="shell" id="analyzer">
+    <main className={page==='analyzer'||page==='cbb'?'shell analyzer-shell':'shell'} id="analyzer">
       {launch ? <SportHome sport={page==='home'?null:(cbb?'cbb':'nfl')}/> :
        page==='cbb' ? <CbbAnalyzer initial={initialCbb}/> :
+       page==='model-record' ? <ModelRecord validation={data.modelValidation}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        page==='cbb-games' ? <CbbGames/> :
        cbb ? <CbbBoard top={page==='cbb-top'} key={page} ranked={page==='cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
@@ -287,7 +284,7 @@ export default function App() {
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
           <h1>{player?.name || 'Player props'}</h1>
-          <p>{METRICS[metric].label} <b>{direction} {line}</b></p>
+          <p>{statOptions.length?<>{METRICS[metric].label} <b>{direction} {line}</b></>:'No recorded prop categories this season.'}</p>
           {!isDemo && <div className="next-match"><span>Next Game</span>
             {upcoming ? <><strong>vs {upcoming.name}</strong><small>{upcoming.venue} · {nextDate}{upcoming.timeKnown ? '' : ' · Time TBD'}</small></> :
               <small>No upcoming game listed for {scheduleSeason}.</small>}
@@ -321,7 +318,7 @@ export default function App() {
               <option value="ALL">All Teams</option>{teams.map(t => <option key={t}>{t}</option>)}
             </select><ChevronDown size={16}/></div></div>
           <div className="field field-player"><label>Player <span>{!isDemo && <span className="field-quiet">{roster.length.toLocaleString()} searchable</span>}</span></label><PlayerSearch key={`${season}-${activeTeam}`} players={roster} showRoster={activeTeam !== 'ALL'} selected={player} season={season} onSelect={onSelectPlayer} /></div>
-          <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{Object.entries(METRICS).map(([key,m])=><option key={key} value={key}>{m.label}</option>)}</select><ChevronDown size={16}/></div></div>
+          <div className="field"><label>Stat Category</label><div className="select-wrap large-select"><select value={metric} onChange={e=>onMetricChange(e.target.value)} aria-label="Statistic category">{statOptions.map(key=><option key={key} value={key}>{METRICS[key].label}</option>)}</select><ChevronDown size={16}/></div></div>
           <div className="field"><label>Opponent</label><div className="select-wrap large-select"><select value={opponent} onChange={e=>setOpponent(e.target.value)} aria-label="Filter by opponent"><option value="ALL">All Opponents</option>{opponents.map(o=><option key={o} value={o}>{o}</option>)}</select><ChevronDown size={16}/></div></div>
           <div className="field"><label>Location</label><div className="segmented venue-control"><button type="button" className={venue==='ALL'?'active':''} onClick={()=>setVenue('ALL')}>All</button><button type="button" className={venue==='H'?'active':''} onClick={()=>setVenue('H')}>Home</button><button type="button" className={venue==='A'?'active':''} onClick={()=>setVenue('A')}>Away</button></div></div>
         </div>
@@ -337,7 +334,9 @@ export default function App() {
       </section>
       </div></aside>
       <div className="rail-graphics"><VenueSplits multi={multi} games={splitGames} metric={metric} line={line} direction={direction} windowSize={windowSize}/></div>
-      </div><div className="results"><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit Rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'All Opponents':`vs ${opponent}`} · {venue==='ALL'?'All Venues':venue==='H'?'Home Only':'Away Only'}</p></div></div>
+      {upcoming && <MatchCard game={upcoming}/>}
+      <UsageTrends games={displayed} label={usageFor(metric).label} value={g=>g.usage?.[usageFor(metric).key]}/>
+      </div><div className="results">{!statOptions.length?<p>No recorded categories for this player and season.</p>:<><section className="hit-section" aria-labelledby="hit-title"><div className="section-header"><div><h2 id="hit-title">Hit Rates</h2><p>For <strong>{player?.name || 'the selected player'}</strong> · {METRICS[metric].label.toLowerCase()} {direction} {line} · {opponent==='ALL'?'All Opponents':`vs ${opponent}`} · {venue==='ALL'?'All Venues':venue==='H'?'Home Only':'Away Only'}</p></div></div>
         <div className="stat-grid"><StatCard label="Last 5" summary={last5} selected={windowSize==='5'} onClick={()=>setWindowSize('5')} /><StatCard label="Last 10" summary={last10} selected={windowSize==='10'} onClick={()=>setWindowSize('10')} /><StatCard label={multi ? "All Seasons" : "Full Season"} summary={whole} selected={windowSize==='season'} onClick={()=>setWindowSize('season')} /></div>
       </section>
       <section className="panel chart-panel" aria-labelledby="chart-title">
@@ -346,11 +345,9 @@ export default function App() {
         <div className="chart-note"><Info size={15}/><span>DEF shows the opponent’s rank for {seasonLabel.toLowerCase()} using all games in that period. #1 allows the most {METRICS[metric].label.toLowerCase()} Per Game to {player?.position || "this position"}. A hit requires a value strictly {direction==='over'?'above':'below'} the selected line. Filters apply before L5/L10 are calculated.</span></div>
       </section>
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
-      {upcoming && <MatchCard game={upcoming}/>}
-      <UsageTrends games={displayed} label={usageFor(metric).label} value={g=>g.usage?.[usageFor(metric).key]}/>
-      <section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player Trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
+      </>}</div></div>{statOptions.length>0 && <div className="analyzer-bottom"><section className="insights" aria-labelledby="insights-title"><div className="section-header"><div><h2 id="insights-title">Player Trends</h2></div></div><Insights games={allGames} metric={metric} line={line} direction={direction} /></section>
       <section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game Log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide Table' : 'Show Table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      </div></div></>}{nflTool && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      </div>}</>}{nflTool && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
         <p className="footer-disclaimer">Historical Hit Rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>}

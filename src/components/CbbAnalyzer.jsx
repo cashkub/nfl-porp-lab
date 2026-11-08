@@ -1,3 +1,6 @@
+import PropChart from './PropChart.jsx';
+import StatCard from './StatCard.jsx';
+import {availableStats} from '../lib/availableStats.js';
 import {UsageTrends} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
 import React, {useEffect, useState} from 'react';
@@ -40,32 +43,41 @@ export default function CbbAnalyzer({initial = {}}) {
   const roster=useCbbFile(team ? season+'/'+team+'.json' : null);
   const [athlete,setAthlete]=useState(initial.player || '');
   const player=roster.data?.find(p=>p.id===athlete) || roster.data?.[0];
-  const [metric,setMetric]=useState(initial.metric || 'points');
-  const [line,setLine]=useState(initial.line ?? markets.points.defaultLine);
+  const [requestedMetric,setMetric]=useState(initial.metric || 'points');
+  const statOptions=availableStats(markets,player?.games || []);
+  const metric=statOptions.includes(requestedMetric)?requestedMetric:statOptions[0] || 'points';
+  const [chosenLine,setLine]=useState(initial.line ?? markets.points.defaultLine);
+  const line=requestedMetric===metric?chosenLine:markets[metric].defaultLine;
+  useEffect(()=>{if(player && metric!==requestedMetric){setMetric(metric);setLine(markets[metric].defaultLine)}},[player,metric,requestedMetric]);
   const [direction,setDirection]=useState(initial.side || 'over');
   const [venue,setVenue]=useState('All Venues');
   const [period,setPeriod]=useState('10');
-  const games=filteredWindow((player?.games || []).filter(g=>venue==='All Venues'||g.venue===venue),period);
+  const history=(player?.games || []).filter(g=>venue==='All Venues'||g.venue===venue);
+  const games=filteredWindow(history,period);
   const summary=summarize(games,metric,line,direction);
   const failed=[index,source,roster].find(s=>s.error);
   const highest=Math.max(1,line,...games.map(g=>g.stats[metric]));
   const rankCount=Object.keys(source.data?.ranks || {}).length;
-  return <section className="panel props-board cbb-board">
-    <header><h1>CBB Analyzer</h1><p>Men’s College Basketball · Manual Lines{index.data && season && ' · Games Through '+index.data.through[season]}</p></header>
+  return <div className="college-analyzer"><section className="match-header"><div className="match-player"><div className="match-context">Men’s College Basketball · {season ? (season-1)+'–'+String(season).slice(-2):''}</div><h1>{player?.name || 'CBB Analyzer'}</h1><p>{source.data?.teams?.[team]} · {statOptions.length?markets[metric].label+' '+direction+' '+line:'Player Research'}</p></div><div className="match-form"><span>Hit Rate</span><strong><HitRate rate={statOptions.length?summary.rate:null}/></strong><small>{summary.total} matching games</small></div></section>
+    <div className="workspace"><div className="analysis-rail"><aside className="panel setup college-settings"><h2>Prop Settings</h2>
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setAthlete('');}}>{index.data?.seasons.map(y=><option value={y} key={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>
       <ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/>
       <label>Team<select value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
       <label>Player<select value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{roster.data?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-      <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{Object.entries(markets).map(([k,m])=><option value={k} key={k}>{m.label}</option>)}</select></label>
+      <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</select></label>
       <label>Location<select value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</select></label>
       <label>Games<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></select></label>
       <label>Side<select value={direction} onChange={e=>setDirection(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
     </div>
     <div className="cbb-line"><LineSelect key={metric} metric={metric} markets={markets} value={line} onChange={setLine}/></div>
-    {failed ? <p role="status">Box Scores Are Unavailable. <button onClick={failed.reload}>Retry</button></p> :
+    <small>Manual Line</small></aside>{statOptions.length>0 && <><UsageTrends games={games} label="Minutes" value={g=>g.minutes}/><UsageTrends games={games} label="Shot Attempts" value={g=>g.shots}/></>}</div>
+    <div className="results">{failed ? <p role="status">Box Scores Are Unavailable. <button onClick={failed.reload}>Retry</button></p> :
       !roster.data ? <p role="status">Loading College Basketball Box Scores…</p> :
-      <><div className="cbb-summary"><h2>{player?.name} · {markets[metric].label}</h2><strong><HitRate rate={summary.rate}/> Hit Rate</strong><span>{summary.hits} of {summary.total} Games</span></div>
+      !statOptions.length?<p>No recorded prop categories for this player and season.</p>:
+      <><section className="hit-section"><h2>Hit Rates</h2><div className="stat-grid">{[['5','Last 5'],['10','Last 10'],['season','Full Season']].map(([key,label])=><StatCard key={key} label={label} summary={summarize(filteredWindow(history,key),metric,line,direction)} selected={period===key} onClick={()=>setPeriod(key)}/>)}</div></section>
+      <section className="panel chart-panel"><div className="chart-top"><h2>Game-by-Game Performance</h2><small>{markets[metric].label}</small></div><PropChart college games={games.map(g=>({...g,gameId:g.id,venue:({Home:'H',Away:'A'})[g.venue] || '?'}))} markets={markets} rankCount={rankCount} metric={metric} direction={direction} line={line} defenses={Object.entries(source.data.ranks).map(([team,r])=>({team,rank:r[metric]}))}/></section>
+      <section className="panel log-panel"><h2>Game Log</h2>
       {games.length ? <div className="board-scroll"><table className="game-log"><thead><tr>{['Date','Opponent','Location',markets[metric].label,'Minutes','DEF Rank','Result'].map(s=><th key={s}>{s}</th>)}</tr></thead><tbody>
       {[...games].reverse().map(g=>{
         const val=g.stats[metric],rank=source.data.ranks[g.opponent]?.[metric];
@@ -75,8 +87,8 @@ export default function CbbAnalyzer({initial = {}}) {
           <td>{g.minutes}</td><td style={rankCount>1 && rank ? rateStyle((rankCount-rank)/(rankCount-1)):undefined}>{rank ? '#'+rank : '—'}</td>
           <td><span className={'result-pill '+outcome.toLowerCase()}>{outcome}</span></td></tr>;
       })}</tbody></table></div>:<p>No Recorded Games Match These Filters.</p>}
-      <UsageTrends games={games} label="Minutes" value={g=>g.minutes}/><UsageTrends games={games} label="Shot Attempts" value={g=>g.shots}/>
-      <p className="board-foot">Bar markers show your line. Defense #1 allows the most of the selected stat per game to all opposing players combined. Rankings use the selected season’s available box scores.</p></>}
+
+      <p className="board-foot">Bar markers show your line. Defense #1 allows the most of the selected stat per game to all opposing players combined. Rankings use the selected season’s available box scores.</p></section></>}
     <p className="board-foot">Box Scores and Schedules · <a href="https://github.com/sportsdataverse/hoopR-mbb-data">SportsDataverse / hoopR</a></p>
-  </section>;
+  </div></div></div>;
 }

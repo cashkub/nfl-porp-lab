@@ -30,7 +30,8 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
       [w.rating.offense-other.rating.offense,'stronger opponent-adjusted scoring'],
       [other.rating.defense-w.rating.defense,'fewer opponent-adjusted points allowed'],
       [w.court-other.court,'home advantage'],
-      [other.injuries-w.injuries,'a smaller injury deduction']
+      [other.injuries-w.injuries,'a smaller injury deduction'],
+      ...Object.keys(w.parts).map(k=>[(w.parts[k]||0)-(other.parts[k]||0),k.toLowerCase()])
     ].sort((a,b)=>b[0]-a[0]);
     explanation=label(w.team)+' gains the most from '+factors[0][1]+' (+'+factors[0][0].toFixed(1)+' points of margin).';
   }
@@ -38,6 +39,7 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
     <p className="model-call"><small>Model Pick</small><b>{model.winner?label(model.winner.team)+' by '+Math.abs(model.margin).toFixed(1):'Projected Tie'}</b></p>
     <p>{explanation || 'The two projected scores are level at one decimal place.'}</p>
     {!college && model.a.injuries+model.h.injuries>0 && <p className="report-note">Confirmed absences reduce {g.away} by {model.a.injuries.toFixed(2)} and {g.home} by {model.h.injuries.toFixed(2)} points.</p>}
+    {!college && g.context && <NflConditions game={g} model={model}/>}
     {college && Math.min(away.games,home.games)<5 && <small>Early Season · {away.games} and {home.games} games in the sample.</small>}
     <details className="report-fold"><summary>Offense &amp; Defense Breakdown</summary>
       <table className="model-table"><caption>How the Score Is Built</caption><thead><tr><th>Points Per Game</th><th>{label(g.away)}</th><th>{label(g.home)}</th></tr></thead><tbody>
@@ -45,6 +47,7 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
         ['Adjusted Offense',s=>s.rating.offense.toFixed(1)],
         ['Opposing Defense vs. Average',s=>signed(s.defense)],
         ['Venue Adjustment',s=>signed(s.court)],
+        ...Object.keys({...model.a.parts,...model.h.parts}).map(k=>[k,s=>signed(s.parts[k]||0)]),
         ...(!college?[['Injury Adjustment',s=>signed(-s.injuries)]]:[]),
         ['Projected Score',s=>s.score.toFixed(1)]
       ].map(([name,value])=><tr key={name}><th>{name}</th><td>{value(model.a)}</td><td>{value(model.h)}</td></tr>)}</tbody></table>
@@ -53,6 +56,24 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
     </details></>:<p>Projection Pending · {college?'Each team needs a completed game before the selected day.':'Each team needs three completed games.'}</p>}
     {!college && <><p className="market-line">Moneyline · {g.away} {priceText(g.awayPrice)} / {g.home} {priceText(g.homePrice)}<br/>Market Spread · {g.home} {priceText(g.homeSpread)}</p><InjuryReport game={g}/></>}
   </>;
+}
+
+function NflConditions({game,model}){
+  const c=game.context,w=c.weather;
+  return <><details className="report-fold"><summary>Quarterbacks, Efficiency &amp; Weather</summary>
+    {[model.a,model.h].map(s=>{
+      const p=s.profile;
+      if(!p)return <p key={s.team}>{s.team} · Play-by-play unavailable.</p>;
+      const inputs=p.inputs;
+      return <section className="team-history" key={s.team}><b>{s.team} · {p.qb || 'QB Unavailable'}</b>
+        <small>{'QB source: '+p.qbSource} · {p.rest ?? '—'} rest days</small>
+        <small>Last {p.sample} games · Passing EPA/play {signed(inputs['Pass Offense'])} · Rushing EPA/play {signed(inputs['Run Offense'])} · Successful plays {(100*p.success).toFixed(0)}%</small>
+        <small>Opponent allows {inputs['Pass Defense Faced'].toFixed(2)} EPA per dropback and {inputs['Run Defense Faced'].toFixed(2)} per rush. Expected possessions {inputs.Possessions.toFixed(1)}.</small>
+        {p.backupKnown && <small>{s.swap?'Replacement used':'Alternate QB scenario'} · {p.backup} · {signed(p.backupDelta)} pts relative to {p.qb}. Scenario score: {s.team} {(s.score+(s.swap?0:p.backupDelta)).toFixed(1)}. Depth chart alternate · {p.backupPasses} tracked pass plays this season.</small>}</section>;
+    })}
+    <p>{c.stadium} · {c.roof} · {c.surface || 'Surface unavailable'}</p>
+    <p>{w?<>{w.temp ?? '—'} °F · Wind {w.wind ?? '—'} mph · Rain chance {w.rain ?? '—'}%. Forecast for the kickoff hour, retrieved {new Date(w.asOf).toLocaleString()}. {['open','outdoors'].includes(c.roof)?'Wind above 8 mph and temperatures below 40°F enter the score estimate.':'Roof status unconfirmed. Outside weather has no score adjustment.'} <a href="https://open-meteo.com/">Open-Meteo</a></>:['closed','dome'].includes(c.roof)?'Enclosed venue · No outdoor weather adjustment.':'Kickoff forecast unavailable · No weather adjustment.'}</p>
+    </details>{model.blend && <p className="market-line"><b>Market-Informed Score</b><br/>{game.away} {model.blend.away.toFixed(1)} · {game.home} {model.blend.home.toFixed(1)}<br/><small>{(100*model.blend.weight).toFixed(1)}% market weight fitted on 2024 games. The Model Pick above uses team data independently.</small></p>}</>;
 }
 
 export function PickReport({number,name,onOpen,side,line,metric,price,hits,total,average,rank,results,reason}){

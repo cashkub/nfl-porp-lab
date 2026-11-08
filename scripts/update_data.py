@@ -317,9 +317,11 @@ def main() -> int:
     if not payload["players"]:
         print("ERROR: No searchable players in downloaded data; keeping old data.", file=sys.stderr)
         return 1
+    schedule_text = None
     try:
         with urllib.request.urlopen("https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv", timeout=45) as response:
-            payload["schedule"] = schedule_rows(response.read().decode("utf-8-sig"), payload["seasons"])
+            schedule_text = response.read().decode("utf-8-sig")
+            payload["schedule"] = schedule_rows(schedule_text, payload["seasons"])
     except (OSError, ValueError) as exc:
         print(f"Schedule refresh unavailable: {exc}", file=sys.stderr)
         if OUTPUT.exists():
@@ -362,6 +364,15 @@ def main() -> int:
                                                   + shares.get("targets",0), 2)
     except (OSError, ValueError) as exc:
         print(f"Injury reports unavailable: {exc}", file=sys.stderr)
+    if schedule_text:
+        from nfl_context import enrich
+        finals = enrich(payload,schedule_text)
+        record_path = OUTPUT.with_name("model-record.json")
+        if record_path.exists():
+            records=json.loads(record_path.read_text())
+            for item in records:
+                if item["id"] in finals: item["final"]=finals[item["id"]]
+            record_path.write_text(json.dumps(records,separators=(",",":"))+"\n")
     save_if_changed(payload)
     return 0
 
