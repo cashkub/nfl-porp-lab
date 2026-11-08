@@ -7,9 +7,9 @@ main { max-width: 76rem; margin: auto; padding: 0 clamp(1rem,5vw,4rem) 4rem }
 header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 1px solid #e6d2cc30 }
 a { color: inherit; text-decoration: none }
 .brand { display: inline-flex; align-items: center; gap: .42rem; font: italic 800 2.15rem/.95 var(--display); letter-spacing: -.035em }
-.brand img { width:clamp(2.8rem,4.8vw,3.8rem); height:auto; filter:drop-shadow(0 0 7px #b8ff5275) }
-.wordmark { font:400 clamp(1.55rem,3.25vw,2.6rem)/1 'Archivo Black',system-ui,sans-serif; letter-spacing:-.065em; color:#eef9ff; text-shadow:0 2px 0 #12283f,0 0 10px #98e5ff55 }
-.wordmark span { color:#d2ff59; text-shadow:0 2px 0 #344704,0 0 12px #b0ff2e55 }
+.brand img { width:clamp(2.8rem,4.8vw,3.8rem); height:auto; filter:drop-shadow(0 0 7px #efaeff85) }
+.wordmark { font:italic 400 clamp(1.55rem,3.25vw,2.6rem)/1 'Archivo Black',system-ui,sans-serif; letter-spacing:-.065em; color:#eef9ff; text-shadow:0 2px 0 #12283f,0 0 10px #98e5ff55 }
+.wordmark span { color:#efaeff; text-shadow:0 2px 0 #51265e,0 0 12px #ed99ff66 }
 .return { padding: .65rem .9rem; border: 1px solid #655661; border-radius: 2rem; font-size: .82rem }
 h1,h2,strong { font-family: var(--display); font-style: italic; font-weight: 800 }
 h1 { margin: clamp(1.5rem,4vw,3rem) 0 1.2rem; font-size: clamp(3.4rem,7.2vw,6.3rem); line-height: .98; text-transform: uppercase; letter-spacing: -.035em }
