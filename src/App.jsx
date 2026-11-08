@@ -109,8 +109,8 @@ function GameLog({ multi, games, metric, line, direction }) {
 
 function activePage(hash=window.location.hash) {
   return ({'#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
-    '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'best',
-    '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#model-record':'model-record','#cbb-record':'cbb-record','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[hash] || 'home';
+    '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'board',
+    '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#model-record':'model-record','#cbb-record':'cbb-record','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-props'})[hash] || 'home';
 }
 
 export default function App() {
@@ -272,8 +272,8 @@ export default function App() {
        }}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        page==='cbb-games' ? <CbbGames/> :
-       cbb ? <CbbBoard top={page==='cbb-top'} key={page} ranked={page==='cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
-       page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+       cbb ? <CbbBoard top={page==='cbb-top'} key={page} initialRanked={window.location.hash==='#cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
+       page!=='analyzer' ? <PropsBoard key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>

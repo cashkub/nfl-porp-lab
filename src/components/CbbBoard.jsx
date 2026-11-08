@@ -8,7 +8,8 @@ import HitRate from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
 import {isHit} from '../lib/stats.js';
 
-export default function CbbBoard({ranked,top,onOpen}){
+export default function CbbBoard({initialRanked=false,top,onOpen}){
+  const [sort,setSort]=useState(initialRanked?'rate':'player');
   const [custom,setCustom]=useState(false);
   const index=useCbbFile('index.json');
   const [year,setYear]=useState('');
@@ -31,11 +32,11 @@ export default function CbbBoard({ranked,top,onOpen}){
       const hits=values.filter(n=>isHit(n,line,side)).length;
       results.push({p,hits,total:values.length,rate:hits/values.length,avg:values.reduce((a,b)=>a+b,0)/values.length});
     }
-    return results.sort((a,b)=>(ranked && (b.rate-a.rate || b.total-a.total)) || a.p.name.localeCompare(b.p.name));
-  },[board.data,meta.data,conference,team,search,metric,line,side,minimum,ranked]);
+    return results.sort((a,b)=>(sort==='rate' && (b.rate-a.rate || b.total-a.total)) || a.p.name.localeCompare(b.p.name));
+  },[board.data,meta.data,conference,team,search,metric,line,side,minimum,sort]);
   const failed=[index,meta,board].find(x=>x.error);
   if(top && !custom)return <><TrackedPicks sport="cbb" onOpen={r=>onOpen({player:r.playerId,team:r.team,season:r.season,metric:r.metric,line:r.line,side:r.side})}/><button className="outline-button" onClick={()=>setCustom(true)}>Explore Custom Lines</button></>;
-  return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top 8</button>}<header><h1>CBB {top?'Custom Line Research':ranked?'Best Hit Rates':'Props Board'}</h1>
+  return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top 8</button>}<header><h1>CBB {top?'Custom Line Research':'Props Board'}</h1>
     <p>Manual Lines · Last 10 Recorded Games · {rows.length} Players</p></header>
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>
@@ -43,6 +44,7 @@ export default function CbbBoard({ranked,top,onOpen}){
       <label>Team<select value={team} onChange={e=>setTeam(e.target.value)}><option value="">All Teams</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
       <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></label>
       <label>Side<select value={side} onChange={e=>setSide(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
+      {!top && <label>Sort By<select value={sort} onChange={e=>setSort(e.target.value)}><option value="player">Player Name</option><option value="rate">Last 10 Hit Rate</option></select></label>}
       <label>Minimum Games<select value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</select></label>
       <label>Player<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find Player"/></label>
     </div><div className="cbb-line"><LineSelect key={metric} markets={markets} metric={metric} value={line} onChange={setLine}/></div>

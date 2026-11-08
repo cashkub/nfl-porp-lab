@@ -9,15 +9,15 @@ const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
 const day = date => new Date(date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const gameTime = date => new Date(date).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
 
-export default function PropsBoard({ranked=false,games,schedule,players,season,now,onOpen}) {
+export default function PropsBoard({initialRanked=false,games,schedule,players,season,now,onOpen}) {
   const [match,setMatch] = useState('');
   const [team,setTeam] = useState('');
   const [stat,setStat] = useState('');
   const [when,setWhen] = useState('');
-  const [side,setSide] = useState(ranked ? 'both' : 'over');
-  const [sort,setSort] = useState(ranked ? 'rate' : 'kickoff');
-  const [ascending,setAscending] = useState(!ranked);
-  const [minimum,setMinimum] = useState('5');
+  const [side,setSide] = useState(initialRanked ? 'both' : 'over');
+  const [sort,setSort] = useState(initialRanked ? 'rate' : 'kickoff');
+  const [ascending,setAscending] = useState(!initialRanked);
+  const [minimum,setMinimum] = useState(initialRanked?'5':'0');
   const [search,setSearch] = useState('');
   const [limit,setLimit] = useState(30);
   const touchdown = stat==='passingTDs' || stat==='scoredTDs';
@@ -82,7 +82,7 @@ export default function PropsBoard({ranked=false,games,schedule,players,season,n
     (!matchup || g.id === matchup.id) && (!currentTeam || entry?.team === currentTeam) &&
     (!stat || line.metric === stat) && (!when || day(g.kickoff) === day(now)) &&
     playerKey(line.player).includes(playerKey(search)) &&
-    (!ranked || (summary && summary.total >= Number(minimum))));
+    (minimum==='0' || (summary && summary.total >= Number(minimum))));
   const sortValues = {
     kickoff:r=>Date.parse(r.g.kickoff), player:r=>r.line.player,
     category:r=>METRICS[r.line.metric]?.label, line:r=>r.line.point,
@@ -100,17 +100,17 @@ export default function PropsBoard({ranked=false,games,schedule,players,season,n
     setAscending(key === sort ? !ascending : !['rate','over','under'].includes(key));
     setSort(key);setLimit(30);
   }
-  const title = ranked ? 'Best Hit Rates' : 'Props Board';
+  const title = 'Props Board';
   function filter(setter,event) {setter(event.target.value);setLimit(30);}
   return <section className="panel props-board" aria-label={title}>
-    <header><h1>{title}</h1><p>{touchdown?'DraftKings Lines and Research Presets':'DraftKings Pregame Snapshots'} · {filtered.length} {ranked ? 'ranked sides' : 'props'}</p></header>
+    <header><h1>{title}</h1><p>{touchdown?'DraftKings Lines and Research Presets':'DraftKings Pregame Snapshots'} · {filtered.length} {side==='both' ? 'prop sides' : 'props'}</p></header>
     <div className="board-controls">
       <label>Games<select value={when} onChange={e=>{filter(setWhen,e);setMatch('');setTeam('');}}><option value="">Upcoming</option><option value="today">Today (ET)</option></select></label>
       <label>Matchup<select value={matchup?.id || ''} onChange={e=>{filter(setMatch,e);setTeam('');}}><option value="">All Matchups</option>{visibleGames.map(g=><option value={g.id} key={g.id}>{g.away} at {g.home}</option>)}</select></label>
       <label>Team<select value={currentTeam} onChange={e=>filter(setTeam,e)}>{!matchup && <option value="">All Teams</option>}{choices.map(t=><option key={t}>{t}</option>)}</select></label>
       <label>Stat<select value={stat} onChange={e=>filter(setStat,e)}><option value="">All Stats</option>{Object.entries(METRICS).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</select></label>
-      <label>Last 10 Side<select value={side} onChange={e=>filter(setSide,e)}>{ranked && <option value="both">Both Sides</option>}<option value="over">Over</option><option value="under">Under</option></select></label>
-      {ranked && <label>Minimum Games<select value={minimum} onChange={e=>filter(setMinimum,e)}>{[1,5,10].map(n=><option key={n}>{n}</option>)}</select></label>}
+      <label>Last 10 Side<select value={side} onChange={e=>filter(setSide,e)}><option value="both">Both Sides</option><option value="over">Over</option><option value="under">Under</option></select></label>
+      <label>Minimum Games<select value={minimum} onChange={e=>filter(setMinimum,e)}><option value="0">Any</option>{[1,5,10].map(n=><option key={n}>{n}</option>)}</select></label>
       <label>Player<input type="search" value={search} onChange={e=>filter(setSearch,e)} placeholder="Find Player"/></label>
     </div>
     <div className="board-sort">
@@ -120,7 +120,7 @@ export default function PropsBoard({ranked=false,games,schedule,players,season,n
     <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button></th>)}</tr></thead>
     <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,summary,pick})=><tr key={[g.id,line.player,line.metric,line.point,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
       <td><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
-      <td><strong>{ranked && (pick==='over' ? 'Over ' : 'Under ')}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
+      <td><strong>{pick==='over' ? 'Over ' : 'Under '}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
       <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td style={defenseRankStyle(rank)}>{rank ? '#'+rank : '—'}</td>
     </tr>)}</tbody></table></div>
     {!filtered.length && <p className="board-foot">No saved props match these filters.</p>}
