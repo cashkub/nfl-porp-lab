@@ -195,6 +195,37 @@ export default function App() {
     return () => { active = false; };
   }, [nflTool,data.status]);
 
+  useEffect(() => {
+    if (!previewTools || data.status !== 'ready') return;
+    const hasTouches = payload => payload.players?.some(p => p.games?.some(g => g.scoringChances?.length >= 5));
+    if (hasTouches(data)) return;
+    const controller = new AbortController();
+    let pending = false;
+    async function refreshTouches() {
+      if (pending || document.hidden) return;
+      pending = true;
+      try {
+        const response = await fetch(import.meta.env.BASE_URL + 'data/stats.json?v=' + Date.now(),
+          {cache:'no-store', signal:controller.signal});
+        if (response.ok) {
+          const payload = await response.json();
+          if (!controller.signal.aborted && payload.status === 'ready' && hasTouches(payload)) setData(payload);
+        }
+      } catch {
+        // Keep the selected player and retry on the next check.
+      } finally {
+        pending = false;
+      }
+    }
+    const timer = window.setInterval(refreshTouches, 60000);
+    document.addEventListener('visibilitychange', refreshTouches);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshTouches);
+    };
+  }, [previewTools, data]);
+
   const markets=previewTools ? chartMarkets : METRICS;
   const players=useMemo(()=>{
     const source=data.players || [];
