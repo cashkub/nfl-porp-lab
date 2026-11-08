@@ -616,3 +616,22 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .td-chances {margin:10px 0;padding:10px 0;border-block:1px solid var(--rule)}
 .td-chances .report-heading {margin-top:0}
 .td-chances .pick-metrics {margin:6px 0}
+
+.sport-card.nba,.sport-card.cfb {
+  background-image:linear-gradient(100deg,#0c1122ce,transparent 80%),url('/arenas.webp');
+  background-size:100% 100%,200% auto;
+}
+.sport-card.nba {background-position:center,right 68%;border-color:#afa0ef}
+.sport-card.cfb {background-position:center,left 68%;border-color:#9dce9f}
+.sport-card.nba::before,.sport-card.cfb::before {display:none}
+.app[data-sport=nba] {--sport-accent:#7755a6}
+.app[data-sport=cfb] {--sport-accent:#35704b}
+[data-theme=dark] .app[data-sport=nba] {--sport-accent:#d1b2ff}
+[data-theme=dark] .app[data-sport=cfb] {--sport-accent:#96e2ae}
+.sport-cards:has(.nba) .sport-card {min-height:clamp(150px,19vw,255px)}
+
+.player-photo {display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:32px;height:32px;flex:0 0 auto;border-radius:50%;overflow:hidden;background:var(--sport-wash);border:1px solid var(--sport-outline);font-size:12px;line-height:1;font-weight:700;color:var(--sport-accent);margin-inline-end:6px}
+.player-photo img {width:100%;height:100%;object-fit:cover}
+.player-photo-large {width:clamp(42px,5vw,66px);height:clamp(42px,5vw,66px);background:#e0e8f0;color:#263a4c;font-size:18px;letter-spacing:0}
+.player-title {display:flex;align-items:center;gap:5px}
+.compact-pick .player-photo {height:23px;width:23px}

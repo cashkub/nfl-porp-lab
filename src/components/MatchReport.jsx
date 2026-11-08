@@ -1,3 +1,4 @@
+import PlayerPhoto from './PlayerPhoto.jsx';
 import React from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import {projection} from '../lib/projection.js';
@@ -99,8 +100,8 @@ function NflConditions({game,model}){
     </details></>;
 }
 
-export function PickReport({number,name,onOpen,side,line,metric,price,hits,total,average,rank,rankCount=32,results,reason,role,context}){
-  return <><div className="pick-player"><span style={defenseRankStyle(number,9)}>#{number}</span><button className="board-player" onClick={onOpen}>{name}</button></div>
+export function PickReport({number,name,playerId,photo,onOpen,side,line,metric,price,hits,total,average,rank,rankCount=32,results,reason,role,context}){
+  return <><div className="pick-player"><span style={defenseRankStyle(number,9)}>#{number}</span><button className="board-player" onClick={onOpen}><PlayerPhoto id={playerId} name={name} url={photo}/>{name}</button></div>
     <p className="pick-line"><strong>{side==='over'?'Over':'Under'} {line} {metric}</strong><small>{price}</small></p>
     <dl className="pick-metrics"><div><dt>Hit Rate</dt><dd><HitRate rate={hits/total}/></dd></div><div><dt>Game Avg</dt><dd>{average.toFixed(1)}</dd></div><div><dt title="#1 allows the most">Defense Rank</dt><dd style={defenseRankStyle(rank,rankCount)}>{rank?'#'+rank:'—'}</dd></div></dl>
     <div className="pick-reason"><h4 className="report-heading">Why It Ranks</h4><p>{reason}</p></div>

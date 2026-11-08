@@ -1,3 +1,6 @@
+import PlayerPhoto from './PlayerPhoto.jsx';
+import {useLeague} from './ManualLeague.jsx';
+import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
 import {ChevronDown} from 'lucide-react';
 import {defenseRankStyle} from './HitRate.jsx';
 import {priceText} from '../lib/bookLine.js';
@@ -25,7 +28,7 @@ export function MatchCard({game:g,colors=nflColors,compact,children}) {
   if(mobile && compact)return <article className="research-card compact-card" style={style}><details>
     <summary>
       <span className="compact-rank" style={defenseRankStyle(compact.rank,9)}>#{compact.rank}</span>
-      <span className="compact-pick"><b>{compact.title}</b><small>{compact.pick}</small></span>
+      <span className="compact-pick"><b>{g.playerId && <PlayerPhoto id={g.playerId} name={g.player} url={g.photo}/>} {compact.title}</b><small>{compact.pick}</small></span>
       <span className="compact-price">{compact.price}</span><ChevronDown size={16} aria-hidden="true"/>
     </summary>
     <div className="compact-body">{content}</div>
@@ -50,26 +53,37 @@ function featuredGames(games,project){
 }
 
 export function CbbGames(){
+  const sport=useLeague(),football=sport==='cfb';
+  const [chosenWeek,setWeek]=useState('');
   const index=useCbbFile('index.json');
   const [date,setDate]=useState(()=>etDay(Date.now()));
-  const y=Number(date.slice(0,4))+(Number(date.slice(5,7))>=8?1:0);
+  const y=football?index.data?.seasons[0]:Number(date.slice(0,4))+(Number(date.slice(5,7))>=(sport==='nba'?10:8)?1:0);
   const valid=index.data?.seasons.includes(y);
   const schedule=useCbbFile(valid ? y+'/schedule.json':null);
   const meta=useCbbFile(valid ? y+'/teams.json':null);
   const [conf,setConf]=useState('');
-  const rows=(schedule.data || []).filter(g=>etDay(g.kickoff)===date && (!conf || [g.home,g.away].some(t=>meta.data?.conferences?.[t]===conf)));
-  const ratings=useMemo(()=>{
-    const finals=(schedule.data || []).filter(g=>g.final && etDay(g.kickoff)<date);
-    return collegeRatings(finals,Date.now());
-  },[schedule.data,date]);
+  const weeks=football?[...new Set((schedule.data || []).map(g=>recordPeriod(g,sport)))]:[];
+  const nearest=(schedule.data || []).find(g=>Date.parse(g.kickoff)>=Date.now()) || schedule.data?.at(-1);
+  const week=weeks.includes(chosenWeek)?chosenWeek:nearest?recordPeriod(nearest,sport):'';
+  const rows=(schedule.data || []).filter(g=>(football?recordPeriod(g,sport)===week:etDay(g.kickoff)===date) && (!conf || [g.home,g.away].some(t=>meta.data?.conferences?.[t]===conf)));
+  const ratingsByDay=useMemo(()=>{
+    const ratings=new Map();
+    for(const g of schedule.data || []){
+      const day=etDay(g.kickoff);
+      if(football?recordPeriod(g,sport)!==week:day!==date)continue;
+      if(!ratings.has(day))ratings.set(day,collegeRatings(schedule.data.filter(x=>x.final && etDay(x.kickoff)<day),Date.now(),sport!=='cbb'));
+    }
+    return ratings;
+  },[schedule.data,date,football,week,sport]);
+  const ratingsFor=g=>ratingsByDay.get(etDay(g.kickoff)) || {};
   const [showAll,setShowAll]=useState(false);
-  const featured=featuredGames(rows,g=>projection(g,ratings[g.away],ratings[g.home],true));
+  const featured=featuredGames(rows,g=>projection(g,ratingsFor(g)[g.away],ratingsFor(g)[g.home],true));
   const error=index.error?index:schedule.error?schedule:null;
-  return <section className="panel props-board"><h1>CBB Games</h1><div className="board-controls"><label>Game Date (ET)<input type="date" value={date} onChange={e=>{if(e.target.value)setDate(e.target.value)}}/></label><label>Conference<select value={conf} onChange={e=>setConf(e.target.value)}><option value="">All Conferences</option>{[...new Set(Object.values(meta.data?.conferences || {}))].sort().map(c=><option key={c}>{c}</option>)}</select></label><button className="outline-button" onClick={()=>setDate(etDay(Date.now()))}>Today</button></div>
-    <p className="report-note">Pregame estimates use scoring and points allowed against past opponents, blended with four league-average games. Home court adds three points of margin. Neutral games have no home adjustment. Only finals from earlier dates enter the model.</p>
+  return <section className="panel props-board"><h1>{sport.toUpperCase()} Games</h1><div className="board-controls">{football?<label>Game Week<select value={week} onChange={e=>setWeek(e.target.value)}>{weeks.map(w=><option key={w} value={w}>{periodLabel(w,sport)}</option>)}</select></label>:<label>Game Date (ET)<input type="date" value={date} onChange={e=>{if(e.target.value)setDate(e.target.value)}}/></label>}{sport!=='nba' && <label>Conference<select value={conf} onChange={e=>setConf(e.target.value)}><option value="">All Conferences</option>{[...new Set(Object.values(meta.data?.conferences || {}))].sort().map(c=><option key={c}>{c}</option>)}</select></label>}{!football && <button className="outline-button" onClick={()=>setDate(etDay(Date.now()))}>Today</button>}</div>
+    <p className="report-note">Pregame estimates use scoring and points allowed against past opponents, blended with four league-average games. {sport==='cbb'?'Home court adds three points of margin.':'The home advantage is estimated from earlier games this season.'} Neutral games have no home adjustment. Only finals from earlier dates enter the model.</p>
     <button type="button" className="outline-button" aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>{showAll?'Show Top 9 Game Winners':'Show All Matchups'}</button>
     {!showAll && <p>Top Game Winners · Ranked by projected margin · {featured.length} picks</p>}
-    <div className="research-grid matchup-grid">{(showAll?rows:featured).map((g,i)=><MatchCard compact={showAll?undefined:gameSummary(g,projection(g,ratings[g.away],ratings[g.home],true),i+1,true)} key={g.id} game={g} colors={meta.data?.colors || {}}>{g.final && <b>Final · {g.awayScore} – {g.homeScore}</b>}<MatchReport game={g} college away={ratings[g.away]} home={ratings[g.home]} names={{...meta.data?.teams,[g.away]:g.awayName,[g.home]:g.homeName}}/></MatchCard>)}</div>
+    <div className="research-grid matchup-grid">{(showAll?rows:featured).map((g,i)=><MatchCard compact={showAll?undefined:gameSummary(g,projection(g,ratingsFor(g)[g.away],ratingsFor(g)[g.home],true),i+1,true)} key={g.id} game={g} colors={meta.data?.colors || {}}>{g.final && <b>Final · {g.awayScore} – {g.homeScore}</b>}<MatchReport game={g} college away={ratingsFor(g)[g.away]} home={ratingsFor(g)[g.home]} names={{...meta.data?.teams,[g.away]:g.awayName,[g.home]:g.homeName}}/></MatchCard>)}</div>
     {!rows.length && <p>{error?<button onClick={error.reload}>Schedule Unavailable · Retry</button>:!index.data || valid&&!schedule.data?'Loading Games…':'No Scheduled Games for This Selection.'}</p>}</section>;
 }
 
