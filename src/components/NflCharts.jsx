@@ -2,7 +2,6 @@ import React,{useState} from 'react';
 import {METRICS,isHit,summarize,formatNumber,formatRate} from '../lib/stats.js';
 import {priceText,usageFor} from '../lib/bookLine.js';
 import {teamColor} from '../lib/teamColors.js';
-import {MatchReport} from './MatchReport.jsx';
 import {ChartSlate} from './ChartSlate.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import './NflCharts.css';
@@ -81,7 +80,6 @@ function MatchResearch({game,player,metric,line,direction,history,defenses}) {
       <div><dt>League average allowed to {player.position}s</dt><dd>{formatNumber(leagueMean)} {unit}</dd></div>
       <div><dt>Player vs. {game.opponent} this season</dt><dd>{against.length?(line==null?'':headToHead.hits+'/'+against.length+' hits · ')+formatNumber(headToHead.average)+' '+unit+' avg':'No meetings'}</dd></div></dl>
     <p className="method">Rank 1 allows the most {chartMarkets[metric].label.toLowerCase()} to the entire position group.{defense?' Based on '+defense.games+' opponent games.':''}</p>
-    <MatchReport game={game} away={game.awayRating} home={game.homeRating}/>
   </section>;
 }
 
