@@ -1,4 +1,5 @@
 """Enrich the weekly NFL slate with pregame efficiency, quarterback and forecast inputs."""
+from collections import Counter
 import csv
 import io
 import json
@@ -111,9 +112,12 @@ def enrich(payload,schedule_text):
                      if past['game_id'] in completed and int(past['week']) < int(r['week'])
                      and (past['game_id'],team) in red_zone]
             if prior:
+                outcomes = Counter(outcome for drives in prior for outcome in drives.values())
                 info.setdefault('redZoneDefense', {})[g[side]] = {
                     'games': len(prior), 'trips': sum(len(drives) for drives in prior),
-                    'touchdowns': sum(sum(drives.values()) for drives in prior)}
+                    'touchdowns': outcomes['rushTD'] + outcomes['passTD'] + outcomes['otherTD'],
+                    'rushingTDs': outcomes['rushTD'], 'passingTDs': outcomes['passTD'],
+                    'otherTDs': outcomes['otherTD']}
             unavailable={p['id'] for p in g.get('injuries',{}).get(g[side],[]) if (p.get('gameStatus') or '').lower()=='out'}
             chart=[q for q in depths.get(r[side+'_team'],depths.get(g[side],[])) if q['id'] not in unavailable]
             p=form.matchup(r,side,w if r['roof'] in ('open','outdoors') else None,chart)

@@ -147,7 +147,12 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
       <div><dt>Player vs. {game.opponent} in selected history</dt><dd>{against.length?(line==null?'':headToHead.hits+'/'+against.length+' hits · ')+formatNumber(headToHead.average)+' '+unit+' avg':'No meetings'}</dd></div></dl>
     <p className="method">{game.season} defense ranks · Rank 1 allows the most {chartMarkets[metric].label.toLowerCase()} to the entire position group.{defense?' Based on '+defense.games+' opponent games.':''}</p>
     <h3>{game.opponent} Red Zone Defense</h3>
-    <dl><div><dt>Touchdown Rate Allowed</dt><dd>{redZone?.trips ? (100*redZone.touchdowns/redZone.trips).toFixed(1)+'%' : '—'}</dd></div></dl>
+    <dl><div><dt>Touchdown Rate Allowed</dt><dd>{redZone?.trips ? (100*redZone.touchdowns/redZone.trips).toFixed(1)+'%' : '—'}</dd></div>
+      {[['rushingTDs','Rushing TDs Allowed'],['passingTDs','Passing TDs Allowed'],['otherTDs','Other / Unclassified TDs']]
+        .filter(([key])=>key!=='otherTDs' || redZone?.otherTDs>0)
+        .map(([key,label])=><div key={key}><dt>{label}</dt><dd>{Number.isFinite(redZone?.[key]) ?
+          redZone[key]+(redZone.trips?' · '+(100*redZone[key]/redZone.trips).toFixed(1)+'% Of Trips':' · No Trips') : '—'}</dd></div>)}
+    </dl>
     <p className="method">{redZone ? redZone.touchdowns+' TDs Allowed On '+redZone.trips+' Red Zone Trips · '+redZone.games+' Games With Play Data Before Week '+game.week : 'No Earlier Red Zone Play Data Available.'}</p>
     <h3>Last Three Games Against {player.position}s</h3>
     {prior.length?<div className="history-scroll"><table><thead><tr><th>Game</th><th>Offense</th><th>Group Total</th><th>Leading Player</th></tr></thead><tbody>

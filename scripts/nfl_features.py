@@ -26,7 +26,12 @@ def plays(data, scoring_chances=None, include_efficiency=True, red_zone=None):
                 if defense and team and drive and distance is not None and number(p.get('two_point_attempt')) != 1:
                     trips = red_zone.setdefault((p['game_id'], defense), {})
                     if 0 < distance <= 20:
-                        trips[drive] = p['fixed_drive_result'] == 'Touchdown'
+                        trips.setdefault(drive, 'otherTD' if p['fixed_drive_result'] == 'Touchdown' else 'noTD')
+                    if drive in trips and trips[drive] == 'otherTD' and p.get('td_team') == team:
+                        if number(p.get('rush_touchdown')) == 1:
+                            trips[drive] = 'rushTD'
+                        elif number(p.get('pass_touchdown')) == 1:
+                            trips[drive] = 'passTD'
             if scoring_chances is not None and team and p['play_type'] in ('pass','run') and p['qb_kneel'] not in ('1','1.0') and p['qb_spike'] not in ('1','1.0') and p.get('two_point_attempt') not in ('1','1.0'):
                 game_chances = scoring_chances.setdefault((p['game_id'],team), {})
                 distance = number(p.get('yardline_100'))
