@@ -82,7 +82,7 @@ function ControlLabel({children}) {
   return <b><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 7h5m5 0h8M3 17h10m5 0h3"/><circle cx="10.5" cy="7" r="2.5"/><circle cx="15.5" cy="17" r="2.5"/></svg>{children}</b>;
 }
 
-function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,direction}) {
+function LineControl({line,setLine,resetLine,manual,manualLabel,quote,median,games,metric,direction}) {
   const [draft,setDraft]=useState(null);
   const savedAt=Date.parse(quote?.updated);
   const stamp=Number.isFinite(savedAt)?new Date(savedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'}):'';
@@ -100,7 +100,7 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
     <summary className="chart-disclosure">
       <ControlLabel>Prop Line</ControlLabel>
       <span className="line-selection">{line!=null && <strong>{direction} {line}</strong>}
-        {manual?'Custom Line':quote?'DraftKings':'No Sportsbook Line'}
+        {manual?manualLabel:quote?'DraftKings':'No Sportsbook Line'}
       </span>
     </summary>
     <div className="chart-line-panel">
@@ -252,7 +252,7 @@ function GameLog({player,currentSeason,line,direction,metric}) {
   </section>;
 }
 
-export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
+export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,manualLabel,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
   const [filtersOpen,setFiltersOpen]=useState(false);
   const [chosenSeason,setChosenSeason]=useState('');
   const historySeason=chosenSeason || String(season);
@@ -287,14 +287,14 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <ChartSelect label="Window" value={windowSize} onChange={setWindowSize}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full history</option></ChartSelect>
     </div>
     </div>
-    <LineControl key={player.id+metric+(upcoming?.id || '')} line={line} setLine={setLine} resetLine={resetLine} manual={manual} quote={quote} median={current.median} games={displayed} metric={metric} direction={direction}/>
+    <LineControl key={player.id+metric+(upcoming?.id || '')} line={line} setLine={setLine} resetLine={resetLine} manual={manual} manualLabel={manualLabel} quote={quote} median={current.median} games={displayed} metric={metric} direction={direction}/>
     <section className="lab-player">
       <div className="player-identity"><PlayerPhoto key={player.id} large id={player.id} name={player.name} url={player.photo}/>
         <div><small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-prop">
           <strong>{line==null?'No Line Selected':direction+' '+line}</strong><span>{chartMarkets[metric].label}</span>
-          {line!=null && <small>{manual?'Custom Line': 'DraftKings'}</small>}
+          {line!=null && <small>{manual?manualLabel: 'DraftKings'}</small>}
           {upcoming && <small className="prop-matchup">Prop Matchup · Week {upcoming.week} · {upcoming.venue==='Away'?'at':'vs.'} {upcoming.opponent}</small>}
-          {quote && line===quote.point && <div className="prop-prices" aria-label="DraftKings odds">
+          {!(manual && manualLabel==='Player Average') && quote && line===quote.point && <div className="prop-prices" aria-label="DraftKings odds">
             {['over','under'].map(side=><span key={side} data-selected={side===direction}>{side} <b>{priceText(quote[side])}</b></span>)}
           </div>}
         </div><div className="player-next">{nextFixture?<><TeamLogo team={nextFixture.opponent}/><span><b>Next game</b> · {player.team} {nextFixture.venue==='Away'?'at':'vs.'} {nextFixture.opponent}<br/>{new Date(nextFixture.kickoff).toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',...(nextFixture.timeKnown===false?{}:{hour:'numeric',minute:'2-digit',timeZoneName:'short'})})}{nextFixture.timeKnown===false?' · Time TBD':''}</span></>:<span>No upcoming game scheduled</span>}</div></div>

@@ -1,5 +1,6 @@
 import {useChartSlate} from './components/ChartSlate.jsx';
 import NflCharts,{chartMarkets} from './components/NflCharts.jsx';
+import NflPropList from './components/NflPropList.jsx';
 import NflGames from './components/NflGames.jsx';
 import FilterMenu from './components/FilterMenu.jsx';
 import PlayerStepper from './components/PlayerStepper.jsx';
@@ -122,7 +123,7 @@ function GameLog({ multi, games, metric, line, direction }) {
 function activePage(hash=window.location.hash) {
   const manual=hash.slice(1).match(/^(nba|cfb)(-home|-top-eight|-games|-props|-record)?$/);
   if(manual)return manual[1]+(manual[2]==='-top-eight'?'-top':manual[2] || '');
-  return ({'#nfl-games':'nfl-games','#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
+  return ({'#prop-lists':'prop-lists','#nfl-games':'nfl-games','#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
     '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'board',
     '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#model-record':'model-record','#cbb-record':'cbb-record','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-props'})[hash] || 'home';
 }
@@ -135,7 +136,7 @@ export default function App() {
   const nflTool = !launch && !manualLeague;
   const previewTools=new URLSearchParams(window.location.search).get('view')==='nfl';
   useEffect(()=>{
-    if(previewTools && page!=='analyzer')window.location.replace('/preview/nfl/');
+    if(previewTools && page!=='analyzer' && page!=='prop-lists')window.location.replace('/preview/nfl/');
   },[previewTools,page]);
   const [initialCbb,setInitialCbb] = useState({});
   const [dark,setDark] = useState(() => {
@@ -317,9 +318,19 @@ export default function App() {
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   if(previewTools){
+    if(page==='prop-lists')return <ManualLeague.Provider value="nfl"><NflPropList players={players} roster={seasonPlayers}
+      schedule={nflSchedule} season={scheduleSeason} books={bookGames} markets={chartMarkets} now={now} loading={loading} error={error}
+      onOpen={({player:p,game,metric:key,quote:saved,point},side)=>{
+        chartSlate.changeWeek(String(game.week));chartSlate.changeMatch(game.id);
+        boardSelection.current=p.id!==player?.id?p.id:null;
+        setTeam('ALL');setVenue('ALL');setOpponent('ALL');setWindowSize('10');
+        setSelectedId(p.id);setMetric(key);setDirection(side);
+        setCustom(saved?null:{context:[p.id,key,game.kickoff].join('|'),value:point,source:'Player Average'});
+        window.location.hash='analyzer';
+      }}/></ManualLeague.Provider>;
     if(page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl"><NflCharts players={players} seasons={seasons} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
-      metric={metric} onMetric={onMetricChange} line={line} setLine={setLine} quote={quote} manual={manual} direction={direction} setDirection={setDirection}
+      metric={metric} onMetric={onMetricChange} line={line} setLine={setLine} quote={quote} manual={manual} manualLabel={custom?.source || 'Custom Line'} direction={direction} setDirection={setDirection}
       windowSize={windowSize} setWindowSize={setWindowSize} upcoming={upcoming} defenses={defenseRows}
       loading={loading} error={error}/></ManualLeague.Provider>;
   }
