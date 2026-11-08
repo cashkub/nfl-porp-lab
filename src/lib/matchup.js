@@ -1,10 +1,11 @@
 // Each defense-game contributes once, including games with zero production
 // from the selected position. Use the player's listed position in the feed.
-export function defenseTable(players, season, position, metric) {
+export function defenseTable(players, season, position, metric, beforeWeek = null) {
   const defenses = new Map();
   for (const player of players) {
     for (const game of player.games || []) {
       if ((season !== 'ALL' && game.season !== season) || !game.opponent || !game.gameId) continue;
+      if (beforeWeek != null && !(Number(game.week) < Number(beforeWeek))) continue;
       const team = game.opponent;
       if (!defenses.has(team)) defenses.set(team, { team, games: new Set(), total: 0 });
       const row = defenses.get(team);

@@ -50,3 +50,19 @@ body:has(.chart-lab){background:#0b1423 url('/preview/assets/playbook.svg') cent
 .margin-bars [data-result=Unrated]{--outcome:#80cbe6}
 .margin-bars [data-result=Unrated] .bar-space::after{display:none}
 .game-volume{display:grid;gap:.15rem;padding:.35rem 0;font-size:.72rem;line-height:1.3;color:#b4ccdc}.game-volume b{color:#eef8ff}
+.line-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;width:100%}
+.line-compare button{display:grid;gap:.2rem;padding:.65rem .4rem;text-align:center;color:#d1e8f6;background:#0f2032;border:1px solid #436078;border-radius:.5rem}
+.line-compare button[aria-pressed=true]{border-color:#83deff;background:#1b3e52;box-shadow:inset 0 -2px #83deff}
+.line-compare strong{font-size:1.4rem;color:white}.line-compare span{font-size:.8rem}.line-compare small{font-size:.72rem}
+@media(min-width:621px){.lab-controls{grid-template-columns:2fr 1.6fr repeat(4,1fr)}}
+@media(max-width:620px){.lab-controls label:nth-child(n+3){grid-column:span 3}}
+.margin-bars{grid-template-columns:repeat(var(--count),minmax(5.6rem,1fr));--rate-high:#86efc0;--rate-mid:#f9d487;--rate-low:#ffa6b4}
+.margin-bars .bar-space{height:11rem;background-color:#0c1829}
+.margin-bars .bar-space i{left:23%;right:23%;border:1px solid var(--outcome);border-radius:.28rem .28rem .1rem .1rem;box-shadow:inset 0 2px 0 #ffffff85,0 0 .45rem color-mix(in srgb,var(--outcome) 26%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--outcome) 48%,#122131),color-mix(in srgb,var(--outcome) 74%,#102239) 75%,var(--outcome))}
+.margin-bars [aria-pressed=true] .bar-space{background-color:#193146}
+.margin-bars .chart-rank{border:1px solid currentColor;border-radius:4px;padding:.18rem .36rem;font-size:.68rem;font-weight:750;letter-spacing:.035em}
+.chart-lab .defense-note{border-left:2px solid #7396b1;padding:.4rem .65rem;font-size:.82rem;color:#b9ccda}
+.chart-lab :is(h1,h2,h3,dt,th,label,button,small,.player-next,.plot-heading,.line-control,.game-volume,.chart-slate,.lab-controls,.margin-detail){text-transform:capitalize}
+.kickoff-conditions{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.7rem;margin:.8rem 0}
+.kickoff-conditions>div{display:grid;gap:.25rem;padding:.75rem;border:1px solid #3b566e;background:#15283c;border-radius:.5rem}
+.kickoff-conditions small,.kickoff-conditions span{color:#b8cddd;text-transform:capitalize}

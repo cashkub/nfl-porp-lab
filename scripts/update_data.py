@@ -337,12 +337,18 @@ def main() -> int:
         with urllib.request.urlopen("https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv", timeout=45) as response:
             schedule_text = response.read().decode("utf-8-sig")
             payload["schedule"] = schedule_rows(schedule_text, payload["seasons"])
+            ids = {g["gameId"] for p in payload["players"] for g in p["games"]}
+            payload["gameDates"] = {r["game_id"]: r["gameday"]
+                                    for r in csv.DictReader(io.StringIO(schedule_text))
+                                    if r.get("game_id") in ids and r.get("gameday")}
     except (OSError, ValueError) as exc:
         print(f"Schedule refresh unavailable: {exc}", file=sys.stderr)
         if OUTPUT.exists():
             previous = json.loads(OUTPUT.read_text())
             if isinstance(previous.get("schedule"), list):
                 payload["schedule"] = previous["schedule"]
+            if isinstance(previous.get("gameDates"), dict):
+                payload["gameDates"] = previous["gameDates"]
     season = max(payload["seasons"])
     try:
         url = f"https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_{season}.csv"
