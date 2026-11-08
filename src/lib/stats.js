@@ -4,10 +4,8 @@ export const METRICS = {
   rushingYards: { label: 'Rushing Yards', short: 'RUSH YDS', unit: 'yds', defaultLine: 69.5, maximum: 350 },
   receivingYards: { label: 'Receiving Yards', short: 'REC YDS', unit: 'yds', defaultLine: 69.5, maximum: 350 },
   receptions: { label: 'Receptions', short: 'RECEPTIONS', unit: 'rec', defaultLine: 4.5, maximum: 20 },
-  scoredTDs: {label:'Touchdowns Scored (Rush + Rec)', short:'RUSH + REC TD', unit:'TD', defaultLine:0.5, maximum:10},
+  scoredTDs: {label:'Touchdowns', short:'TD', unit:'TD', defaultLine:0.5, maximum:10},
   passingTDs: {label:'Passing Touchdowns', short:'PASS TD', unit:'TD', defaultLine:1.5, maximum:10},
-  rushingTDs: {label:'Rushing Touchdowns', short:'RUSH TD', unit:'TD', defaultLine:0.5, maximum:10},
-  receivingTDs: {label:'Receiving Touchdowns', short:'REC TD', unit:'TD', defaultLine:0.5, maximum:10}
 };
 
 export const preferredMetric = (position) => position === 'QB' ? 'passingYards' :
