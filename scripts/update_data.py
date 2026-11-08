@@ -129,6 +129,7 @@ def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
     if not required.issubset(reader.fieldnames or []):
         raise ValueError("Unexpected nflverse schedule columns")
     games = []
+    games_per_date = Counter()
     eastern = ZoneInfo("America/New_York")
     results = defaultdict(list)
     ratings = {}
@@ -138,6 +139,7 @@ def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
             continue
         if not row["gameday"] or not row["away_team"] or not row["home_team"]:
             continue
+        games_per_date[row["gameday"]] += 1
         home, away = normalize_team(row["home_team"]), normalize_team(row["away_team"])
         neutral = row["location"] == "Neutral"
         if row["result"] not in ("", "NA"):
@@ -157,6 +159,8 @@ def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
                       "neutral": neutral, "homeRating": ratings[season].get(home), "awayRating": ratings[season].get(away),
                       "homeSpread": -spread if spread is not None else None,
                       "homePrice": market_number(row.get("home_moneyline")), "awayPrice": market_number(row.get("away_moneyline"))})
+    for game in games:
+        game["slateGames"] = games_per_date[game["date"]]
     return sorted(games, key=lambda g: g["kickoff"])
 
 

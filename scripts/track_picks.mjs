@@ -16,6 +16,7 @@ const upcoming=g=>!g.final&&Date.parse(g.kickoff)>now&&g.timeKnown!==false && Da
 const code=t=>({LA:'LAR',JAC:'JAX',WSH:'WAS'}[t]||t);
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const candidates=[];
+const nflGamesPerDate=new Map();
 function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season,role,context,minimum,label,volumeChange=0,risk=0}){
   if(values.length<minimum || !values.every(Number.isFinite))return;
   const hits=values.filter(v=>side==='over'?v>line:v<line).length;
@@ -39,6 +40,11 @@ function settle(row,value,completed){
 }
 if(sport==='nfl'){
   const data=read('stats.json'),season=Math.max(...data.seasons),byName=new Map(),cache=new Map();
+  // Older snapshots omit slateGames. Count all scheduled games before filtering candidates.
+  for(const game of data.schedule || []){
+    const date=game.date || day(game.kickoff);
+    nflGamesPerDate.set(date,game.slateGames ?? (nflGamesPerDate.get(date) || 0)+1);
+  }
   const logs=new Map(),played=new Set();
   for(const p of data.players){
     for(const g of p.games){logs.set(g.gameId+'|'+p.id,g);played.add(g.gameId)}
@@ -196,7 +202,8 @@ for(const p of candidates.sort((a,b)=>b.score-a.score||a.player.localeCompare(b.
   const key=slateKey(p);
   if(!used.has(key))used.set(key,new Set());
   const slate=used.get(key);
-  if(slate.size>=9||slate.has(p.playerId))continue;
+  const limit=nflGamesPerDate.get(p.date)===1 ? 2 : 9;
+  if(slate.size>=limit||slate.has(p.playerId))continue;
   slate.add(p.playerId);p.rank=slate.size;archive.push(p);
 }
 fs.writeFileSync(root+path,JSON.stringify(archive)+'\n');
