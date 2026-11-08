@@ -8,11 +8,11 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from update_data import parse_player_stats_csv, build_payload, save_if_changed, venue_from_game_id, current_nfl_season
 
-CSV_TEXT = '''player_id,player_display_name,position,season,week,season_type,game_id,team,opponent_team,passing_yards,rushing_yards,receiving_yards,receptions
-p1,Test Player,WR,2026,1,REG,2026_01_BAL_CIN,CIN,BAL,0,0,89,7
-p1,Test Player,WR,2026,2,REG,2026_02_CIN_CLE,CIN,CLE,0,0,42,3
-p2,Test Passer,QB,2026,1,REG,2026_01_BUF_NYJ,NYJ,BUF,246,12,0,0
-p1,Test Player,WR,2026,20,POST,2026_20_CIN_BAL,CIN,BAL,0,0,50,4
+CSV_TEXT = '''player_id,player_display_name,position,season,week,season_type,game_id,team,opponent_team,passing_yards,rushing_yards,receiving_yards,receptions,passing_tds,rushing_tds,receiving_tds
+p1,Test Player,WR,2026,1,REG,2026_01_BAL_CIN,CIN,BAL,0,0,89,7,0,0,1
+p1,Test Player,WR,2026,2,REG,2026_02_CIN_CLE,CIN,CLE,0,0,42,3,0,0,0
+p2,Test Passer,QB,2026,1,REG,2026_01_BUF_NYJ,NYJ,BUF,246,12,0,0,3,1,0
+p1,Test Player,WR,2026,20,POST,2026_20_CIN_BAL,CIN,BAL,0,0,50,4,0,0,1
 '''
 
 class DataImportTests(unittest.TestCase):
@@ -25,6 +25,9 @@ class DataImportTests(unittest.TestCase):
         parsed = parse_player_stats_csv(CSV_TEXT, 2026)
         self.assertEqual(len(parsed), 3)
         self.assertEqual(parsed[0]['game']['stats']['receptions'], 7)
+        self.assertEqual(parsed[0]['game']['stats']['scoredTDs'], 1)
+        self.assertEqual(parsed[2]['game']['stats']['passingTDs'], 3)
+        self.assertEqual(parsed[2]['game']['stats']['scoredTDs'], 1)
         self.assertEqual(parsed[1]['game']['venue'], 'A')
         self.assertEqual(parsed[2]['game']['stats']['passingYards'], 246)
 

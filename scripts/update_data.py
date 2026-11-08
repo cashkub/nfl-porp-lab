@@ -30,6 +30,7 @@ URL_TEMPLATE = "https://github.com/nflverse/nflverse-data/releases/download/stat
 STAT_COLUMNS = {
     "passingYards": "passing_yards", "rushingYards": "rushing_yards",
     "receivingYards": "receiving_yards", "receptions": "receptions",
+    "passingTDs": "passing_tds", "rushingTDs": "rushing_tds", "receivingTDs": "receiving_tds",
 }
 OFFENSE_POSITIONS = {"QB", "RB", "FB", "WR", "TE"}
 TEAM_ALIASES = {"JAC": "JAX", "STL": "LAR", "LA": "LAR", "WSH": "WAS", "OAK": "LV", "SD": "LAC"}
@@ -192,6 +193,7 @@ def parse_player_stats_csv(text: str, expected_season: int) -> list[dict]:
             continue
         position = (raw.get("position") or "").strip().upper()
         stats = {key: to_number(raw.get(column)) for key, column in STAT_COLUMNS.items()}
+        stats["scoredTDs"] = stats["rushingTDs"] + stats["receivingTDs"]
         if "carries" in raw:
             stats["rushingAttempts"] = to_number(raw["carries"])
         if position not in OFFENSE_POSITIONS and not any(stats.values()):
@@ -203,14 +205,17 @@ def parse_player_stats_csv(text: str, expected_season: int) -> list[dict]:
         week = to_number(raw.get("week"))
         if not player_id or not name or not game_id or not week:
             continue
+        usage = {key: to_number(raw[key]) for key in ("attempts", "carries", "targets")
+                 if raw.get(key) not in (None, "", "NA", "NaN")}
+        if "carries" in raw and "targets" in raw:
+            usage["opportunities"] = usage.get("carries", 0) + usage.get("targets", 0)
         records.append({
             "id": player_id, "name": name, "position": position, "team": team,
             "game": {
                 "season": expected_season, "week": week, "seasonType": "REG", "gameId": game_id,
                 "team": team, "opponent": (raw.get("opponent_team") or "").strip().upper(),
                 "venue": venue_from_game_id(game_id, team), "stats": stats,
-                "usage": {key: to_number(raw[key]) for key in ("attempts", "carries", "targets")
-                          if raw.get(key) not in (None, "", "NA", "NaN")},
+                "usage": usage,
             },
         })
     return records
