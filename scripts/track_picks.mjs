@@ -1,18 +1,18 @@
 // Publish a fixed, independently reviewable slate before games start.
-import {markets as cbbMarkets} from '../src/lib/cbbMarkets.js';
+import {manualMarkets} from '../src/lib/manualSports.js';
 import fs from 'node:fs';
 import {getPlayerGames,METRICS} from '../src/lib/stats.js';
 import {playerKey,usageFor} from '../src/lib/bookLine.js';
 import {defenseTable} from '../src/lib/matchup.js';
 import {collegeRatings,projection} from '../src/lib/projection.js';
 const root='public/data/',sport=process.argv[2];
-if(!['nfl','cbb'].includes(sport))throw Error('Choose nfl or cbb');
+if(!['nfl','cbb','nba','cfb'].includes(sport))throw Error('Choose nfl, cbb, nba or cfb');
 const read=p=>JSON.parse(fs.readFileSync(root+p));
 const path=sport+'-picks.json',archive=fs.existsSync(root+path)?read(path):[];
 const now=Date.now(),saved=new Date(now).toISOString();
 const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
 const day=time=>fmt.format(new Date(time));
-const upcoming=g=>!g.final&&Date.parse(g.kickoff)>now&&Date.parse(g.kickoff)-now<36*3600000;
+const upcoming=g=>!g.final&&Date.parse(g.kickoff)>now&&g.timeKnown!==false && Date.parse(g.kickoff)-now<(sport==='cfb'?7*24:36)*3600000;
 const code=t=>({LA:'LAR',JAC:'JAX',WSH:'WAS'}[t]||t);
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const candidates=[];
@@ -28,7 +28,7 @@ function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season
   const score=.8*adjusted+.2*trend+.06*matchup+.025*sign*volumeChange-risk-breakEven;
   if(score<=0)return;
   candidates.push({gameId:g.id,kickoff:g.kickoff,away:g.away,home:g.home,awayName:g.awayName,homeName:g.homeName,
-    colors:g.colors,date:day(g.kickoff),season,player:p.name,playerId:p.id,team,metric,label,line,side,price,score,hits,total:values.length,
+    week:g.week,postseason:g.postseason,colors:g.colors,date:day(g.kickoff),season,player:p.name,playerId:p.id,photo:p.photo,team,metric,label,line,side,price,score,hits,total:values.length,
     adjusted,trend,breakEven,volumeChange,risk,average:mean(values),values,defenseRank:rank,rankCount,role,context,model:'2026.11.v1',saved});
 }
 function settle(row,value,completed){
@@ -47,6 +47,8 @@ if(sport==='nfl'){
     const key=playerKey(p.name)+'|'+code(hist.at(-1).team);
     byName.set(key,byName.has(key)?null:{p,hist});
   }
+  const photos=new Map(data.players.filter(p=>p.photo).map(p=>[p.id,p.photo]));
+  for(const r of archive)if(!r.photo && photos.has(r.playerId))r.photo=photos.get(r.playerId);
   for(const r of archive)settle(r,logs.get(r.gameId+'|'+r.playerId)?.stats[r.metric],played.has(r.gameId));
   const books=read('lines.json').games;
   function touchdownQuote(row){
@@ -105,7 +107,7 @@ if(sport==='nfl'){
       const score=.7*adjusted+.2*(lastThree+1)/7+.1*Math.min(1,workload/20)+.08*matchup-(status==='questionable'?.05:0);
       const quote=touchdownQuote({...g,player:p.name});
       candidates.push({kind:'touchdown',gameId:g.id,kickoff:g.kickoff,date:day(g.kickoff),season,
-        away:g.away,home:g.home,team,player:p.name,playerId:p.id,metric:'scoredTDs',label:'Touchdowns',
+        away:g.away,home:g.home,team,player:p.name,playerId:p.id,photo:p.photo,metric:'scoredTDs',label:'Touchdowns',
         line:.5,side:'over',price:quote?.price ?? null,priceUpdated:quote?.updated,score,hits,total:values.length,average:mean(values),values,defenseRank,
         role:workload.toFixed(1)+' carries + targets per game over the last three',context:injury?.status || '',
         chances:recentChances(hist,team,Number(g.week)),model:'td-scorers.v1',saved});
@@ -138,10 +140,10 @@ if(sport==='nfl'){
     }
   }
 }else{
-  const season=read('cbb/index.json').seasons[0],folder='cbb/'+season+'/',schedule=read(folder+'schedule.json'),meta=read(folder+'teams.json');
+  const season=read(sport+'/index.json').seasons[0],folder=sport+'/'+season+'/',schedule=read(folder+'schedule.json'),meta=read(folder+'teams.json');
   const teamLogs=new Map(),schedules=new Map([[season,schedule]]);
   for(const r of archive){
-    const dir='cbb/'+r.season+'/';
+    const dir=sport+'/'+r.season+'/';
     if(!fs.existsSync(root+dir+'schedule.json'))continue;
     if(!schedules.has(r.season))schedules.set(r.season,read(dir+'schedule.json'));
     const g=schedules.get(r.season).find(g=>g.id===r.gameId);
@@ -158,17 +160,18 @@ if(sport==='nfl'){
   }
 
   for(const p of read(folder+'board.json')){
-    if(p.minutes<15)continue;
-    for(const g of byTeam.get(p.team)||[])for(const [metric,{defaultLine:line,label}] of Object.entries(cbbMarkets))for(const side of ['over','under']){
+    if(sport!=='cfb' && p.minutes<15)continue;
+    for(const g of byTeam.get(p.team)||[])for(const [metric,{defaultLine:line,label}] of Object.entries(manualMarkets(sport)))for(const side of ['over','under']){
+      if(sport==='cfb' && !(p.recent[metric] || []).some(v=>v>0))continue;
       const opp=g.home===p.team?g.away:g.home;
       candidate({g,p,team:p.team,metric,label,line,side,price:null,values:p.recent[metric]||[],rank:meta.ranks[opp]?.[metric],
-        rankCount:Object.keys(meta.ranks).length,minimum:2,season,role:p.minutes+' minutes per game',context:'Manual research line'});
+        rankCount:Object.keys(meta.ranks).length,minimum:2,season,role:sport==='cfb'?p.recent[metric].length+' offensive box scores':p.minutes+' minutes per game',context:'Manual research line'});
     }
   }
   for(const pick of archive){
     if(pick.season===season && !pick.rankCount)pick.rankCount=Object.keys(meta.ranks).length;
   }
-  const gp='cbb-games-record.json',games=fs.existsSync(root+gp)?read(gp):[];
+  const gp=sport+'-games-record.json',games=fs.existsSync(root+gp)?read(gp):[];
   const tracked=new Map(games.map(g=>[g.id,g]));
   const finals=new Map(schedule.map(g=>[g.id,g]));
   for(const item of games){const g=finals.get(item.id);if(g?.final&&[g.awayScore,g.homeScore].every(Number.isFinite))item.final=[g.awayScore,g.homeScore]}
@@ -176,9 +179,9 @@ if(sport==='nfl'){
   for(const g of schedule.filter(upcoming)){
     if(tracked.has(g.id))continue;
     const date=day(g.kickoff);
-    if(!ratings.has(date))ratings.set(date,collegeRatings(schedule.filter(x=>x.final && day(x.kickoff)<date),now));
+    if(!ratings.has(date))ratings.set(date,collegeRatings(schedule.filter(x=>x.final && day(x.kickoff)<date),now,sport!=='cbb'));
     const r=ratings.get(date),m=projection(g,r[g.away],r[g.home],true);
-    if(m)tracked.set(g.id,{id:g.id,away:g.awayName,home:g.homeName,kickoff:g.kickoff,saved,stats:[m.a.score,m.h.score]});
+    if(m)tracked.set(g.id,{id:g.id,season,week:g.week,postseason:g.postseason,away:g.awayName,home:g.homeName,kickoff:g.kickoff,saved,stats:[m.a.score,m.h.score]});
   }
   for(const item of tracked.values()){
     const game=finals.get(item.id);
@@ -187,7 +190,7 @@ if(sport==='nfl'){
   fs.writeFileSync(root+gp,JSON.stringify([...tracked.values()])+'\n');
 }
 const used=new Map();
-const slateKey=p=>p.date+'|'+(p.kind || 'props');
+const slateKey=p=>(sport==='cfb'?p.season+'-'+(p.postseason?'P':'')+p.week:p.date)+'|'+(p.kind || 'props');
 for(const p of archive){const k=slateKey(p);if(!used.has(k))used.set(k,new Set());used.get(k).add(p.playerId)}
 for(const p of candidates.sort((a,b)=>b.score-a.score||a.player.localeCompare(b.player))){
   const key=slateKey(p);

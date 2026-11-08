@@ -211,6 +211,7 @@ def parse_player_stats_csv(text: str, expected_season: int) -> list[dict]:
             usage["opportunities"] = usage.get("carries", 0) + usage.get("targets", 0)
         records.append({
             "id": player_id, "name": name, "position": position, "team": team,
+            "photo": raw.get("headshot_url"),
             "game": {
                 "season": expected_season, "week": week, "seasonType": "REG", "gameId": game_id,
                 "team": team, "opponent": (raw.get("opponent_team") or "").strip().upper(),
@@ -235,6 +236,8 @@ def build_payload(records: list[dict]) -> dict:
         # If nflverse publishes a corrected/duplicated row, keep the newer row.
         player["games"][key] = game
         if game["season"] >= max(player["seasons"]):
+            if (record.get("photo") or "").startswith("https://"):
+                player["photo"]=record["photo"]
             player["name"] = record["name"]
             player["position"] = record["position"]
             player["team"] = record["team"]
@@ -245,6 +248,7 @@ def build_payload(records: list[dict]) -> dict:
         players.append({
             "id": player["id"], "name": player["name"], "position": player["position"],
             "team": player["team"], "seasons": sorted(player["seasons"]), "games": games,
+            **({"photo":player["photo"]} if player.get("photo") else {}),
         })
     all_seasons = sorted({season for p in players for season in p["seasons"]})
     newest = max(all_seasons) if all_seasons else 0
