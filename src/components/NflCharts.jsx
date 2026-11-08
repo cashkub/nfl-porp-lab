@@ -244,7 +244,8 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <ChartSelect label="Market" value={metric} onChange={onMetric}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
     </div>
     <button type="button" className="filter-toggle" aria-controls="chart-filters" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(!filtersOpen)}>
-      <b>Filters</b><span>Week {slate.week} · {slate.team || (slate.game ? slate.game.away+' @ '+slate.game.home : 'All Teams')} · {venue==='ALL'?'All Games':venue==='H'?'Home':'Away'} · {windowSize==='season'?'Full History':'Last '+windowSize}</span>
+      <b><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 7h5m5 0h8M3 17h10m5 0h3"/><circle cx="10.5" cy="7" r="2.5"/><circle cx="15.5" cy="17" r="2.5"/></svg>Filters</b>
+      <span>Week {slate.week} · {slate.team || (slate.game ? slate.game.away+' @ '+slate.game.home : 'All Teams')} · {venue==='ALL'?'All Games':venue==='H'?'Home':'Away'} · {windowSize==='season'?'Full History':'Last '+windowSize}</span>
     </button>
     <div className="extra-filters" id="chart-filters" data-open={filtersOpen}>
       <ChartSlate slate={slate}/>
