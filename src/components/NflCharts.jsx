@@ -212,12 +212,20 @@ function logColumns(position,games,metric){
   return fields.filter(key=>key!==metric).map(key=>logFields[key]);
 }
 
-function GameLog({games,line,direction,metric,position}) {
+function GameLog({player,line,direction,metric}) {
+  const [year,setYear]=useState('ALL');
+  const years=[...new Set(player.games.map(g=>g.season))].sort((a,b)=>b-a);
+  const games=getPlayerGames(player,year);
+
   const market=chartMarkets[metric];
-  const columns=logColumns(position,games,metric);
+  const columns=logColumns(player.position,games,metric);
   const ordered=[...games].reverse();
   return <section className="lab-block player-log" aria-label="Game Log">
-    <h2>Game Log</h2><p>{market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
+    <h2>Game Log</h2>
+    <ChartSelect label="Game Log Year" value={year} onChange={setYear}>
+      <option value="ALL">All Years</option>{years.map(y=><option key={y} value={y}>{y}</option>)}
+    </ChartSelect>
+    <p>{games.length} {games.length===1?'Game':'Games'} · Home And Away · {market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
     {ordered.length>0 && <div className="history-scroll log-table" tabIndex="0" role="region" aria-label="Game Log Statistics"><table><thead><tr>
       <th>Week</th><th>Opponent</th><th>{market.label}</th><th>Result</th>{columns.map(([label])=><th key={label}>{label}</th>)}<th>Date</th>
     </tr></thead><tbody>{ordered.map(g=>{
@@ -227,7 +235,7 @@ function GameLog({games,line,direction,metric,position}) {
         <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}</span></td>
         {columns.map(([label,read])=><td key={label}>{read(g) ?? '—'}</td>)}<td>{gameDate(g)}</td></tr>;
     })}</tbody></table></div>}
-    {!games.length && <p>No Games At This Venue.</p>}
+    {!games.length && <p>No Recorded Games For This Year.</p>}
   </section>;
 }
 
@@ -293,7 +301,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div><dt>{usage.label} · last {recentUsage.length} recorded</dt><dd>{recentUsage.length?formatNumber(recentUsage.reduce((a,b)=>a+b,0)/recentUsage.length):'—'} per game</dd></div>
       {['H','A'].map(v=>{const s=summarize(splitGames.filter(g=>g.venue===v),metric,line,direction);return <div key={v}><dt>Selected history · {v==='H'?'home':'away'} hits</dt><dd style={line==null?undefined:rateStyle(s.rate)}>{line==null?'—':s.hits+'/'+s.total+' · '+formatRate(s.rate)}</dd></div>})}
     </dl><WorkloadUsage players={players} games={displayed} position={player.position}/></section>
-    <GameLog position={player.position} games={allGames} line={line} direction={direction} metric={metric}/>
+    <GameLog key={player.id} player={player} line={line} direction={direction} metric={metric}/>
     </>}
   </main>;
 }
