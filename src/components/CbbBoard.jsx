@@ -36,7 +36,7 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
   },[board.data,meta.data,conference,team,search,metric,line,side,minimum,sort]);
   const failed=[index,meta,board].find(x=>x.error);
   if(top && !custom)return <><TrackedPicks sport="cbb" onOpen={r=>onOpen({player:r.playerId,team:r.team,season:r.season,metric:r.metric,line:r.line,side:r.side})}/><button className="outline-button" onClick={()=>setCustom(true)}>Explore Custom Lines</button></>;
-  return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top 8</button>}<header><h1>CBB {top?'Custom Line Research':'Props Board'}</h1>
+  return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top Props</button>}<header><h1>CBB {top?'Custom Line Research':'Props Board'}</h1>
     <p>Manual Lines · Last 10 Recorded Games · {rows.length} Players</p></header>
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>

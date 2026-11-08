@@ -47,6 +47,44 @@ if(sport==='nfl'){
     byName.set(key,byName.has(key)?null:{p,hist});
   }
   for(const r of archive)settle(r,logs.get(r.gameId+'|'+r.playerId)?.stats[r.metric],played.has(r.gameId));
+  // Consider the full ET game day before locking the touchdown leaderboard.
+  const tomorrow=day(now+24*3600000);
+  const latestWeek=new Map();
+  for(const entry of byName.values()){
+    if(!entry)continue;
+    const last=entry.hist.at(-1),team=code(last.team);
+    latestWeek.set(team,Math.max(latestWeek.get(team)||0,last.week));
+  }
+  for(const g of data.schedule || []){
+    if(!g.id || !g.timeKnown || Date.parse(g.kickoff)<=now || day(g.kickoff)>tomorrow)continue;
+    for(const entry of byName.values()){
+      if(!entry)continue;
+      const {p,hist}=entry,last=hist.at(-1),team=code(last.team);
+      if((team!==g.home && team!==g.away) || !['QB','RB','FB','WR','TE'].includes(p.position))continue;
+      if(last.week<latestWeek.get(team)-1)continue;
+      const injury=g.injuries?.[team]?.find(x=>x.id===p.id);
+      const status=injury?.gameStatus?.toLowerCase();
+      if(status==='out'||status==='doubtful')continue;
+      const recent=hist.filter(x=>code(x.team)===team).slice(-10);
+      const values=recent.map(x=>x.stats.scoredTDs);
+      if(values.length<3 || !values.every(Number.isFinite))continue;
+      const hits=values.filter(v=>v>0).length;
+      const workload=mean(recent.slice(-3).map(x=>x.usage?.opportunities || 0));
+      if(!hits || !workload)continue;
+      const opponent=g.home===team?g.away:g.home,key=p.position+'|scoredTDs';
+      if(!cache.has(key))cache.set(key,defenseTable(data.players,season,p.position,'scoredTDs'));
+      const defenseRank=cache.get(key).find(r=>code(r.team)===opponent)?.rank;
+      const adjusted=(hits+1)/(values.length+4);
+      const lastThree=values.slice(-3).filter(v=>v>0).length;
+      const matchup=defenseRank?(16.5-defenseRank)/31:0;
+      const score=.7*adjusted+.2*(lastThree+1)/7+.1*Math.min(1,workload/20)+.08*matchup-(status==='questionable'?.05:0);
+      candidates.push({kind:'touchdown',gameId:g.id,kickoff:g.kickoff,date:day(g.kickoff),season,
+        away:g.away,home:g.home,team,player:p.name,playerId:p.id,metric:'scoredTDs',label:'Touchdowns',
+        line:.5,side:'over',price:null,score,hits,total:values.length,average:mean(values),values,defenseRank,
+        role:workload.toFixed(1)+' carries + targets per game over the last three',context:injury?.status || '',
+        model:'td-scorers.v1',saved});
+    }
+  }
   for(const book of read('lines.json').games.filter(upcoming)){
     const g=data.schedule?.find(g=>g.id&&g.home===book.home&&g.away===book.away&&Math.abs(Date.parse(g.kickoff)-Date.parse(book.kickoff))<12*3600000);
     if(!g||!upcoming(g))continue;
@@ -116,10 +154,12 @@ if(sport==='nfl'){
   fs.writeFileSync(root+gp,JSON.stringify([...tracked.values()])+'\n');
 }
 const used=new Map();
-for(const p of archive){if(!used.has(p.date))used.set(p.date,new Set());used.get(p.date).add(p.playerId)}
+const slateKey=p=>p.date+'|'+(p.kind || 'props');
+for(const p of archive){const k=slateKey(p);if(!used.has(k))used.set(k,new Set());used.get(k).add(p.playerId)}
 for(const p of candidates.sort((a,b)=>b.score-a.score||a.player.localeCompare(b.player))){
-  if(!used.has(p.date))used.set(p.date,new Set());
-  const slate=used.get(p.date);
+  const key=slateKey(p);
+  if(!used.has(key))used.set(key,new Set());
+  const slate=used.get(key);
   if(slate.size>=8||slate.has(p.playerId))continue;
   slate.add(p.playerId);p.rank=slate.size;archive.push(p);
 }

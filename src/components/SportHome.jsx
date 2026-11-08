@@ -2,8 +2,8 @@ import React from 'react';
 import {ArrowUpRight, ChevronRight, SlidersHorizontal, ListFilter, Trophy, Star, CalendarDays} from 'lucide-react';
 
 export const toolsBySport = {
-  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Top 8','top-eight'],['Moneylines','moneylines'],['Model Record','model-record']],
-  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Top 8','cbb-top-eight'],['Games','cbb-games'],['Model Record','cbb-record']]
+  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Top Props','top-eight'],['Moneylines','moneylines'],['Model Record','model-record']],
+  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Top Props','cbb-top-eight'],['Games','cbb-games'],['Model Record','cbb-record']]
 };
 const icons=[SlidersHorizontal,ListFilter,Star,CalendarDays,Trophy];
 
