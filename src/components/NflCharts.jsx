@@ -141,13 +141,28 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
 }
 
 function GameLog({games,line,direction,metric}) {
-  return <section className="lab-block"><h2>Game log</h2><p>Selected history · selected venue · newest first</p>
-    <div className="history-scroll"><table><thead><tr>{['Date','Week','Opponent',chartMarkets[metric].label,'Rush yds','Rec yds','Att','Carries','Targets','Result'].map(h=><th key={h}>{h}</th>)}</tr></thead>
-      <tbody>{[...games].reverse().map(g=>{
-        const value=g.stats[metric] ?? 0;
-        const result=line==null?'—':value===line?'Push':isHit(value,line,direction)?'Hit':'Miss';
-        return <tr key={g.gameId}><td>{gameDate(g)}</td><td>{g.week}</td><td>{g.venue==='A'?'@':'vs.'} {g.opponent}</td><td><b>{value}</b></td><td>{g.stats.rushingYards ?? '—'}</td><td>{g.stats.receivingYards ?? '—'}</td><td>{g.usage?.attempts ?? '—'}</td><td>{g.usage?.carries ?? '—'}</td><td>{g.usage?.targets ?? '—'}</td><td data-result={result}>{result}</td></tr>;
-      })}</tbody></table></div>{!games.length && <p>No games at this venue.</p>}</section>;
+  const market=chartMarkets[metric];
+  return <section className="lab-block player-log" aria-label="Game Log">
+    <h2>Game Log</h2><p>{market.label} · {line==null?'No Line Selected':(direction==='over'?'Over ':'Under ')+line} · Newest First</p>
+    {[...games].reverse().map(g=>{
+      const value=g.stats[metric] ?? 0;
+      const result=line==null?'Unrated':value===line?'Push':isHit(value,line,direction)?'Hit':'Miss';
+      const venue=g.venue==='A'?'Away':g.venue==='H'?'Home':'Neutral';
+      const delta=line==null?null:Math.round((value-line)*100)/100;
+      const fields=[['Pass Yards',g.stats.passingYards],['Rush Yards',g.stats.rushingYards],['Receiving Yards',g.stats.receivingYards],
+        ['Pass Attempts',g.usage?.attempts],['Carries',g.usage?.carries],['Targets',g.usage?.targets],
+        ['Receptions',g.stats.receptions],['Pass TDs',g.stats.passingTDs],['TDs Scored',g.stats.scoredTDs]];
+      return <details key={g.gameId} className="log-game" style={{'--opponent':teamColor(g.opponent) || '#6086a2'}}>
+        <summary><span className="log-match"><span className="log-emblem"><TeamLogo team={g.opponent}/></span><span><strong>{g.team} {venue==='Away'?'@':'vs.'} {g.opponent}</strong><small>{gameDate(g)}{g.date ? ' · W'+g.week : ''} · {venue}</small></span></span>
+          <span className="log-performance"><strong>{value} <small>{market.unit}</small></strong><span className="log-outcome" data-result={result}>{result}</span></span>
+          <span className="log-expand" aria-hidden="true">⌄</span></summary>
+        <div className="log-body">{delta!=null && <p>{delta===0?'Exactly On The Line':Math.abs(delta)+' '+market.unit+' '+(delta>0?'Above':'Below')+' The Line'} · {direction==='over'?'Over':'Under'} {line}</p>}
+          <dl>{fields.map(([label,stat])=><div key={label}><dt>{label}</dt><dd>{stat ?? '—'}</dd></div>)}</dl>
+        </div>
+      </details>;
+    })}
+    {!games.length && <p>No Games At This Venue.</p>}
+  </section>;
 }
 
 export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
