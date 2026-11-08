@@ -1,3 +1,4 @@
+import HitRate from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import TrackedPicks,{useArchive} from './TrackedPicks.jsx';
 import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
@@ -28,8 +29,8 @@ export default function ModelRecord({validation,sport='nfl'}){
   const tabs=<div className="board-sort">{[['games','Game Winners'],['props','Top Props'],...(sport==='nfl'?[['touchdowns','Touchdown Scorers']]:[])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}</div>;
   if(tab!=='games')return <TrackedPicks sport={sport} touchdownRecord={tab==='touchdowns'} record archive={{...picks,rows:picks.rows?.filter(inPeriod)}}>{tabs}{selector}</TrackedPicks>;
   return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}
-    <div className="usage-trend"><h3>Overall Record</h3><p>{right} Correct · {decided.length-right} Incorrect</p>
-      <small>{decided.length?Math.round(100*right/decided.length)+'% accuracy · ':''}{graded.length} graded · Average margin error {graded.length?(graded.reduce((sum,r)=>sum+Math.abs(margin(r.final)-margin(r.overall)),0)/graded.length).toFixed(1)+' pts':'—'}</small></div>
+    <div className="usage-trend"><h3>Overall Record</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>
+      <small>{decided.length?<><HitRate rate={right/decided.length}/> accuracy · </>:''}{graded.length} graded · Average margin error {graded.length?(graded.reduce((sum,r)=>sum+Math.abs(margin(r.final)-margin(r.overall)),0)/graded.length).toFixed(1)+' pts':'—'}</small></div>
     {validation && <details><summary>2025 Held-Out Test · {validation.games} Games</summary><p>Average absolute error in points. Historical evaluation uses recorded starting QBs and outdoor conditions. The injury overlay is evaluated prospectively.</p>{Object.entries(validation.results).map(([k,v])=><p key={k}><b>{k}</b> · Team score {v.scoreMAE} · Margin {v.marginMAE}</p>)}</details>}
     {rows?.length?<div className="board-scroll"><table className="game-log"><thead><tr>{[...(sport==='cbb'?['Game Date']:[]),'Matchup (Away First)','Overall Pick','Projected Score','Final','Result','Saved'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id}>
       {sport==='cbb' && <td>{periodLabel(recordPeriod(r,sport),sport)}</td>}<td><span className="team-name" style={{'--team-color':teamColor(r.away,r.colors)}}>{r.away}</span> at <span className="team-name" style={{'--team-color':teamColor(r.home,r.colors)}}>{r.home}</span></td><td>{!r.overall?'—':margin(r.overall)===0?'No Pick':margin(r.overall)>0?r.home:r.away}</td>

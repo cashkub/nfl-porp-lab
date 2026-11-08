@@ -78,6 +78,6 @@ function CollegePicks({rows,schedule,meta,metric,line,side,onOpen}){
     <div className="research-grid picks-grid">{picks.map(({p,hits,total,avg},i)=>{
       const game=next.get(p.team),opp=game.home===p.team?game.away:game.home;
       const rank=meta.ranks?.[opp]?.[metric];
-      return <MatchCard key={p.team+p.id} game={game} colors={meta.colors || {}}><PickReport number={i+1} name={p.name} side={side} line={line} metric={markets[metric].label} price="Manual Line" hits={hits} total={total} average={avg} rank={rank} results={p.recent[metric]} reason={'At this line, the sample-adjusted hit rate is '+(100*(hits+2)/(total+4)).toFixed(1)+'%. '+p.name+' averaged '+p.minutes+' minutes per game.'} onOpen={()=>onOpen(p)}/></MatchCard>;
+      return <MatchCard key={p.team+p.id} game={game} colors={meta.colors || {}}><PickReport number={i+1} name={p.name} side={side} line={line} metric={markets[metric].label} price="Manual Line" hits={hits} total={total} average={avg} rank={rank} rankCount={Object.keys(meta.ranks || {}).length} results={p.recent[metric]} reason={<>At this line, the sample-adjusted hit rate is <HitRate rate={(hits+2)/(total+4)}/>. {p.name} averaged {p.minutes} minutes per game.</>} onOpen={()=>onOpen(p)}/></MatchCard>;
     })}</div>{!picks.length && <p>{schedule.error?<button onClick={schedule.reload}>Schedule Unavailable · Retry</button>:schedule.data?'No Upcoming Players Meet These Filters.':'Loading Schedule…'}</p>}</>;
 }

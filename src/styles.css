@@ -590,3 +590,8 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
   .college-settings select {max-width:100%}
   .setup .line-panel {margin-top:8px}
 }
+
+.app .result-win,.pick-status[data-result=Hit] {color:var(--rate-high)}
+.app .result-loss,.pick-status[data-result=Miss] {color:var(--rate-low)}
+.app .result-push,.pick-status[data-result=Push],.record-result[data-result=Tie] {color:var(--rate-mid)}
+.app .context-value {color:var(--sport-accent);font-variant-numeric:tabular-nums}

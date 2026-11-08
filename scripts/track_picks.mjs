@@ -28,7 +28,7 @@ function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season
   if(score<=0)return;
   candidates.push({gameId:g.id,kickoff:g.kickoff,away:g.away,home:g.home,awayName:g.awayName,homeName:g.homeName,
     colors:g.colors,date:day(g.kickoff),season,player:p.name,playerId:p.id,team,metric,label,line,side,price,score,hits,total:values.length,
-    adjusted,trend,breakEven,volumeChange,risk,average:mean(values),values,defenseRank:rank,role,context,model:'2026.11.v1',saved});
+    adjusted,trend,breakEven,volumeChange,risk,average:mean(values),values,defenseRank:rank,rankCount,role,context,model:'2026.11.v1',saved});
 }
 function settle(row,value,completed){
   if(!completed)return;
@@ -151,6 +151,9 @@ if(sport==='nfl'){
       candidate({g,p,team:p.team,metric,label,line,side,price:null,values:p.recent[metric]||[],rank:meta.ranks[opp]?.[metric],
         rankCount:Object.keys(meta.ranks).length,minimum:2,season,role:p.minutes+' minutes per game',context:'Manual research line'});
     }
+  }
+  for(const pick of archive){
+    if(pick.season===season && !pick.rankCount)pick.rankCount=Object.keys(meta.ranks).length;
   }
   const gp='cbb-games-record.json',games=fs.existsSync(root+gp)?read(gp):[];
   const tracked=new Map(games.map(g=>[g.id,g]));

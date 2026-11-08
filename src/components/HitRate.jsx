@@ -11,12 +11,12 @@ export function rateStyle(rate) {
   return { color: `color-mix(in srgb, ${from}, ${to} ${weight}%)` };
 }
 
-// NFL defensive ranks run in reverse order of the existing percentage palette.
-export function defenseRankStyle(rank) {
-  if (!Number.isInteger(rank) || rank < 1 || rank > 32) return undefined;
-  return rateStyle((32 - rank) / 31);
+// First rank represents the highest value on the color scale.
+export function defenseRankStyle(rank,total=32) {
+  if (!Number.isInteger(rank) || rank < 1 || rank > total || !Number.isInteger(total) || total < 2) return undefined;
+  return rateStyle((total - rank) / (total - 1));
 }
 
 export default function HitRate({rate}) {
-  return <span className="hit-percent" style={rateStyle(rate)}>{formatRate(rate)}</span>;
+  return <span className="hit-percent" style={rateStyle(rate)}>{formatRate(Number.isFinite(rate)?rate:null)}</span>;
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import {projection} from '../lib/projection.js';
 import {priceText} from '../lib/bookLine.js';
-import HitRate from './HitRate.jsx';
+import HitRate,{defenseRankStyle} from './HitRate.jsx';
 
 const signed=n=>(n>0?'+':'')+n.toFixed(1);
 const priorities=['out','doubtful','questionable','limited participation in practice','did not participate in practice','full participation in practice'];
@@ -40,8 +40,8 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
   }
   if(model?.blend){
     const weight=Math.round(100*model.blend.weight);
-    const marketNote='The overall projection gives team data '+(100-weight)+'% weight and the market spread and total '+weight+'%.';
-    explanation=(winner && winner===model.winner?.team?explanation+' ':winner?'The market adjustment shifts the projected margin toward '+label(winner)+'. ':'')+marketNote;
+    const marketNote=<>The overall projection gives team data <span className="context-value">{100-weight}%</span> weight and the market spread and total <span className="context-value">{weight}%</span>.</>;
+    explanation=<>{winner && winner===model.winner?.team?explanation+' ':winner?'The market adjustment shifts the projected margin toward '+label(winner)+'. ':''}{marketNote}</>;
   }
   return <>{model?<><p className="model-call"><small>Overall Pick</small><b>{winner?label(winner)+' by '+Math.abs(overallMargin).toFixed(1):'Projected Tie'}</b></p>
     <h4 className="report-heading">Projected Score</h4>
@@ -77,7 +77,7 @@ function MarketComparison({game,blend}){
         <tr><th>Spread</th><td>{Number.isFinite(game.homeSpread)?priceText(-game.homeSpread):'—'}</td><td>{priceText(game.homeSpread)}</td></tr>
         {blend && <tr><th>Market-Informed Score</th><td>{blend.away.toFixed(1)}</td><td>{blend.home.toFixed(1)}</td></tr>}
       </tbody></table>
-    {blend && <p className="report-note">This score gives the market {(100*blend.weight).toFixed(1)}% weight, fitted on 2024 games. This weighting is included in the overall pick.</p>}
+    {blend && <p className="report-note">This score gives the market <span className="context-value">{(100*blend.weight).toFixed(1)}%</span> weight, fitted on 2024 games. This weighting is included in the overall pick.</p>}
   </details>;
 }
 
@@ -90,19 +90,19 @@ function NflConditions({game,model}){
       const inputs=p.inputs;
       return <section className="team-history" key={s.team}><b>{s.team} · {p.qb || 'QB Unavailable'}</b>
         <small>{'QB source: '+p.qbSource} · {p.rest ?? '—'} rest days</small>
-        <small>Last {p.sample} games · Passing EPA/play {signed(inputs['Pass Offense'])} · Rushing EPA/play {signed(inputs['Run Offense'])} · Successful plays {(100*p.success).toFixed(0)}%</small>
+        <small>Last {p.sample} games · Passing EPA/play {signed(inputs['Pass Offense'])} · Rushing EPA/play {signed(inputs['Run Offense'])} · Successful plays <HitRate rate={p.success}/></small>
         <small>Opponent allows {inputs['Pass Defense Faced'].toFixed(2)} EPA per dropback and {inputs['Run Defense Faced'].toFixed(2)} per rush. Expected possessions {inputs.Possessions.toFixed(1)}.</small>
         {p.backupKnown && <small>{s.swap?'Replacement used':'Alternate QB scenario'} · {p.backup} · {signed(p.backupDelta)} pts relative to {p.qb}. Scenario score: {s.team} {(s.score+(s.swap?0:p.backupDelta)).toFixed(1)}. Depth chart alternate · {p.backupPasses} tracked pass plays this season.</small>}</section>;
     })}
     <p>{c.stadium} · {c.roof} · {c.surface || 'Surface unavailable'}</p>
-    <p>{w?<>{w.temp ?? '—'} °F · Wind {w.wind ?? '—'} mph · Rain chance {w.rain ?? '—'}%. Forecast for the kickoff hour, retrieved {new Date(w.asOf).toLocaleString()}. {['open','outdoors'].includes(c.roof)?'Wind above 8 mph and temperatures below 40°F enter the score estimate.':'Roof status unconfirmed. Outside weather has no score adjustment.'} <a href="https://open-meteo.com/">Open-Meteo</a></>:['closed','dome'].includes(c.roof)?'Enclosed venue · No outdoor weather adjustment.':'Kickoff forecast unavailable · No weather adjustment.'}</p>
+    <p>{w?<>{w.temp ?? '—'} °F · Wind {w.wind ?? '—'} mph · Rain chance <span className="context-value">{w.rain==null?'—':w.rain+'%'}</span>. Forecast for the kickoff hour, retrieved {new Date(w.asOf).toLocaleString()}. {['open','outdoors'].includes(c.roof)?'Wind above 8 mph and temperatures below 40°F enter the score estimate.':'Roof status unconfirmed. Outside weather has no score adjustment.'} <a href="https://open-meteo.com/">Open-Meteo</a></>:['closed','dome'].includes(c.roof)?'Enclosed venue · No outdoor weather adjustment.':'Kickoff forecast unavailable · No weather adjustment.'}</p>
     </details></>;
 }
 
-export function PickReport({number,name,onOpen,side,line,metric,price,hits,total,average,rank,results,reason,role,context}){
-  return <><div className="pick-player"><span>#{number}</span><button className="board-player" onClick={onOpen}>{name}</button></div>
+export function PickReport({number,name,onOpen,side,line,metric,price,hits,total,average,rank,rankCount=32,results,reason,role,context}){
+  return <><div className="pick-player"><span style={defenseRankStyle(number,9)}>#{number}</span><button className="board-player" onClick={onOpen}>{name}</button></div>
     <p className="pick-line"><strong>{side==='over'?'Over':'Under'} {line} {metric}</strong><small>{price}</small></p>
-    <dl className="pick-metrics"><div><dt>Hit Rate</dt><dd><HitRate rate={hits/total}/></dd></div><div><dt>Game Avg</dt><dd>{average.toFixed(1)}</dd></div><div><dt title="#1 allows the most">Defense Rank</dt><dd>{rank?'#'+rank:'—'}</dd></div></dl>
+    <dl className="pick-metrics"><div><dt>Hit Rate</dt><dd><HitRate rate={hits/total}/></dd></div><div><dt>Game Avg</dt><dd>{average.toFixed(1)}</dd></div><div><dt title="#1 allows the most">Defense Rank</dt><dd style={defenseRankStyle(rank,rankCount)}>{rank?'#'+rank:'—'}</dd></div></dl>
     <div className="pick-reason"><h4 className="report-heading">Why It Ranks</h4><p>{reason}</p></div>
     <details className="report-fold pick-evidence"><summary>Game History{role || context?' & Player Context':''}</summary>
     <small>{hits} of {total} Hit · Oldest First</small>
