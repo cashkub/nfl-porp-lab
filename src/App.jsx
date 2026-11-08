@@ -287,7 +287,7 @@ export default function App() {
 
   if(previewTools){
     if(page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
-    return <ManualLeague.Provider value="nfl"><NflCharts players={players} seasons={seasons} quotedMarkets={statOptions.filter(m=>bookLine(bookGames,upcoming,player?.name,m))} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
+    return <ManualLeague.Provider value="nfl"><NflCharts players={players} seasons={seasons} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
       metric={metric} onMetric={onMetricChange} line={line} setLine={setLine} quote={quote} manual={manual} direction={direction} setDirection={setDirection}
       windowSize={windowSize} setWindowSize={setWindowSize} upcoming={upcoming} defenses={defenseRows}
       loading={loading} error={error}/></ManualLeague.Provider>;

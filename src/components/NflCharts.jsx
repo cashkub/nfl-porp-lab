@@ -150,7 +150,7 @@ function GameLog({games,line,direction,metric}) {
       })}</tbody></table></div>{!games.length && <p>No games at this venue.</p>}</section>;
 }
 
-export default function NflCharts({players,seasons,quotedMarkets,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
+export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
   const [chosenSeason,setChosenSeason]=useState('');
   const historySeason=chosenSeason || String(season);
   const splitGames=useMemo(()=>getPlayerGames(player,historySeason),[player,historySeason]);
@@ -169,7 +169,7 @@ export default function NflCharts({players,seasons,quotedMarkets,slate,venue,onV
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls">
       <label>Player<select value={player.id} onChange={e=>onPlayer(e.target.value)}>{roster.map(p=><option key={p.id} value={p.id}>{p.name} · {p.team}</option>)}</select></label>
-      <label>Market<select value={metric} onChange={e=>onMetric(e.target.value)}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}{quotedMarkets.includes(m)?' · DK':''}</option>)}</select></label>
+      <label>Market<select value={metric} onChange={e=>onMetric(e.target.value)}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</select></label>
       <label>Side<select value={direction} onChange={e=>setDirection(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
       <label>Venue<select value={venue} onChange={e=>onVenue(e.target.value)}><option value="ALL">All games</option><option value="H">Home</option><option value="A">Away</option></select></label>
       <label>History season<select value={historySeason} onChange={e=>setChosenSeason(e.target.value)}>{[...seasons].sort((a,b)=>b-a).map(y=><option key={y}>{y}</option>)}<option value="ALL">All seasons</option></select></label>
