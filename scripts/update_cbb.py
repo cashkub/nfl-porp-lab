@@ -13,6 +13,13 @@ OUT = Path(__file__).resolve().parents[1] / 'public/data/cbb'
 SOURCE = 'https://raw.githubusercontent.com/sportsdataverse/hoopR-mbb-data/main/mbb'
 STATS = {'points':'points', 'rebounds':'rebounds', 'assists':'assists', 'threes':'three_point_field_goals_made'}
 
+COMBINATIONS = {
+    'pointsRebounds': ('points', 'rebounds'),
+    'pointsAssists': ('points', 'assists'),
+    'pointsReboundsAssists': ('points', 'rebounds', 'assists'),
+}
+MARKETS = (*STATS, *COMBINATIONS)
+
 
 def read_source(folder, name, season, columns):
     with urlopen(f'{SOURCE}/{folder}/parquet/{name}_{season}.parquet', timeout=90) as response:
@@ -59,8 +66,9 @@ def build(season):
         seen.add((team, game, player))
         teams[team] = row['team_display_name'] or team
         stats = {k:int(row[v]) for k,v in STATS.items()}
-        totals = allowed[opp].setdefault(game, dict.fromkeys(STATS, 0))
-        for k in STATS:
+        stats.update({key: sum(stats[field] for field in fields) for key, fields in COMBINATIONS.items()})
+        totals = allowed[opp].setdefault(game, dict.fromkeys(MARKETS, 0))
+        for k in MARKETS:
             totals[k] += stats[k]
         venue = 'Neutral' if game in neutral else {'home':'Home','away':'Away'}.get(row['home_away'],'Unknown')
         p = rosters[team].setdefault(player, {'id':player,'name':row['athlete_display_name'],'games':[]})
@@ -70,7 +78,7 @@ def build(season):
     if not teams:
         raise ValueError(f'No usable player games for {season}')
     ranks = {}
-    for key in STATS:
+    for key in MARKETS:
         ordered = sorted(((sum(g[key] for g in games.values()) / len(games), tid)
                           for tid,games in allowed.items()), reverse=True)
         prev,rank = None,0
@@ -85,7 +93,7 @@ def build(season):
             recent = p['games'][-10:]
             board.append({'id':p['id'],'name':p['name'],'team':team,
                           'minutes':round(sum(g['minutes'] for g in recent)/len(recent),1),
-                          'recent':{key:[g['stats'][key] for g in recent] for key in STATS}})
+                          'recent':{key:[g['stats'][key] for g in recent] for key in MARKETS}})
         write(OUT/str(season)/(team+'.json'), sorted(players.values(),key=lambda p:p['name'] or ''))
     write(OUT/str(season)/'board.json', board)
     schedule = []

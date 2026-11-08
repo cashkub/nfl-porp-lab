@@ -10,12 +10,7 @@ import HitRate, {rateStyle} from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
 import {filteredWindow, summarize} from '../lib/stats.js';
 
-export const markets = {
-  points:{label:'Points',maximum:100,unit:'pts',defaultLine:15.5},
-  rebounds:{label:'Rebounds',maximum:50,unit:'reb',defaultLine:5.5},
-  assists:{label:'Assists',maximum:40,unit:'ast',defaultLine:3.5},
-  threes:{label:'Made Threes',maximum:25,unit:'3PM',defaultLine:1.5}
-};
+import {markets} from '../lib/cbbMarkets.js';
 
 export function useCbbFile(path) {
   const [result,setResult] = useState(null);
