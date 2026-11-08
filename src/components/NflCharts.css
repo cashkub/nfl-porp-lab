@@ -203,3 +203,31 @@ body:has(.chart-lab){background-color:#1c102e;background-blend-mode:luminosity}
 .line-selection{display:flex;align-items:center;flex-wrap:wrap;gap:.25rem .5rem}
 .line-control[open]>.chart-disclosure{border-radius:.65rem .65rem 0 0}
 .line-control[open]>.chart-line-panel{border:1px solid #74558d;border-top:0;border-radius:0 0 .65rem .65rem;background:#1d1628}
+
+.charts-title-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 .55rem}
+.glow-switch{display:inline-flex;align-items:center;gap:.4rem;min-height:44px;padding:.3rem .1rem .3rem .45rem;background:transparent;border:0;color:#e8d7f7;font:700 .78rem/1.2 system-ui;cursor:pointer}
+.glow-track{display:inline-flex;align-items:center;width:1.85rem;height:1.05rem;border:1px solid #877194;border-radius:1rem;background:#302635;padding:2px}
+.glow-track::after{content:'';display:block;width:.65rem;height:.65rem;border-radius:50%;background:#decee9}
+.glow-switch[aria-checked=true] .glow-track{justify-content:flex-end;background:#8450ad;border-color:#d9afff;box-shadow:0 0 8px #bb76f780}
+.glow-switch[aria-checked=true] .glow-track::after{background:white}
+.chart-lab[data-full-glow=true]{
+  --glow-frame:#be8ce8;
+  --glow-shadow:inset 0 0 0 1px #c993ff22,0 0 12px #a550fb33;
+  --lab-rule:#694b7f;
+}
+.chart-lab[data-full-glow=true] :is(.lab-block,.lab-player,.chart-filter,.bar-report,.kickoff-conditions>div,.line-compare button,.line-stepper){
+  border-color:var(--glow-frame);box-shadow:var(--glow-shadow)
+}
+.chart-lab[data-full-glow=true] .lab-player{border-left-color:var(--club)}
+.chart-lab[data-full-glow=true] .lab-block{background:linear-gradient(135deg,#362044 0,#201728 15rem,#19131f 75%)}
+.chart-lab[data-full-glow=true] :is(.chart-filter,.kickoff-conditions>div){background:linear-gradient(110deg,#47265c,#271b32)}
+.chart-lab[data-full-glow=true] .lab-block>h2{
+  display:table;padding:.16em .34em .2em;border-radius:.22em;background:#d9b3ff;color:#271234;
+  box-shadow:0 0 12px #bb6ffa42;margin-bottom:.35em
+}
+.chart-lab[data-full-glow=true] :is(.lab-player h2,.lab-block h3,.player-numbers b,.game-volume b){text-shadow:0 0 10px #cb8dff60}
+.chart-lab[data-full-glow=true] .history-scroll{border:1px solid #9264ad;border-radius:.45rem;box-shadow:0 0 9px #ac62e326}
+.chart-lab[data-full-glow=true] .history-scroll thead th{background:#392346;color:#f0ddff}
+.chart-lab[data-full-glow=true] .history-scroll tbody tr:nth-child(even){background:#d29aff08}
+.chart-lab[data-full-glow=true] .margin-bars .bar-space i{box-shadow:inset 0 1px 0 #ffffff88,0 0 .65rem color-mix(in srgb,var(--outcome) 43%,transparent)}
+.chart-lab[data-full-glow=true] .line-compare button[aria-pressed=true]{box-shadow:inset 0 -3px var(--violet),var(--glow-shadow)}

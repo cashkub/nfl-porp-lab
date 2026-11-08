@@ -226,6 +226,16 @@ function GameLog({games,line,direction,metric,position}) {
 }
 
 export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
+  const [fullGlow,setFullGlow]=useState(()=>{
+    try { return localStorage.getItem('nfl-charts-full-glow')!=='off'; }
+    catch { return true; }
+  });
+  function toggleGlow(){
+    const next=!fullGlow;
+    setFullGlow(next);
+    try { localStorage.setItem('nfl-charts-full-glow',next?'on':'off'); }
+    catch { /* The switch still works for this visit. */ }
+  }
   const [filtersOpen,setFiltersOpen]=useState(false);
   const [chosenSeason,setChosenSeason]=useState('');
   const historySeason=chosenSeason || String(season);
@@ -238,9 +248,13 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const observedUsage=displayed.map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
   const meanUsage=observedUsage.length ? observedUsage.reduce((sum,value)=>sum+value,0)/observedUsage.length : null;
   const recentUsage=displayed.slice(-3).map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
-  return <main className="chart-lab" style={{'--club':teamColor(player?.team) || '#be98ed'}}>
+  return <main className="chart-lab" data-full-glow={fullGlow} style={{'--club':teamColor(player?.team) || '#be98ed'}}>
     <header><a href="/preview/"><img alt="" src="/preview/assets/mark.svg"/> PropBets</a><a href="/preview/nfl/">← NFL Menu</a></header>
-    <h1>Player <em>Charts</em></h1>
+    <div className="charts-title-row"><h1>Player <em>Charts</em></h1>
+      <button className="glow-switch" type="button" role="switch" aria-checked={fullGlow} onClick={toggleGlow}>
+        <span aria-hidden="true" className="glow-track"/>Full Glow
+      </button>
+    </div>
     {!loading && !error && !player && <ChartSlate slate={slate}/>}
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls primary-controls">
