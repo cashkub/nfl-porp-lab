@@ -650,3 +650,62 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .column-sort span {color:var(--muted)}
 th[aria-sort] .column-sort span {color:var(--sport-accent)}
 .column-sort:focus-visible {outline:2px solid var(--sport-accent);outline-offset:2px}
+
+/* Shared picker surfaces and sport-colored selection states. */
+.app {
+  --picker-fill:color-mix(in srgb,var(--canvas) 93%,var(--sport-accent));
+  --picker-shadow:0 10px 32px rgb(8 20 38 / 18%);
+}
+.app select,.app .line-trigger,.app .search-input-shell,.app .player-stepper > input {
+  color:var(--ink);
+  background-color:var(--picker-fill);
+  border:1px solid var(--sport-outline);
+  border-radius:10px;
+}
+.app select {
+  appearance:none;
+  min-width:0;
+  max-width:100%;
+  padding:8px 30px 8px 11px;
+  min-height:40px;
+  text-overflow:ellipsis;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%237a8da1' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+}
+.app .select-wrap {border:0;background:transparent}
+.app .select-wrap > svg {display:none}
+.app select:hover:enabled,.app .line-trigger:hover,.app .search-input-shell:focus-within {
+  border-color:var(--sport-accent);
+}
+.app select:disabled {opacity:.65;cursor:default}
+.app select:focus-visible,.app .line-trigger:focus-visible {outline:2px solid var(--sport-accent);outline-offset:2px}
+.app .search-results,.app .line-menu {border:1px solid var(--sport-outline);border-radius:12px;box-shadow:var(--picker-shadow)}
+.app .line-options button[aria-pressed=true],.app .player-result.result-focused {
+  color:var(--ink);background:var(--sport-wash);box-shadow:inset 3px 0 var(--sport-accent);
+}
+
+@supports (appearance:base-select) and selector(::picker(select)) {
+  .app select,.app select::picker(select) {appearance:base-select}
+  .app select {align-items:center}
+  .app select::picker-icon {display:none}
+  .app select::picker(select) {
+    max-width:calc(100vw - 24px);
+    max-height:min(44vh,22rem);
+    margin-block:4px;
+    padding:4px;
+    overflow:auto;
+    background:var(--canvas);
+    color:var(--ink);
+    border:1px solid var(--sport-outline);
+    border-radius:12px;
+    box-shadow:var(--picker-shadow);
+  }
+  .app select option {padding:8px 10px;min-height:36px;border-radius:7px;white-space:normal}
+  .app select option:hover,.app select option:focus-visible {background:var(--sport-wash)}
+  .app select option:checked {font-weight:700;background:var(--picker-fill)}
+  .app select option::checkmark {color:var(--sport-accent)}
+}
+@media(max-width:650px),(pointer:coarse) {
+  .app select,.app .player-stepper input,.app .search-input-shell input,.app .line-menu input {font-size:16px;min-height:44px}
+}
