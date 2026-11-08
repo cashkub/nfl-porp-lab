@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 0 61 54">
   <defs>
     <linearGradient id="metal" x1=".2" x2=".8" y1="0" y2="1" gradientUnits="objectBoundingBox">
-      <stop stop-color="#fff6c8"/><stop offset=".29" stop-color="#ffcf79"/>
-      <stop offset=".53" stop-color="#ff7738"/><stop offset=".78" stop-color="#ff5228"/><stop offset="1" stop-color="#ffac57"/>
+      <stop stop-color="#f7ffd7"/><stop offset=".29" stop-color="#e7ff9e"/>
+      <stop offset=".53" stop-color="#c4ff43"/><stop offset=".78" stop-color="#86d523"/><stop offset="1" stop-color="#d5ff6e"/>
     </linearGradient>
   </defs>
-  <path fill="url(#metal)" stroke="#ffbb78" stroke-width=".8" d="M13 3h29l8 9-3 8 9 7-4 12-12 10H21l5-11h12l5-4-3-4H20L10 49H0l13-27h21l5-4-3-4H8z"/>
-  <path fill="none" stroke="#fff0c8" stroke-width="1.4" d="M10 12l4-8h27l6 7M14 23h20l5-4"/>
-  <path fill="none" stroke="#a83320" stroke-width="1.5" d="m23 47 16 .2 11-9 4-10"/>
+  <path fill="url(#metal)" stroke="#deff9d" stroke-width=".8" d="M13 3h29l8 9-3 8 9 7-4 12-12 10H21l5-11h12l5-4-3-4H20L10 49H0l13-27h21l5-4-3-4H8z"/>
+  <path fill="none" stroke="#f4ffda" stroke-width="1.4" d="M10 12l4-8h27l6 7M14 23h20l5-4"/>
+  <path fill="none" stroke="#52882c" stroke-width="1.5" d="m23 47 16 .2 11-9 4-10"/>
 </svg>

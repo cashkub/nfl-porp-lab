@@ -1,12 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 920" fill="none">
-  <defs><pattern id="field" width="82" height="480" patternUnits="userSpaceOnUse"><path d="M1 0v480M17 142v9m16-9v9m16-9v9m16-9v9M17 320v9m16-9v9m16-9v9m16-9v9" stroke="currentColor" stroke-width="2"/></pattern></defs>
-  <g transform="translate(-160 168) rotate(-25)" color="#767f83" opacity=".33">
-    <rect width="660" height="480" fill="url(#field)" stroke="currentColor" stroke-width="3"/>
-    <path d="M90 290h84l86-86h67" stroke="#e7aa81" stroke-width="3" stroke-dasharray="10 8"/>
-    <path d="m314 192 14 12-14 12M64 280l19 19m0-19-19 19" stroke="#e7aa81" stroke-width="3"/>
+  <defs>
+    <pattern id="yard" width="72" height="360" patternUnits="userSpaceOnUse">
+      <path stroke="#9ce5ff" stroke-width="2" d="M1 0v360M15 106v10m14-10v10m14-10v10m14-10v10M15 244v10m14-10v10m14-10v10m14-10v10"/>
+    </pattern>
+  </defs>
+  <g transform="translate(-122 203) rotate(-18)" opacity=".46">
+    <rect width="648" height="360" stroke="#b5e8ff" stroke-width="3" fill="url(#yard)"/>
+    <path d="M72 307h83l92-92h61m-15-12 16 12-16 12" stroke="#b7f2ff" stroke-width="3" stroke-dasharray="12 5"/>
   </g>
-  <g transform="translate(1040 780) rotate(-28)" stroke="#d89e83" stroke-width="3" opacity=".33">
-    <path d="M-200-400h640v800h-640zM-200-330h64a335 335 0 0 1 0 660h-64M-200-96H18V96h-218"/>
-    <circle cx="18" cy="0" r="96"/><path d="M-172-32v64"/><circle cx="-157" cy="0" r="13"/>
+  <g transform="translate(1120 120) rotate(16)" stroke="#d9c2ff" stroke-width="2.5" opacity=".47">
+    <rect x="-236" y="-150" width="472" height="650"/>
+    <path d="M-236 175h472M-206-150v45a206 206 0 0 0 412 0v-45M-76-150V22H76v-172"/>
+    <circle cy="22" r="63"/><circle cy="175" r="47"/><path d="M-30-114h60"/><circle cy="-102" r="10"/>
+  </g>
+  <g transform="translate(965 830) rotate(-19)" stroke="#ffccae" stroke-width="2.6" opacity=".52">
+    <path d="M-240-175h480v350h-480zM-240-146h56a165 165 0 0 1 0 292h-56M-240-56h119V56h-119"/>
+    <circle cx="-121" r="52"/><path d="M-218-21v42"/><circle cx="-204" r="9"/>
   </g>
 </svg>
