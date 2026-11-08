@@ -1,4 +1,5 @@
-import NflCharts from './components/NflCharts.jsx';
+import {useChartSlate} from './components/ChartSlate.jsx';
+import NflCharts,{chartMarkets} from './components/NflCharts.jsx';
 import NflGames from './components/NflGames.jsx';
 import FilterMenu from './components/FilterMenu.jsx';
 import PlayerStepper from './components/PlayerStepper.jsx';
@@ -194,7 +195,13 @@ export default function App() {
     return () => { active = false; };
   }, [nflTool,data.status]);
 
-  const players = data.players || [];
+  const markets=previewTools ? chartMarkets : METRICS;
+  const players=useMemo(()=>{
+    const source=data.players || [];
+    if(!previewTools)return source;
+    return source.map(p=>({...p,games:p.games.map(g=>({...g,stats:{...g.stats,
+      scrimmageYards:(g.stats?.rushingYards ?? 0)+(g.stats?.receivingYards ?? 0)}}))}));
+  },[data.players,previewTools]);
   const seasons = data.seasons || [];
   const multi = season === 'ALL';
   const seasonLabel = multi ? 'All Seasons' : String(season);
@@ -208,14 +215,16 @@ export default function App() {
   const nflSchedule = useMemo(()=>(data.schedule ?? initialSchedule).filter(g=>g.season===slateSeason),[data.schedule,slateSeason]);
   const gameFilter = useGameFilter('nfl',slateSeason,nflSchedule);
   const normalizeTeam = team => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[team] || team);
-  const scopedPlayers = seasonPlayers.filter(p=>gameFilter.allows(normalizeTeam(p.team)));
+  const chartSlate=useChartSlate(previewTools?nflSchedule:[],Date.now());
+  const scope=previewTools?chartSlate:gameFilter;
+  const scopedPlayers=seasonPlayers.filter(p=>scope.allows(normalizeTeam(p.team)));
   const teams = useMemo(() => [...new Set(scopedPlayers.map(p => p.team).filter(Boolean))].sort(), [scopedPlayers]);
   const activeTeam = teams.includes(team) ? team : 'ALL';
   const roster = useMemo(() => activeTeam === 'ALL' ? scopedPlayers :
     scopedPlayers.filter(p => p.team === activeTeam), [scopedPlayers, activeTeam]);
   const player = roster.find(p => p.id === selectedId) ||
     roster.find(p => ['WR','QB','RB','TE'].includes(p.position)) || roster[0];
-  const statOptions=useMemo(()=>availableStats(METRICS,getPlayerGames(player,season)),[player,season]);
+  const statOptions=useMemo(()=>availableStats(markets,getPlayerGames(player,season)),[markets,player,season]);
   const metric=statOptions.includes(requestedMetric)?requestedMetric:statOptions[0] || 'receivingYards';
   useEffect(() => {
     if (boardSelection.current === player?.id) { boardSelection.current=null; return; }
@@ -230,7 +239,7 @@ export default function App() {
     const key = preferredMetric(picked?.position);
     setMetric(key);
     setCustom(null);
-    setOpponent('ALL'); setVenue('ALL');
+    setOpponent('ALL'); if(!previewTools)setVenue('ALL');
   };
   const onMetricChange = key => { setMetric(key); setCustom(null); };
   const onSeasonChange = next => { setSeason(next === 'ALL' ? next : Number(next)); if (next === 'ALL') setWindowSize('season'); setOpponent('ALL'); setVenue('ALL'); };
@@ -242,11 +251,12 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
   const scheduleSeason = multi ? Math.max(...seasons) : season;
-  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(gameFilter.game ? [gameFilter.game] : nflSchedule, player?.team, scheduleSeason, gameFilter.game ? -Infinity : now);
+  const contextSchedule=previewTools ? (chartSlate.game?[chartSlate.game]:chartSlate.games) : gameFilter.game?[gameFilter.game]:nflSchedule;
+  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(contextSchedule, player?.team, scheduleSeason, previewTools || gameFilter.game ? -Infinity : now);
   const quote = bookLine(bookGames, upcoming, player?.name, metric);
   const lineContext = [player?.id, metric, upcoming?.kickoff].join('|');
   const manual = custom?.context === lineContext;
-  const line = manual ? custom.value : quote?.point ?? METRICS[metric].defaultLine;
+  const line = manual ? custom.value : quote?.point ?? markets[metric].defaultLine;
   const setLine = value => setCustom({context:lineContext, value});
   const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
@@ -277,7 +287,7 @@ export default function App() {
 
   if(previewTools){
     if(page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
-    return <ManualLeague.Provider value="nfl"><NflCharts player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
+    return <ManualLeague.Provider value="nfl"><NflCharts nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} splitGames={splitGames} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
       metric={metric} onMetric={onMetricChange} line={line} setLine={setLine} quote={quote} manual={manual} direction={direction} setDirection={setDirection}
       windowSize={windowSize} setWindowSize={setWindowSize} allGames={allGames} displayed={displayed} upcoming={upcoming} defenses={defenseRows}
       loading={loading} error={error}/></ManualLeague.Provider>;
