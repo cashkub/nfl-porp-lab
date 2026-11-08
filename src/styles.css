@@ -595,3 +595,16 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .app .result-loss,.pick-status[data-result=Miss] {color:var(--rate-low)}
 .app .result-push,.pick-status[data-result=Push],.record-result[data-result=Tie] {color:var(--rate-mid)}
 .app .context-value {color:var(--sport-accent);font-variant-numeric:tabular-nums}
+
+@media(max-width:650px){
+  .research-grid:has(.compact-card) {gap:7px}
+  .research-grid .compact-card {display:block;padding:0;background-size:100% 2px}
+  .research-card.compact-card > details {border:0;margin:0;padding:0}
+  .compact-card > details > summary {display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:9px;align-items:center;min-height:54px;padding:9px 12px;list-style:none}
+  .compact-card > details > summary::-webkit-details-marker {display:none}
+  .compact-card summary:focus-visible {outline:2px solid var(--sport-accent);outline-offset:-2px;border-radius:10px}
+  .compact-card > details[open] > summary svg {transform:rotate(180deg)}
+  .compact-pick b,.compact-pick small {display:block}
+  .compact-pick small,.compact-price,.compact-rank {font-size:.8rem}
+  .compact-body {padding:12px;border-top:1px solid var(--rule)}
+}

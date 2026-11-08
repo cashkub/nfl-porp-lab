@@ -1,17 +1,46 @@
+import {ChevronDown} from 'lucide-react';
+import {defenseRankStyle} from './HitRate.jsx';
+import {priceText} from '../lib/bookLine.js';
 import {nflColors,teamColor} from '../lib/teamColors.js';
 import {MatchReport} from './MatchReport.jsx';
 import {collegeRatings,projection} from '../lib/projection.js';
-import React,{useMemo,useState} from 'react';
+import React,{useMemo,useState,useSyncExternalStore} from 'react';
 import {useCbbFile} from './CbbAnalyzer.jsx';
 
 const dayFormatter = new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
 const etDay = value => dayFormatter.format(new Date(value));
 const when = value => new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
-export function MatchCard({game:g,colors=nflColors,children}) {
-  return <article className="research-card" style={{'--team-color':teamColor(g.team,colors),'--away-color':teamColor(g.away,colors) || 'var(--rule)','--home-color':teamColor(g.home,colors) || 'var(--rule)'}}>
-    <small>{when(g.kickoff)}{g.neutral?' · Neutral Site':''}{g.final?' · Final':''}</small>
-    <h3>{g.awayName || g.away} <small>{g.neutral?'vs':'at'}</small> {g.homeName || g.home}</h3>{children}
-  </article>;
+const phone=window.matchMedia('(max-width: 650px)');
+const subscribePhone=notify=>{
+  phone.addEventListener('change',notify);
+  return ()=>phone.removeEventListener('change',notify);
+};
+const isPhone=()=>phone.matches;
+
+export function MatchCard({game:g,colors=nflColors,compact,children}) {
+  const mobile=useSyncExternalStore(subscribePhone,isPhone,()=>false);
+  const style={'--team-color':teamColor(g.team,colors),'--away-color':teamColor(g.away,colors) || 'var(--rule)','--home-color':teamColor(g.home,colors) || 'var(--rule)'};
+  const content=<><small>{when(g.kickoff)}{g.neutral?' · Neutral Site':''}{g.final?' · Final':''}</small>
+    <h3>{g.awayName || g.away} <small>{g.neutral?'vs':'at'}</small> {g.homeName || g.home}</h3>{children}</>;
+  if(mobile && compact)return <article className="research-card compact-card" style={style}><details>
+    <summary>
+      <span className="compact-rank" style={defenseRankStyle(compact.rank,9)}>#{compact.rank}</span>
+      <span className="compact-pick"><b>{compact.title}</b><small>{compact.pick}</small></span>
+      <span className="compact-price">{compact.price}</span><ChevronDown size={16} aria-hidden="true"/>
+    </summary>
+    <div className="compact-body">{content}</div>
+  </details></article>;
+  return <article className="research-card" style={style}>{content}</article>;
+}
+
+function gameSummary(game,model,rank,college=false){
+  if(!rank || !model)return undefined;
+  const [away,home]=model.overall;
+  const homeWins=home>away;
+  const winner=homeWins?(game.homeName || game.home):(game.awayName || game.away);
+  const price=homeWins?game.homePrice:game.awayPrice;
+  return {rank,title:winner+' by '+Math.abs(home-away).toFixed(1),pick:(game.awayName || game.away)+' at '+(game.homeName || game.home),
+    price:college?'':Number.isFinite(price)?priceText(price):'Odds —'};
 }
 
 function featuredGames(games,project){
@@ -40,7 +69,7 @@ export function CbbGames(){
     <p className="report-note">Pregame estimates use scoring and points allowed against past opponents, blended with four league-average games. Home court adds three points of margin. Neutral games have no home adjustment. Only finals from earlier dates enter the model.</p>
     <button type="button" className="outline-button" aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>{showAll?'Show Top 9 Game Winners':'Show All Matchups'}</button>
     {!showAll && <p>Top Game Winners · Ranked by projected margin · {featured.length} picks</p>}
-    <div className="research-grid matchup-grid">{(showAll?rows:featured).map(g=><MatchCard key={g.id} game={g} colors={meta.data?.colors || {}}>{g.final && <b>Final · {g.awayScore} – {g.homeScore}</b>}<MatchReport game={g} college away={ratings[g.away]} home={ratings[g.home]} names={{...meta.data?.teams,[g.away]:g.awayName,[g.home]:g.homeName}}/></MatchCard>)}</div>
+    <div className="research-grid matchup-grid">{(showAll?rows:featured).map((g,i)=><MatchCard compact={showAll?undefined:gameSummary(g,projection(g,ratings[g.away],ratings[g.home],true),i+1,true)} key={g.id} game={g} colors={meta.data?.colors || {}}>{g.final && <b>Final · {g.awayScore} – {g.homeScore}</b>}<MatchReport game={g} college away={ratings[g.away]} home={ratings[g.home]} names={{...meta.data?.teams,[g.away]:g.awayName,[g.home]:g.homeName}}/></MatchCard>)}</div>
     {!rows.length && <p>{error?<button onClick={error.reload}>Schedule Unavailable · Retry</button>:!index.data || valid&&!schedule.data?'Loading Games…':'No Scheduled Games for This Selection.'}</p>}</section>;
 }
 
@@ -56,8 +85,8 @@ export function Moneylines({games,now,updated}){
     <div className="board-controls"><label>Game Week<select value={week || ''} onChange={e=>setSelection(e.target.value)}>{weeks.map(w=><option key={w}>{w}</option>)}</select></label></div>
     <button type="button" className="outline-button" aria-pressed={showAll} onClick={()=>setShowAll(!showAll)}>{showAll?'Show Top 9 Game Winners':'Show All Matchups'}</button>
     {!showAll && <p>Top Game Winners · Ranked by projected margin · {featured.length} picks</p>}
-    <div className="research-grid matchup-grid">{(showAll?slate:featured).map(g=>
-      <MatchCard key={g.kickoff+g.home} game={g}><MatchReport game={g} away={g.awayRating} home={g.homeRating}/></MatchCard>
+    <div className="research-grid matchup-grid">{(showAll?slate:featured).map((g,i)=>
+      <MatchCard compact={showAll?undefined:gameSummary(g,projection(g,g.awayRating,g.homeRating),i+1)} key={g.kickoff+g.home} game={g}><MatchReport game={g} away={g.awayRating} home={g.homeRating}/></MatchCard>
     )}</div>{!upcoming.length && <p>No Upcoming Games Available.</p>}
     <p className="board-foot">The model adjusts scoring and points allowed for opponent strength, blends each team with four league-average games and gives the home team 1.5 points outside neutral venues. Projections start after three games per team. Confirmed Out players reduce projected offense in proportion to their share of team workload over the previous four team games. A full share of pass attempts is worth 3 points, carries 1 point and targets 1 point. These are heuristic weights. When an identified starting QB is out and a depth-chart alternate is available, the QB efficiency difference replaces his workload deduction. Other designations and defensive absences appear in the injury report for context. Prices come from the nflverse schedule snapshot. A dash indicates an unavailable price.</p></section>;
 }
