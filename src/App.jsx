@@ -256,7 +256,7 @@ export default function App() {
   const quote = bookLine(bookGames, upcoming, player?.name, metric);
   const lineContext = [player?.id, metric, upcoming?.kickoff].join('|');
   const manual = custom?.context === lineContext;
-  const line = manual ? custom.value : quote?.point ?? markets[metric].defaultLine;
+  const line = manual ? custom.value : quote?.point ?? (previewTools?null:markets[metric].defaultLine);
   const setLine = value => setCustom({context:lineContext, value});
   const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
