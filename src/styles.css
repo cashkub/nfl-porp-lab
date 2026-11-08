@@ -117,7 +117,7 @@ h2 {font-size:21px;letter-spacing:-.04em}
 .outline-button {display:flex;align-items:center;gap:4px;padding:5px 10px;white-space:nowrap;font-size:12px}
 .up {transform:rotate(180deg)}
 .game-log-wrap {overflow:auto}
-.game-log {width:100%;border-collapse:collapse;text-align:left;font-size:12px;white-space:nowrap}
+.game-log {width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
 .game-log th,.game-log td {padding:11px 15px;border-top:1px solid var(--rule)}
 .game-log th {background:#f2f5f8;color:var(--muted)}
 .venue-pill,.result-pill {font-size:10px;font-weight:750;padding:3px 6px;border-radius:4px;background:#e9eef4}
@@ -457,8 +457,8 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .score-pair {grid-template-columns:1fr 1fr;margin:12px 0}.score-pair>div,.pick-metrics>div {background:var(--canvas);padding:10px 12px;min-width:0}
 .score-pair small,.score-pair strong,.report-sub,.team-history small,.pick-reason b {display:block}.score-pair strong {font-size:1.75rem;font-variant-numeric:tabular-nums}
 .model-call,.pick-line,.pick-player {display:flex;align-items:center;gap:10px;flex-wrap:wrap}.model-call small,.pick-line small,.pick-player>span {font-size:.78rem;font-weight:700;color:var(--blue)}
-.model-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:.83rem;font-variant-numeric:tabular-nums}.model-table caption,.report-team h4 {text-align:left;margin:12px 0 5px;font-weight:750}
-.model-table th,.model-table td {padding:7px 4px;border-bottom:1px solid var(--rule);text-align:right;overflow-wrap:anywhere}.model-table th:first-child {width:46%;text-align:left}.model-table tbody th {font-weight:500}
+.model-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:.83rem;font-variant-numeric:tabular-nums}.model-table caption,.report-team h4 {margin:12px 0 5px;font-weight:750}
+.model-table th,.model-table td {padding:7px 4px;border-bottom:1px solid var(--rule);overflow-wrap:anywhere}.model-table th:first-child {width:46%}.model-table tbody th {font-weight:500}
 .team-history,.report-note,.market-line {font-size:.85rem}.team-history {padding:8px 0}.team-history small {margin-top:4px}
 .report-team ul {padding:0;margin:0;list-style:none}.report-team li {display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:8px;border-top:1px solid var(--rule);padding:8px 0;font-size:.85rem}.report-status {text-align:right}.report-status span {font-weight:650}.report-status [data-status="0"] {color:var(--rate-low)}.report-status [data-status="1"],.report-status [data-status="2"] {color:var(--rate-mid)}
 .pick-player .board-player {font-size:1.2rem}.pick-line {justify-content:space-between}.pick-metrics {grid-template-columns:repeat(3,1fr);margin:12px 0}.pick-metrics dt {color:var(--muted);font-size:.72rem}.pick-metrics dd {margin:3px 0 0;font-size:1.15rem;font-weight:700}
@@ -612,7 +612,6 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .performance-summary {margin:18px 0}
 .performance-summary h2 {margin-bottom:10px}
 .performance-summary td small,.performance-summary > small,.td-chances > small {display:block;color:var(--muted);margin:4px 0}
-.performance-summary tbody th {text-align:left}
 .td-chances {margin:10px 0;padding:10px 0;border-block:1px solid var(--rule)}
 .td-chances .report-heading {margin-top:0}
 .td-chances .pick-metrics {margin:6px 0}
@@ -709,3 +708,7 @@ th[aria-sort] .column-sort span {color:var(--sport-accent)}
 @media(max-width:650px),(pointer:coarse) {
   .app select,.app .player-stepper input,.app .search-input-shell input,.app .line-menu input {font-size:16px;min-height:44px}
 }
+
+/* Align tables consistently in the original tools and the NFL preview. */
+table :is(th,td),table caption {text-align:center;vertical-align:middle}
+table tr > :is(th,td) + :is(th,td) {border-inline-start:1px solid color-mix(in srgb,currentColor 14%,transparent)}
