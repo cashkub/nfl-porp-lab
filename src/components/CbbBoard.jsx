@@ -1,3 +1,4 @@
+import TrackedPicks from './TrackedPicks.jsx';
 import {PickReport} from './MatchReport.jsx';
 import {MatchCard} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
@@ -8,6 +9,7 @@ import LineSelect from './LineSelect.jsx';
 import {isHit} from '../lib/stats.js';
 
 export default function CbbBoard({ranked,top,onOpen}){
+  const [custom,setCustom]=useState(false);
   const index=useCbbFile('index.json');
   const [year,setYear]=useState('');
   const season=year || index.data?.seasons[0];
@@ -32,7 +34,8 @@ export default function CbbBoard({ranked,top,onOpen}){
     return results.sort((a,b)=>(ranked && (b.rate-a.rate || b.total-a.total)) || a.p.name.localeCompare(b.p.name));
   },[board.data,meta.data,conference,team,search,metric,line,side,minimum,ranked]);
   const failed=[index,meta,board].find(x=>x.error);
-  return <section className="panel props-board cbb-board"><header><h1>CBB {top?'Top 8':ranked?'Best Hit Rates':'Props Board'}</h1>
+  if(top && !custom)return <><TrackedPicks sport="cbb" onOpen={r=>onOpen({player:r.playerId,team:r.team,season:r.season,metric:r.metric,line:r.line,side:r.side})}/><button className="outline-button" onClick={()=>setCustom(true)}>Explore Custom Lines</button></>;
+  return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top 8</button>}<header><h1>CBB {top?'Custom Line Research':ranked?'Best Hit Rates':'Props Board'}</h1>
     <p>Manual Lines · Last 10 Recorded Games · {rows.length} Players</p></header>
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>

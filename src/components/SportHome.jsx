@@ -3,7 +3,7 @@ import {ArrowUpRight, ChevronRight, SlidersHorizontal, ListFilter, Trophy, Star,
 
 export const toolsBySport = {
   nfl:[['Analyzer','analyzer'],['Props Board','props'],['Best Hit Rates','best-hit-rates'],['Top 8','top-eight'],['Moneylines','moneylines'],['Model Record','model-record']],
-  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Best Hit Rates','cbb-best'],['Top 8','cbb-top-eight'],['Games','cbb-games']]
+  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Best Hit Rates','cbb-best'],['Top 8','cbb-top-eight'],['Games','cbb-games'],['Model Record','cbb-record']]
 };
 const icons=[SlidersHorizontal,ListFilter,Trophy,Star,CalendarDays,Trophy];
 

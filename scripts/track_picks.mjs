@@ -1,0 +1,126 @@
+// Publish a fixed, independently reviewable slate before games start.
+import fs from 'node:fs';
+import {getPlayerGames,METRICS} from '../src/lib/stats.js';
+import {playerKey,usageFor} from '../src/lib/bookLine.js';
+import {defenseTable} from '../src/lib/matchup.js';
+import {collegeRatings,projection} from '../src/lib/projection.js';
+const root='public/data/',sport=process.argv[2];
+if(!['nfl','cbb'].includes(sport))throw Error('Choose nfl or cbb');
+const read=p=>JSON.parse(fs.readFileSync(root+p));
+const path=sport+'-picks.json',archive=fs.existsSync(root+path)?read(path):[];
+const now=Date.now(),saved=new Date(now).toISOString();
+const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
+const day=time=>fmt.format(new Date(time));
+const upcoming=g=>!g.final&&Date.parse(g.kickoff)>now&&Date.parse(g.kickoff)-now<36*3600000;
+const code=t=>({LA:'LAR',JAC:'JAX',WSH:'WAS'}[t]||t);
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const candidates=[];
+function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season,role,context,minimum,label,volumeChange=0,risk=0}){
+  if(values.length<minimum || !values.every(Number.isFinite))return;
+  const hits=values.filter(v=>side==='over'?v>line:v<line).length;
+  const sign=side==='over'?1:-1;
+  const recent=values.slice(-3), recentHits=recent.filter(v=>sign*(v-line)>0).length;
+  const trend=(recentHits+1.5)/(recent.length+3);
+  const adjusted=(hits+2)/(values.length+4);
+  const matchup=rank&&rankCount>1?sign*(0.5-(rank-1)/(rankCount-1)):0;
+  const breakEven=price==null?.5:price<0?-price/(100-price):100/(100+price);
+  const score=.8*adjusted+.2*trend+.06*matchup+.025*sign*volumeChange-risk-breakEven;
+  if(score<=0)return;
+  candidates.push({gameId:g.id,kickoff:g.kickoff,away:g.away,home:g.home,awayName:g.awayName,homeName:g.homeName,
+    colors:g.colors,date:day(g.kickoff),season,player:p.name,playerId:p.id,team,metric,label,line,side,price,score,hits,total:values.length,
+    adjusted,trend,breakEven,volumeChange,risk,average:mean(values),values,defenseRank:rank,role,context,model:'2026.11.v1',saved});
+}
+function settle(row,value,completed){
+  if(!completed)return;
+  if(!Number.isFinite(value)){if(row.actual==null)row.result='No Stat';return}
+  row.actual=value;
+  row.result=value===row.line?'Push':(row.side==='over'?value>row.line:value<row.line)?'Hit':'Miss';
+}
+if(sport==='nfl'){
+  const data=read('stats.json'),season=Math.max(...data.seasons),byName=new Map(),cache=new Map();
+  const logs=new Map(),played=new Set();
+  for(const p of data.players){
+    for(const g of p.games){logs.set(g.gameId+'|'+p.id,g);played.add(g.gameId)}
+    const hist=getPlayerGames(p,season);
+    if(!hist.length)continue;
+    const key=playerKey(p.name)+'|'+code(hist.at(-1).team);
+    byName.set(key,byName.has(key)?null:{p,hist});
+  }
+  for(const r of archive)settle(r,logs.get(r.gameId+'|'+r.playerId)?.stats[r.metric],played.has(r.gameId));
+  for(const book of read('lines.json').games.filter(upcoming)){
+    const g=data.schedule?.find(g=>g.id&&g.home===book.home&&g.away===book.away&&Math.abs(Date.parse(g.kickoff)-Date.parse(book.kickoff))<12*3600000);
+    if(!g||!upcoming(g))continue;
+    for(const line of book.lines){
+      const entries=[g.away,g.home].map(t=>byName.get(playerKey(line.player)+'|'+t)).filter(Boolean);
+      if(entries.length!==1||!METRICS[line.metric])continue;
+      const {p,hist}=entries[0],team=code(hist.at(-1).team),opponent=team===g.home?g.away:g.home;
+      const injury=g.injuries?.[team]?.find(x=>x.id===p.id);
+      if(['out','doubtful'].includes(injury?.gameStatus?.toLowerCase()))continue;
+      const key=p.position+'|'+line.metric;
+      if(!cache.has(key))cache.set(key,defenseTable(data.players,season,p.position,line.metric));
+      const rank=cache.get(key).find(r=>code(r.team)===opponent)?.rank;
+      const recent=hist.slice(-10),usage=usageFor(line.metric);
+      const volume=recent.slice(-3).map(x=>x.usage?.[usage.key]).filter(Number.isFinite);
+      const baseline=recent.map(x=>x.usage?.[usage.key]).filter(Number.isFinite);
+      const change=volume.length && baseline.length?Math.max(-1,Math.min(1,(mean(volume)-mean(baseline))/Math.max(1,mean(baseline)))):0;
+      const w=g.context?.weather;
+      for(const side of ['over','under']){
+        if(!Number.isFinite(line[side])||Math.abs(line[side])<100)continue;
+        candidate({g,p,team,metric:line.metric,label:METRICS[line.metric].label,line:line.point,side,price:line[side],
+          values:recent.map(x=>x.stats[line.metric]),rank,rankCount:32,season,minimum:5,volumeChange:change,risk:injury?.gameStatus?.toLowerCase()==='questionable'?.025:0,
+          role:volume.length?volume.length+'-game avg: '+mean(volume).toFixed(1)+' '+usage.label.toLowerCase():null,
+          context:[injury?.status,w&&'Kickoff wind '+w.wind+' mph ('+g.context.roof+')'].filter(Boolean).join(' · ')});
+      }
+    }
+  }
+}else{
+  const season=read('cbb/index.json').seasons[0],folder='cbb/'+season+'/',schedule=read(folder+'schedule.json'),meta=read(folder+'teams.json');
+  const teamLogs=new Map(),schedules=new Map([[season,schedule]]);
+  for(const r of archive){
+    const dir='cbb/'+r.season+'/';
+    if(!fs.existsSync(root+dir+'schedule.json'))continue;
+    if(!schedules.has(r.season))schedules.set(r.season,read(dir+'schedule.json'));
+    const g=schedules.get(r.season).find(g=>g.id===r.gameId);
+    if(!g?.final || !fs.existsSync(root+dir+r.team+'.json'))continue;
+    const k=dir+r.team;if(!teamLogs.has(k))teamLogs.set(k,read(k+'.json'));
+    const roster=teamLogs.get(k),log=roster.find(p=>p.id===r.playerId)?.games.find(x=>x.id===r.gameId);
+    settle(r,log?.stats[r.metric],roster.some(p=>p.games.some(x=>x.id===r.gameId)));
+  }
+  const byTeam=new Map();
+  for(const g of schedule.filter(upcoming))for(const t of [g.away,g.home]){
+    g.colors=Object.fromEntries([g.away,g.home].map(id=>[id,meta.colors?.[id] || '717d90']));
+    if(!byTeam.has(t))byTeam.set(t,[]);
+    byTeam.get(t).push(g);
+  }
+  const markets={points:[15.5,'Points'],rebounds:[5.5,'Rebounds'],assists:[3.5,'Assists'],threes:[1.5,'Made Threes']};
+  for(const p of read(folder+'board.json')){
+    if(p.minutes<15)continue;
+    for(const g of byTeam.get(p.team)||[])for(const [metric,[line,label]] of Object.entries(markets))for(const side of ['over','under']){
+      const opp=g.home===p.team?g.away:g.home;
+      candidate({g,p,team:p.team,metric,label,line,side,price:null,values:p.recent[metric]||[],rank:meta.ranks[opp]?.[metric],
+        rankCount:Object.keys(meta.ranks).length,minimum:2,season,role:p.minutes+' minutes per game',context:'Manual research line'});
+    }
+  }
+  const gp='cbb-games-record.json',games=fs.existsSync(root+gp)?read(gp):[];
+  const tracked=new Map(games.map(g=>[g.id,g]));
+  const finals=new Map(schedule.map(g=>[g.id,g]));
+  for(const item of games){const g=finals.get(item.id);if(g?.final&&[g.awayScore,g.homeScore].every(Number.isFinite))item.final=[g.awayScore,g.homeScore]}
+  const ratings=new Map();
+  for(const g of schedule.filter(upcoming)){
+    if(tracked.has(g.id))continue;
+    const date=day(g.kickoff);
+    if(!ratings.has(date))ratings.set(date,collegeRatings(schedule.filter(x=>x.final && day(x.kickoff)<date),now));
+    const r=ratings.get(date),m=projection(g,r[g.away],r[g.home],true);
+    if(m)tracked.set(g.id,{id:g.id,away:g.awayName,home:g.homeName,kickoff:g.kickoff,saved,stats:[m.a.score,m.h.score]});
+  }
+  fs.writeFileSync(root+gp,JSON.stringify([...tracked.values()])+'\n');
+}
+const used=new Map();
+for(const p of archive){if(!used.has(p.date))used.set(p.date,new Set());used.get(p.date).add(p.playerId)}
+for(const p of candidates.sort((a,b)=>b.score-a.score||a.player.localeCompare(b.player))){
+  if(!used.has(p.date))used.set(p.date,new Set());
+  const slate=used.get(p.date);
+  if(slate.size>=8||slate.has(p.playerId))continue;
+  slate.add(p.playerId);p.rank=slate.size;archive.push(p);
+}
+fs.writeFileSync(root+path,JSON.stringify(archive)+'\n');

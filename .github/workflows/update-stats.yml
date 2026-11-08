@@ -3,7 +3,7 @@ name: Update NFL Data
 on:
   push:
     branches: [main]
-    paths: ['scripts/update_data.py', 'scripts/nfl_features.py', 'scripts/nfl_context.py', 'scripts/nfl_weights.json', 'scripts/record_nfl.mjs', 'src/lib/projection.js']
+    paths: ['scripts/update_data.py', 'scripts/nfl_features.py', 'scripts/nfl_context.py', 'scripts/nfl_weights.json', 'scripts/record_nfl.mjs', 'scripts/track_picks.mjs', 'src/lib/projection.js']
   schedule:
     - cron: '25 11,17,21 * * *'
   workflow_dispatch:
@@ -37,11 +37,13 @@ jobs:
         run: python scripts/update_data.py
 
       - name: Save pregame forecasts
-        run: node scripts/record_nfl.mjs
+        run: |
+          node scripts/record_nfl.mjs
+          node scripts/track_picks.mjs nfl
 
       - name: Commit and publish changed data
         run: |
-          git add public/data/stats.json public/data/model-record.json
+          git add public/data/stats.json public/data/model-record.json public/data/nfl-picks.json
           if git diff --cached --quiet; then
             echo "No new player stats — nothing to commit."
             exit 0
