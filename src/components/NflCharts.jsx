@@ -1,7 +1,7 @@
 import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
-import {METRICS,getPlayerGames,filteredWindow,isHit,summarize,formatNumber,formatRate} from '../lib/stats.js';
+import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate} from '../lib/stats.js';
 import {priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
 import {defenseRankStyle,rateStyle} from './HitRate.jsx';
@@ -40,6 +40,14 @@ function PlayerBoxScore({game}) {
   return <dl>{boxScoreFields(game).map(([label,stat])=><div key={label}><dt>{label}</dt><dd>{stat ?? '—'}</dd></div>)}</dl>;
 }
 
+function lineResult(value,line,direction) {
+  if (line==null) return {margin:null,outcome:'Unrated'};
+  const margin=direction==='under' ? line-value : value-line;
+  return {margin,outcome:margin>0?'Hit':margin<0?'Miss':'Push'};
+}
+
+const marginNumber=new Intl.NumberFormat('en-US',{maximumFractionDigits:12,signDisplay:'exceptZero'});
+
 function GameChart({games,windowSize,players,playerPosition,playerName,metric,line,direction}) {
   const [selected,setSelected]=useState('');
   const info=chartMarkets[metric];
@@ -51,8 +59,7 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
   })),[games,players,playerPosition,metric]);
   const rows=games.map(game=>{
     const value=game.stats[metric] ?? 0;
-    const margin=(value-line)*(direction==='over'?1:-1);
-    return {game,value,margin,...ranks.get(game.gameId),outcome:line==null?'Unrated':margin>0?'Hit':margin<0?'Miss':'Push'};
+    return {game,value,...ranks.get(game.gameId),...lineResult(value,line,direction)};
   });
   const low=Math.min(0,...rows.map(r=>r.value));
   const high=Math.max(1,line,...rows.map(r=>r.value));
@@ -230,9 +237,9 @@ function GameLog({player,currentSeason,line,direction,metric}) {
       <th>Week</th><th>Opponent</th><th>{market.label}</th><th>Result</th>{columns.map(([label])=><th key={label}>{label}</th>)}<th>Date</th>
     </tr></thead><tbody>{ordered.map(g=>{
       const v=g.stats[metric] ?? 0;
-      const outcome=line==null?'Unrated':v===line?'Push':isHit(v,line,direction)?'Hit':'Miss';
+      const {margin,outcome}=lineResult(v,line,direction);
       return <tr key={g.gameId}><th scope="row">{g.week}</th><td><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></td>
-        <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}</span></td>
+        <td><b>{v}</b></td><td><span className="log-outcome" data-result={outcome}>{outcome}{margin!=null && ' '+marginNumber.format(margin)}</span></td>
         {columns.map(([label,read])=><td key={label}>{read(g) ?? '—'}</td>)}<td>{gameDate(g)}</td></tr>;
     })}</tbody></table></div>}
     {!games.length && <p>No Recorded Games For This Year.</p>}
