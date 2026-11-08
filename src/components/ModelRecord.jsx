@@ -18,7 +18,7 @@ export default function ModelRecord({validation,sport='nfl'}){
   const rows=games?.filter(inWeek);
   const selector=<div className="board-controls"><label>Game Week<select value={week} onChange={e=>setWeek(e.target.value)}><option value="all">All Weeks</option>{weeks.map(w=><option value={w} key={w}>{weekLabel(w)}</option>)}</select></label></div>;
   const tabs=<div className="board-sort">{[['games','Game Winners'],['props','Top Props'],...(sport==='nfl'?[['touchdowns','Touchdown Scorers']]:[])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}</div>;
-  if(tab!=='games')return <>{tabs}{selector}<TrackedPicks key={week+tab} sport={sport} touchdownRecord={tab==='touchdowns'} record archive={{...picks,rows:picks.rows?.filter(inWeek)}}/></>;
+  if(tab!=='games')return <TrackedPicks sport={sport} touchdownRecord={tab==='touchdowns'} record archive={{...picks,rows:picks.rows?.filter(inWeek)}}>{tabs}{selector}</TrackedPicks>;
   return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}
     <div className="research-grid">{(sport==='nfl'?[['stats','Stats-Only'],['blend','Market-Informed']]:[['stats','Stats-Only']]).map(([k,label])=>{
       const graded=(rows || []).filter(r=>r.final && r[k]),margin=s=>s[1]-s[0];
