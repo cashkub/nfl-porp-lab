@@ -4,7 +4,7 @@ import React,{useMemo,useState} from 'react';
 import {METRICS,getPlayerGames,filteredWindow,isHit,summarize,formatNumber,formatRate} from '../lib/stats.js';
 import {priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
-import {defenseRankStyle} from './HitRate.jsx';
+import {defenseRankStyle,rateStyle} from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import {ChartSlate} from './ChartSlate.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -16,6 +16,12 @@ const dateFormat=new Intl.DateTimeFormat('en-US',{year:'numeric',month:'short',d
 function gameDate(g){
   const date=Date.parse(g.date+'T12:00:00Z');
   return Number.isFinite(date)?dateFormat.format(date):g.season+' · W'+g.week;
+}
+
+function leagueComparison(value,average) {
+  if (!Number.isFinite(value) || !Number.isFinite(average)) return undefined;
+  if (value === average) return 'equal';
+  return value > average ? 'above' : 'below';
 }
 
 function TeamLogo({team}) {
@@ -99,7 +105,7 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
       const summary=summarize(games,metric,value,direction);
       const saved=quote?.point===value;
       return <button type="button" key={value} aria-pressed={line===value} onClick={()=>{setDraft(null);if(saved)resetLine();else setLine(value)}}>
-        <strong>{value}{saved && <sup> DK</sup>}</strong><span>{summary.hits}/{summary.total} {direction}</span>
+        <strong>{value}{saved && <sup> DK</sup>}</strong><span style={rateStyle(summary.rate)}>{summary.hits}/{summary.total} {direction}</span>
       </button>;
     })}</div>}
     <small className="line-source">{source}</small>
@@ -160,11 +166,11 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   return <section className="lab-block matchup-lab"><h2>Matchup research</h2>
     <h3><TeamLogo team={game.away}/>{game.away} at {game.home}<TeamLogo team={game.home}/></h3>
     <KickoffConditions game={game}/>
-    <dl><div><dt>{game.opponent} vs. {player.position}s</dt><dd>{defense?'#'+defense.rank+' of '+defenses.length:'—'}</dd></div>
-      <div><dt>Position group allowed per game</dt><dd>{formatNumber(defense?.average)} {unit}</dd></div>
+    <dl><div><dt>{game.opponent} vs. {player.position}s</dt><dd style={defenseRankStyle(defense?.rank,defenses.length)}>{defense?'#'+defense.rank+' of '+defenses.length:'—'}</dd></div>
+      <div><dt>Position group allowed per game</dt><dd data-vs-league={leagueComparison(defense?.average,leagueMean)}>{formatNumber(defense?.average)} {unit}</dd></div>
       <div><dt>League average allowed to {player.position}s</dt><dd>{formatNumber(leagueMean)} {unit}</dd></div>
-      <div><dt>Player vs. {game.opponent} in selected history</dt><dd>{against.length?(line==null?'':headToHead.hits+'/'+against.length+' hits · ')+formatNumber(headToHead.average)+' '+unit+' avg':'No meetings'}</dd></div></dl>
-    <p className="method">{game.season} defense ranks · Rank 1 allows the most {chartMarkets[metric].label.toLowerCase()} to the entire position group.{defense?' Based on '+defense.games+' opponent games.':''}</p>
+      <div><dt>Player vs. {game.opponent} in selected history</dt><dd>{against.length?<>{line!=null && <span style={rateStyle(headToHead.rate)}>{headToHead.hits}/{against.length} Hits · </span>}{formatNumber(headToHead.average)} {unit} Avg</>:'No Meetings'}</dd></div></dl>
+    <p className="method">Green = More Allowed · Red = Less Allowed. Position Totals Use The League Average Above. {game.season} defense ranks · Rank 1 allows the most {chartMarkets[metric].label.toLowerCase()} to the entire position group.{defense?' Based on '+defense.games+' opponent games.':''}</p>
     <h3>{game.opponent} Red Zone Defense</h3>
     <dl><div><dt>Touchdown Rate Allowed</dt><dd>{redZone?.trips ? (100*redZone.touchdowns/redZone.trips).toFixed(1)+'%' : '—'}</dd></div>
     </dl>
@@ -175,7 +181,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
     <p className="method">{redZone ? redZone.touchdowns+' TDs Allowed On '+redZone.trips+' Red Zone Trips · '+redZone.games+' Games With Play Data Before Week '+game.week : 'No Earlier Red Zone Play Data Available.'}</p>
     <h3>Last Three Games Against {player.position}s</h3>
     {prior.length?<div className="history-scroll"><table><thead><tr><th>Game</th><th>Offense</th><th>Group Total</th><th>Leading Player</th></tr></thead><tbody>
-      {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td>{g.team}</td><td>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}
+      {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td><span className="log-table-team"><TeamLogo team={g.team}/>{g.team}</span></td><td data-vs-league={leagueComparison(total,leagueMean)}>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}
     </tbody></table></div>:<p>No Earlier Games Recorded This Season.</p>}
   </section>;
 }
@@ -226,16 +232,6 @@ function GameLog({games,line,direction,metric,position}) {
 }
 
 export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
-  const [fullGlow,setFullGlow]=useState(()=>{
-    try { return localStorage.getItem('nfl-charts-full-glow')!=='off'; }
-    catch { return true; }
-  });
-  function toggleGlow(){
-    const next=!fullGlow;
-    setFullGlow(next);
-    try { localStorage.setItem('nfl-charts-full-glow',next?'on':'off'); }
-    catch { /* The switch still works for this visit. */ }
-  }
   const [filtersOpen,setFiltersOpen]=useState(false);
   const [chosenSeason,setChosenSeason]=useState('');
   const historySeason=chosenSeason || String(season);
@@ -248,13 +244,9 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const observedUsage=displayed.map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
   const meanUsage=observedUsage.length ? observedUsage.reduce((sum,value)=>sum+value,0)/observedUsage.length : null;
   const recentUsage=displayed.slice(-3).map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
-  return <main className="chart-lab" data-full-glow={fullGlow} style={{'--club':teamColor(player?.team) || '#be98ed'}}>
+  return <main className="chart-lab" style={{'--club':teamColor(player?.team) || '#be98ed'}}>
     <header><a href="/preview/"><img alt="" src="/preview/assets/mark.svg"/> PropBets</a><a href="/preview/nfl/">← NFL Menu</a></header>
-    <div className="charts-title-row"><h1>Player <em>Charts</em></h1>
-      <button className="glow-switch" type="button" role="switch" aria-checked={fullGlow} onClick={toggleGlow}>
-        <span aria-hidden="true" className="glow-track"/>Full Glow
-      </button>
-    </div>
+    <h1>Player <em>Charts</em></h1>
     {!loading && !error && !player && <ChartSlate slate={slate}/>}
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls primary-controls">
@@ -287,7 +279,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       </div>
       <div className="player-numbers">
         <div><small>Median</small><b>{formatNumber(current.median)} <small>{chartMarkets[metric].unit}</small></b></div>
-        <div><small>Hit Rate</small>{line==null?<button type="button" onClick={()=>{const input=document.getElementById('chart-line');input.closest('details').open=true;input.focus()}}>Set Custom Line</button>:<><b>{formatRate(current.rate)}</b><small>{current.hits} Hits · {current.total-current.hits-pushes} Misses · {pushes} Pushes</small></>}</div>
+        <div><small>Hit Rate</small>{line==null?<button type="button" onClick={()=>{const input=document.getElementById('chart-line');input.closest('details').open=true;input.focus()}}>Set Custom Line</button>:<><b style={rateStyle(current.rate)}>{formatRate(current.rate)}</b><small>{current.hits} Hits · {current.total-current.hits-pushes} Misses · {pushes} Pushes</small></>}</div>
         <div><small>Games Shown</small><b>{displayed.length}</b></div>
       </div>
 
@@ -299,7 +291,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div><dt>Average / median</dt><dd>{formatNumber(current.average)} / {formatNumber(current.median)} {chartMarkets[metric].unit}</dd></div>
       <div><dt>{usage.label} per game</dt><dd>{formatNumber(meanUsage)}</dd></div>
       <div><dt>{usage.label} · last {recentUsage.length} recorded</dt><dd>{recentUsage.length?formatNumber(recentUsage.reduce((a,b)=>a+b,0)/recentUsage.length):'—'} per game</dd></div>
-      {['H','A'].map(v=>{const s=summarize(splitGames.filter(g=>g.venue===v),metric,line,direction);return <div key={v}><dt>Selected history · {v==='H'?'home':'away'} hits</dt><dd>{line==null?'—':s.hits+'/'+s.total+' · '+formatRate(s.rate)}</dd></div>})}
+      {['H','A'].map(v=>{const s=summarize(splitGames.filter(g=>g.venue===v),metric,line,direction);return <div key={v}><dt>Selected history · {v==='H'?'home':'away'} hits</dt><dd style={line==null?undefined:rateStyle(s.rate)}>{line==null?'—':s.hits+'/'+s.total+' · '+formatRate(s.rate)}</dd></div>})}
     </dl><WorkloadUsage players={players} games={displayed} position={player.position}/></section>
     <GameLog position={player.position} games={allGames} line={line} direction={direction} metric={metric}/>
     </>}
