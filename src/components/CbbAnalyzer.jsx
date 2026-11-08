@@ -1,3 +1,4 @@
+import PlayerStepper from './PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './GameFilter.jsx';
 import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -78,7 +79,7 @@ export default function CbbAnalyzer({initial = {}}) {
       <div className="extra-filter conference-field">{sport!=='nba' && <ConferenceFilter metadata={source.data} value={conference} onChange={value=>{setConference(value);setSelection('');setAthlete('');}}/>}</div>
       {<GameFilter filter={gameFilter} onChange={()=>{setConference('');setSelection('');setAthlete('');}}/>}
       <label>Team<select value={team || ''} onChange={e=>{setSelection(e.target.value);setAthlete('');}}>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
-      <label>Player<select value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <div className="stepper-field"><label htmlFor="analyzer-player">Player</label><PlayerStepper choices={eligible.map(p=>p.id)} value={player?.id} onSelect={setAthlete}><select id="analyzer-player" value={player?.id || ''} onChange={e=>setAthlete(e.target.value)}>{eligible.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></PlayerStepper></div>
       <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{statOptions.map(k=><option value={k} key={k}>{markets[k].label}</option>)}</select></label>
       <label className="extra-filter">Location<select value={venue} onChange={e=>setVenue(e.target.value)}>{['All Venues','Home','Away','Neutral'].map(v=><option key={v}>{v}</option>)}</select></label>
       <label className="extra-filter">Games<select value={period} onChange={e=>setPeriod(e.target.value)}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full Season</option></select></label>

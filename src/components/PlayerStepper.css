@@ -1,0 +1,7 @@
+.stepper-field { min-width:0; display:grid; gap:4px; align-content:end; }
+.player-stepper { display:grid; grid-template-columns:36px minmax(0,1fr) 36px; align-items:stretch; gap:3px; min-width:0; }
+.player-stepper > button { display:grid; place-items:center; color:inherit; background:transparent; border:1px solid currentColor; border-radius:8px; cursor:pointer; min-height:40px; padding:0; }
+.player-stepper > button:hover:enabled { background:color-mix(in srgb,currentColor 10%,transparent); }
+.player-stepper > button:disabled { opacity:.35; cursor:default; }
+.player-stepper > :nth-child(2) { min-width:0; width:100%; }
+@media (pointer:coarse) { .player-stepper > button { min-height:44px; } }

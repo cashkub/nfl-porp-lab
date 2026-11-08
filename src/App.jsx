@@ -1,3 +1,4 @@
+import PlayerStepper from './components/PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './components/GameFilter.jsx';
 import SortableTable from './components/SortableTable.jsx';
 import PlayerPhoto from './components/PlayerPhoto.jsx';
@@ -44,7 +45,7 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
   }, []);
-  const results = useMemo(() => {
+  const matches = useMemo(() => {
     const term = query.toLowerCase().trim();
     const ranked = players.filter(p => !term || `${p.name} ${p.team} ${p.position}`.toLowerCase().includes(term));
     return ranked.sort((a, b) => {
@@ -53,8 +54,9 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
       const aStarts = a.name.toLowerCase().startsWith(term);
       const bStarts = b.name.toLowerCase().startsWith(term);
       return Number(bStarts) - Number(aStarts) || a.name.localeCompare(b.name);
-    }).slice(0, showRoster ? undefined : 10);
-  }, [players, query, season, showRoster]);
+    });
+  }, [players, query, season]);
+  const results = showRoster ? matches : matches.slice(0,10);
   const choose = player => { onSelect(player.id); setOpen(false); setQuery(''); };
   const onKeyDown = event => {
     if (!open && ['ArrowDown','Enter'].includes(event.key)) { setOpen(true); return; }
@@ -63,7 +65,8 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
     if (event.key === 'ArrowUp') { event.preventDefault(); setFocusIndex(i => Math.max(i - 1, 0)); }
     if (event.key === 'Enter' && open && results[focusIndex]) { event.preventDefault(); choose(results[focusIndex]); }
   };
-  return <div className="player-picker" ref={wrap}>
+  return <PlayerStepper choices={matches.map(p=>p.id)} value={selected?.id} onSelect={id=>{onSelect(id);setOpen(false);setQuery('');}}>
+    <div className="player-picker"  ref={wrap}>
     <div className={`search-input-shell ${open ? 'search-open' : ''}`}>
       <Search size={19} aria-hidden="true" className="muted-icon" />
       <input
@@ -89,7 +92,7 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
         <ChevronRight size={15} className="muted-icon" />
       </button>) : <div className="no-results">Try a different name or select a different season.</div>}
     </div>}
-  </div>;
+  </div></PlayerStepper>;
 }
 
 

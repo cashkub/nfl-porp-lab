@@ -1,3 +1,4 @@
+import {BoardPlayerPicker} from './PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './GameFilter.jsx';
 import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -32,12 +33,12 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
   const [conference,setConference]=useState('');
   const gameFilter=useGameFilter(sport,season,schedule.data);
   const teams=Object.entries(meta.data?.teams || {}).filter(([id])=>top || gameFilter.allows(id)).filter(([id])=>!conference || meta.data?.conferences?.[id]===conference).sort((a,b)=>a[1].localeCompare(b[1]));
-  const rows=useMemo(()=>{
+  const candidates=useMemo(()=>{
     const results=[];
     for(const p of board.data || []){
       if(!top && !gameFilter.allows(p.team)) continue;
       if(conference && meta.data?.conferences?.[p.team] !== conference) continue;
-      if((team&&p.team!==team)||!p.name?.toLowerCase().includes(search.trim().toLowerCase())) continue;
+      if((team&&p.team!==team)||!p.name) continue;
       for (const category of metric ? [metric] : Object.keys(markets)) {
       const threshold = metric ? line : markets[category].defaultLine;
       const values=p.recent[category];
@@ -47,7 +48,8 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
       }
     }
     return results;
-  },[top,gameFilter.date,gameFilter.match,schedule.data,sport,board.data,meta.data,conference,team,search,metric,line,side,minimum]);
+  },[top,gameFilter.date,gameFilter.match,schedule.data,sport,board.data,meta.data,conference,team,metric,line,side,minimum]);
+  const rows=candidates.filter(({p})=>p.name.toLowerCase().includes(search.trim().toLowerCase()));
   const failed=[index,meta,board].find(x=>x.error);
   if(top && !custom)return <><TrackedPicks sport={sport} onOpen={r=>onOpen({player:r.playerId,team:r.team,season:r.season,metric:r.metric,line:r.line,side:r.side})}/><button className="outline-button" onClick={()=>setCustom(true)}>Explore Custom Lines</button></>;
   return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top Props</button>}<header><h1>{sport.toUpperCase()} {top?'Custom Line Research':'Props Board'}</h1>
@@ -61,7 +63,7 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
       <label>Side<select value={side} onChange={e=>setSide(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
       {!top && <label>Sort By<select value={sort.column} onChange={e=>{const column=Number(e.target.value);setSort({column,asc:column<3});}}>{['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])].map((name,i)=><option key={name} value={i}>{name}</option>)}</select></label>}
       <label>{sport==='cfb'?'Min. Games With Role':'Minimum Games'}<select value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</select></label>
-      <label>Player<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find Player"/></label>
+      <BoardPlayerPicker names={candidates.map(r=>r.p.name)} value={search} onSelect={value=>{setSearch(value);setLimit(40);}}/>
     </div>{metric && <div className="cbb-line"><LineSelect key={metric} markets={markets} metric={metric} value={line} onChange={setLine}/></div>}
     {failed ? <p role="status">Box Scores Unavailable. <button onClick={failed.reload}>Retry</button></p> : !board.data || !meta.data ? <p role="status">Loading Player Results…</p> :
     top ? <CollegePicks rows={rows} schedule={schedule} meta={meta.data} metric={metric} line={line} side={side} onOpen={p=>onOpen({player:p.id,team:p.team,season,metric,line,side})}/> :

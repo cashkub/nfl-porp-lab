@@ -1,3 +1,4 @@
+import {BoardPlayerPicker} from './PlayerStepper.jsx';
 import GameFilter from './GameFilter.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {teamColor} from '../lib/teamColors.js';
@@ -79,11 +80,11 @@ export default function PropsBoard({gameFilter,initialRanked=false,games,schedul
   const choices = matchup ? [matchup.away,matchup.home] : [...new Set(visibleGames.flatMap(g=>[g.home,g.away]))].sort();
   const currentTeam = choices.includes(team) ? team : '';
   const included = new Set(visibleGames.filter(g=>!matchup || (g.home===matchup.home && g.away===matchup.away && day(g.kickoff)===day(matchup.kickoff))));
-  const filtered = rows.filter(({g,line,entry,summary}) =>
+  const candidates = rows.filter(({g,line,entry,summary}) =>
     included.has(g) && (!currentTeam || entry?.team === currentTeam) &&
     (!stat || line.metric === stat) &&
-    playerKey(line.player).includes(playerKey(search)) &&
     (minimum==='0' || (summary && summary.total >= Number(minimum))));
+  const filtered = candidates.filter(({line})=>playerKey(line.player).includes(playerKey(search)));
   const sortValues = {
     kickoff:r=>Date.parse(r.g.kickoff), player:r=>r.line.player,
     category:r=>METRICS[r.line.metric]?.label, line:r=>r.line.point,
@@ -111,7 +112,7 @@ export default function PropsBoard({gameFilter,initialRanked=false,games,schedul
       <label>Stat<select value={stat} onChange={e=>filter(setStat,e)}><option value="">All Stats</option>{Object.entries(METRICS).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</select></label>
       <label>Last 10 Side<select value={side} onChange={e=>filter(setSide,e)}><option value="both">Both Sides</option><option value="over">Over</option><option value="under">Under</option></select></label>
       <label>Minimum Games<select value={minimum} onChange={e=>filter(setMinimum,e)}><option value="0">Any</option>{[1,5,10].map(n=><option key={n}>{n}</option>)}</select></label>
-      <label>Player<input type="search" value={search} onChange={e=>filter(setSearch,e)} placeholder="Find Player"/></label>
+      <BoardPlayerPicker names={candidates.map(r=>r.line.player)} value={search} onSelect={value=>{setSearch(value);setLimit(30);}}/>
     </div>
     <div className="board-sort">
       <label>Sort By <select value={sort} onChange={e=>changeSort(e.target.value)}>{Object.entries({kickoff:'Kickoff',player:'Player',category:'Stat Category',line:'Prop Line',over:'Over Price',under:'Under Price',rate:'Last 10 Hit Rate',rank:'Defense Rank'}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
