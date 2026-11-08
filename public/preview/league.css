@@ -1,12 +1,14 @@
 @font-face { font-family: Barlow; src: url('./assets/display.ttf') format('truetype'); font-style: italic; font-weight: 800; font-display: swap }
 :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; color: #fff6eb; background: #110f16; --display: Barlow, Impact, sans-serif; --fire: #ff8652 }
 * { box-sizing: border-box }
-body { min-height: 100vh; margin: 0; background: radial-gradient(ellipse at 82% 9%, #512a334f, transparent 48%), repeating-linear-gradient(132deg, transparent 0 47px, #fbd7bb06 48px 49px, transparent 50px 79px), linear-gradient(130deg,#181923,#151118 68%,#23171b) }
+body { min-height:100vh; margin:0; background-color:#0e192c }
 main { max-width: 76rem; margin: auto; padding: 0 clamp(1rem,5vw,4rem) 4rem }
 header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 1px solid #e6d2cc30 }
 a { color: inherit; text-decoration: none }
 .brand { display: inline-flex; align-items: center; gap: .42rem; font: italic 800 2.15rem/.95 var(--display); letter-spacing: -.035em }
-.brand img { width: 2.65rem; height: 2.4rem }
+.brand img { width:clamp(2.8rem,4.8vw,3.8rem); height:auto; filter:drop-shadow(0 0 7px #ff762a86) }
+.wordmark { font-size:clamp(2.25rem,4vw,3.3rem); color:#99f1ff; -webkit-text-stroke:.55px #e3ffff; paint-order:stroke fill; text-shadow:1px 2px #176184,0 0 12px #00bcff80 }
+.wordmark span { color:#ffab62; -webkit-text-stroke-color:#fff1c8; text-shadow:1px 2px #914029,0 0 11px #ff65157d }
 .return { padding: .65rem .9rem; border: 1px solid #655661; border-radius: 2rem; font-size: .82rem }
 h1,h2,strong { font-family: var(--display); font-style: italic; font-weight: 800 }
 h1 { margin: clamp(1.5rem,4vw,3rem) 0 1.2rem; font-size: clamp(3.4rem,7.2vw,6.3rem); line-height: .98; text-transform: uppercase; letter-spacing: -.035em }
@@ -18,7 +20,7 @@ small,summary span { text-transform: uppercase; font: 650 .66rem/1.4 system-ui; 
 .action { display: inline-flex; gap: 1.4rem; align-items: center; background: var(--fire); color: #241418; padding: .8rem 1.15rem; font-weight: 750; border-radius: 2px }
 .action b { font-size: 1.25em }
 .hero-copy p { max-width: 19rem; text-shadow: 0 1px 4px #000 }
-body { background-image:url('./assets/playbook.svg'), radial-gradient(ellipse at 4% 0%,#154269,transparent 54%), radial-gradient(ellipse at 94% 82%,#56265c,transparent 58%), linear-gradient(128deg,#111f35,#22203d 62%,#291c39); background-size:cover; background-position:center }
+body { background-image:url('./assets/playbook.svg'),linear-gradient(100deg,#09162b55,#10142b8c 52%,#20112f4d),url('./assets/stadium-dusk.jpg'); background-size:cover; background-position:center; background-repeat:no-repeat }
 h1 em { color:#e7fcff; -webkit-text-stroke:1.5px #65eaff; paint-order:stroke fill; text-shadow:2px 3px #144b76,0 0 10px #16acffae,0 0 26px #2383ffad }
 .leagues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(.55rem,1.5vw,1rem) }
 .frame { --accent:#54dcff; position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid var(--accent); border-radius:5px; background:#152237; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 27%,transparent) }
@@ -41,7 +43,7 @@ a:focus-visible,summary:focus-visible { outline:3px solid white; outline-offset:
   .frame { height:clamp(10.5rem,44vw,14rem) }
   .frame::before { background-position:70% center }
   .shortcut { font-size:.69rem }
-  body { background-size:auto 100%,cover,cover,cover }
+  body { background-size:auto 100%,cover,auto 100%; background-position:center,center,18% center }
 }
 @media (prefers-reduced-motion:no-preference) {
   @view-transition { navigation:auto }
