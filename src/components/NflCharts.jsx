@@ -67,6 +67,10 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
     {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF #{active.defense.rank} of {active.teams}</b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'} Rank 1 allows the most to the position before that week.</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
 }
 
+function ControlLabel({children}) {
+  return <b><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 7h5m5 0h8M3 17h10m5 0h3"/><circle cx="10.5" cy="7" r="2.5"/><circle cx="15.5" cy="17" r="2.5"/></svg>{children}</b>;
+}
+
 function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,direction}) {
   const [draft,setDraft]=useState(null);
   const savedAt=Date.parse(quote?.updated);
@@ -82,11 +86,11 @@ function LineControl({line,setLine,resetLine,manual,quote,median,games,metric,di
     setDraft(null);
   }
   return <details className="line-control">
-    <summary>
-      <span className="line-caption">Prop Line</span>
-      <strong>{line==null?'—':direction+' '+line}</strong>
-      <small>{manual?'Custom Line':quote?'DraftKings':'No Sportsbook Line'}</small>
-      <span className="line-edit"><span className="line-closed-label">{line==null?'Choose Line':'Edit Line'}</span><span className="line-open-label">Close</span></span>
+    <summary className="chart-disclosure">
+      <ControlLabel>Prop Line</ControlLabel>
+      <span className="line-selection">{line!=null && <strong>{direction} {line}</strong>}
+        {manual?'Custom Line':quote?'DraftKings':'No Sportsbook Line'}
+      </span>
     </summary>
     <div className="chart-line-panel">
     <div className="chart-line-options">
@@ -243,8 +247,8 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <ChartSelect label="Player" value={player.id} onChange={onPlayer}>{roster.map(p=><option key={p.id} value={p.id}>{p.name} · {p.team}</option>)}</ChartSelect>
       <ChartSelect label="Market" value={metric} onChange={onMetric}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
     </div>
-    <button type="button" className="filter-toggle" aria-controls="chart-filters" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(!filtersOpen)}>
-      <b><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 7h5m5 0h8M3 17h10m5 0h3"/><circle cx="10.5" cy="7" r="2.5"/><circle cx="15.5" cy="17" r="2.5"/></svg>Filters</b>
+    <button type="button" className="filter-toggle chart-disclosure" aria-controls="chart-filters" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(!filtersOpen)}>
+      <ControlLabel>Filters</ControlLabel>
       <span>Week {slate.week} · {slate.team || (slate.game ? slate.game.away+' @ '+slate.game.home : 'All Teams')} · {venue==='ALL'?'All Games':venue==='H'?'Home':'Away'} · {windowSize==='season'?'Full History':'Last '+windowSize}</span>
     </button>
     <div className="extra-filters" id="chart-filters" data-open={filtersOpen}>
