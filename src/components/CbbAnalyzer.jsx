@@ -1,3 +1,4 @@
+import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import {ChevronDown} from 'lucide-react';
@@ -87,15 +88,16 @@ export default function CbbAnalyzer({initial = {}}) {
       <><section className="hit-section"><h2>Hit Rates</h2><div className="stat-grid">{[['5','Last 5'],['10','Last 10'],['season','Full Season']].map(([key,label])=><StatCard key={key} label={label} summary={summarize(filteredWindow(history,key),metric,line,direction)} selected={period===key} onClick={()=>setPeriod(key)}/>)}</div></section>
       <section className="panel chart-panel"><div className="chart-top"><h2>Game-by-Game Performance</h2><small>{markets[metric].label}</small></div><PropChart college football={football} games={games.map(g=>({...g,gameId:g.id,venue:({Home:'H',Away:'A'})[g.venue] || '?'}))} markets={markets} rankCount={rankCount} metric={metric} direction={direction} line={line} defenses={Object.entries(source.data.ranks).map(([team,r])=>({team,rank:r[metric]}))}/></section>
       <section className="panel log-panel"><h2>Game Log</h2>
-      {games.length ? <div className="board-scroll"><table className="game-log"><thead><tr>{['Date','Opponent','Location',markets[metric].label,...(football?[]:['Minutes']),'DEF Rank','Result'].map(s=><th key={s}>{s}</th>)}</tr></thead><tbody>
-      {[...games].reverse().map(g=>{
+      {games.length ? <div className="board-scroll"><SortableTable headers={['Date','Opponent','Location',markets[metric].label,...(football?[]:['Minutes']),'DEF Rank','Result']} rows={[...games].reverse()}
+      values={g=>[g.date,source.data.teams[g.opponent] || g.abbr,g.venue,g.stats[metric],...(football?[]:[g.minutes]),source.data.ranks[g.opponent]?.[metric],g.stats[metric]===line?'Push':(direction==='over'?g.stats[metric]>line:g.stats[metric]<line)?'Hit':'Miss']}
+      descending={[0,3]} renderRow={g=>{
         const val=g.stats[metric],rank=source.data.ranks[g.opponent]?.[metric];
         const outcome=val===line?'Push':(direction==='over'?val>line:val<line)?'Hit':'Miss';
         return <tr key={g.id}><td>{g.date}</td><td>{source.data.teams[g.opponent] || g.abbr}</td><td>{g.venue}</td>
           <td><div className="cbb-bar"><b>{val}</b><div aria-hidden="true"><i className={'cbb-'+outcome} style={{width:100*val/highest+'%'}}/><em style={{left:100*line/highest+'%'}}/></div></div></td>
           {!football && <td>{g.minutes}</td>}<td style={rankCount>1 && rank ? rateStyle((rankCount-rank)/(rankCount-1)):undefined}>{rank ? '#'+rank : '—'}</td>
           <td><span className={'result-pill '+outcome.toLowerCase()}>{outcome}</span></td></tr>;
-      })}</tbody></table></div>:<p>No Recorded Games Match These Filters.</p>}
+      }}/></div>:<p>No Recorded Games Match These Filters.</p>}
 
       <p className="board-foot">Bar markers show your line. Defense #1 allows the most of the selected stat per game to all opposing players combined. Rankings use the selected season’s available box scores.</p></section></>}
     <p className="board-foot">Box Scores and Schedules · <a href={'https://github.com/sportsdataverse/'+(football?'cfbfastR-cfb-data':sport==='nba'?'hoopR-nba-data':'hoopR-mbb-data')}>SportsDataverse</a> · Stats through {index.data?.through?.[season] || '—'}</p>

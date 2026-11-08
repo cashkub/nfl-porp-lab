@@ -1,5 +1,5 @@
 // Publish a fixed, independently reviewable slate before games start.
-import {manualMarkets} from '../src/lib/manualSports.js';
+import {cfbRoleGames,manualMarkets} from '../src/lib/manualSports.js';
 import fs from 'node:fs';
 import {getPlayerGames,METRICS} from '../src/lib/stats.js';
 import {playerKey,usageFor} from '../src/lib/bookLine.js';
@@ -162,7 +162,7 @@ if(sport==='nfl'){
   for(const p of read(folder+'board.json')){
     if(sport!=='cfb' && p.minutes<15)continue;
     for(const g of byTeam.get(p.team)||[])for(const [metric,{defaultLine:line,label}] of Object.entries(manualMarkets(sport)))for(const side of ['over','under']){
-      if(sport==='cfb' && !(p.recent[metric] || []).some(v=>v>0))continue;
+      if(sport==='cfb' && cfbRoleGames(p,metric)<2)continue;
       const opp=g.home===p.team?g.away:g.home;
       candidate({g,p,team:p.team,metric,label,line,side,price:null,values:p.recent[metric]||[],rank:meta.ranks[opp]?.[metric],
         rankCount:Object.keys(meta.ranks).length,minimum:2,season,role:sport==='cfb'?p.recent[metric].length+' offensive box scores':p.minutes+' minutes per game',context:'Manual research line'});

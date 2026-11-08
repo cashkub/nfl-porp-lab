@@ -63,7 +63,13 @@ def write_player_files(output, season, rosters, teams, allowed, markets):
         for p in players.values():
             p['games'].sort(key=lambda g:(g['date'],g['id']))
             recent = p['games'][-10:]
-            board.append({'id':p['id'],'name':p['name'],'team':team,
+            roles={}
+            if 'usage' in recent[0]:
+                roles={'passing':sum(g['usage']['attempts']>0 for g in recent),
+                       'rushing':sum(g['stats']['rushingAttempts']>0 for g in recent),
+                       'receiving':sum(g['stats']['receptions']>0 for g in recent),
+                       'scoring':sum(g['usage']['opportunities']>0 for g in recent)}
+            board.append({**({'roleGames':roles} if roles else {}),'id':p['id'],'name':p['name'],'team':team,
                           **({'minutes':round(sum(g['minutes'] for g in recent)/len(recent),1)} if 'minutes' in recent[0] else {}),
                           'recent':{key:[g['stats'][key] for g in recent] for key in markets}})
         write(output/str(season)/(team+'.json'), sorted(players.values(),key=lambda p:p['name'] or ''))

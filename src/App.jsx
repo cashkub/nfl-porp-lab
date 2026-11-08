@@ -1,3 +1,4 @@
+import SortableTable from './components/SortableTable.jsx';
 import PlayerPhoto from './components/PlayerPhoto.jsx';
 import {ManualLeague} from './components/ManualLeague.jsx';
 import {teamColor} from './lib/teamColors.js';
@@ -93,8 +94,9 @@ function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
 
 function GameLog({ multi, games, metric, line, direction }) {
   return <div className="game-log-wrap">
-    <table className="game-log"><thead><tr><th>Game</th><th>Opponent</th><th>Venue</th><th>{METRICS[metric].short}</th><th>{usageFor(metric).label}</th><th>Result</th></tr></thead>
-      <tbody>{[...games].reverse().map((game, i) => {
+    <SortableTable headers={['Game','Opponent','Venue',METRICS[metric].short,usageFor(metric).label,'Result']} rows={[...games].reverse()}
+      values={g=>[Number(g.season)*100+Number(g.week),g.opponent,g.venue,g.stats[metric],g.usage?.[usageFor(metric).key],g.stats[metric]===line?'Push':isHit(g.stats[metric],line,direction)?'Hit':'Miss']}
+      descending={[0,3,4]} renderRow={(game,i)=>{
         const val = Number(game.stats[metric] ?? 0);
         const hit = isHit(val, line, direction);
         return <tr key={`${game.gameId}-${game.week}-${i}`}>
@@ -104,8 +106,7 @@ function GameLog({ multi, games, metric, line, direction }) {
           <td className="table-num">{val}</td><td>{game.usage?.[usageFor(metric).key] ?? "—"}</td>
           <td><span className={`result-pill ${val === line ? 'push' : hit?'hit':'miss'}`}>{val === line ? 'Push' : hit ? 'Hit' : 'Miss'}</span></td>
         </tr>;
-      })}</tbody>
-    </table>
+      }}/>
     {games.length === 0 && <div className="empty-log">No matching games found.</div>}
   </div>;
 }

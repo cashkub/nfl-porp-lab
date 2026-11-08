@@ -1,3 +1,4 @@
+import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import TrackedPicks from './TrackedPicks.jsx';
@@ -5,7 +6,7 @@ import {PickReport} from './MatchReport.jsx';
 import {MatchCard} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
 import React,{useMemo,useState} from 'react';
-import {manualMarkets,seasonLabel} from '../lib/manualSports.js';
+import {cfbRoleGames,manualMarkets,seasonLabel} from '../lib/manualSports.js';
 import {useLeague} from './ManualLeague.jsx';
 import {useCbbFile} from './CbbAnalyzer.jsx';
 import HitRate from './HitRate.jsx';
@@ -16,7 +17,7 @@ import {isHit} from '../lib/stats.js';
 export default function CbbBoard({initialRanked=false,top,onOpen}){
   const sport=useLeague(),markets=manualMarkets(sport);
   const fallback=sport==='cfb'?'passingYards':'points';
-  const [sort,setSort]=useState(initialRanked?'rate':'player');
+  const [sort,setSort]=useState({column:initialRanked?4:0,asc:!initialRanked});
   const [custom,setCustom]=useState(false);
   const index=useCbbFile('index.json');
   const [year,setYear]=useState('');
@@ -35,12 +36,12 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
       if(conference && meta.data?.conferences?.[p.team] !== conference) continue;
       if((team&&p.team!==team)||!p.name?.toLowerCase().includes(search.trim().toLowerCase())) continue;
       const values=p.recent[metric];
-      if(!values?.length || (sport==='cfb' && !values.some(v=>v!==0)) || values.length<minimum) continue;
+      if(!values?.length || (sport==='cfb' && cfbRoleGames(p,metric)<minimum) || values.length<minimum) continue;
       const hits=values.filter(n=>isHit(n,line,side)).length;
       results.push({p,hits,total:values.length,rate:hits/values.length,avg:values.reduce((a,b)=>a+b,0)/values.length});
     }
-    return results.sort((a,b)=>(sort==='rate' && (b.rate-a.rate || b.total-a.total)) || a.p.name.localeCompare(b.p.name));
-  },[sport,board.data,meta.data,conference,team,search,metric,line,side,minimum,sort]);
+    return results;
+  },[sport,board.data,meta.data,conference,team,search,metric,line,side,minimum]);
   const failed=[index,meta,board].find(x=>x.error);
   if(top && !custom)return <><TrackedPicks sport={sport} onOpen={r=>onOpen({player:r.playerId,team:r.team,season:r.season,metric:r.metric,line:r.line,side:r.side})}/><button className="outline-button" onClick={()=>setCustom(true)}>Explore Custom Lines</button></>;
   return <section className="panel props-board cbb-board">{top&&<button className="outline-button" onClick={()=>setCustom(false)}>← Published Top Props</button>}<header><h1>{sport.toUpperCase()} {top?'Custom Line Research':'Props Board'}</h1>
@@ -48,18 +49,18 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{seasonLabel(sport,y)}</option>)}</select></label>
       {sport!=='nba' && <ConferenceFilter metadata={meta.data} value={conference} onChange={value=>{setConference(value);setTeam('');setLimit(40);}}/>}
-      <label>Team<select value={team} onChange={e=>setTeam(e.target.value)}><option value="">All Teams</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
+      <label>Team<select value={team} onChange={e=>{setTeam(e.target.value);setLimit(40)}}><option value="">All Teams</option>{teams.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
       <label>Stat<select value={metric} onChange={e=>{setMetric(e.target.value);setLine(markets[e.target.value].defaultLine);}}>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></label>
       <label>Side<select value={side} onChange={e=>setSide(e.target.value)}><option value="over">Over</option><option value="under">Under</option></select></label>
-      {!top && <label>Sort By<select value={sort} onChange={e=>setSort(e.target.value)}><option value="player">Player Name</option><option value="rate">Last 10 Hit Rate</option></select></label>}
-      <label>Minimum Games<select value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</select></label>
+      {!top && <label>Sort By<select value={sort.column} onChange={e=>{const column=Number(e.target.value);setSort({column,asc:column<3});}}>{['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])].map((name,i)=><option key={name} value={i}>{name}</option>)}</select></label>}
+      <label>{sport==='cfb'?'Min. Games With Role':'Minimum Games'}<select value={minimum} onChange={e=>setMinimum(Number(e.target.value))}>{(top?[2,3,5,10]:[1,3,5,10]).map(n=><option key={n}>{n}</option>)}</select></label>
       <label>Player<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find Player"/></label>
     </div><div className="cbb-line"><LineSelect key={metric} markets={markets} metric={metric} value={line} onChange={setLine}/></div>
     {failed ? <p role="status">Box Scores Unavailable. <button onClick={failed.reload}>Retry</button></p> : !board.data || !meta.data ? <p role="status">Loading Player Results…</p> :
     top ? <CollegePicks rows={rows} schedule={schedule} meta={meta.data} metric={metric} line={line} side={side} onOpen={p=>onOpen({player:p.id,team:p.team,season,metric,line,side})}/> :
-    <div className="board-scroll"><table className="game-log"><thead><tr>{['Player','Team','Manual Line','Average','Hit Rate'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>
-      {rows.slice(0,limit).map(({p,hits,total,rate,avg})=><tr key={p.team+'-'+p.id}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}><PlayerPhoto id={p.id} name={p.name}/> {p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td></tr>)}
-    </tbody></table>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
+    <div className="board-scroll"><SortableTable headers={['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])]} rows={rows} sort={sort} onSort={setSort} limit={limit} descending={[3,4,5]}
+      values={({p,avg,rate})=>[p.name,meta.data.teams[p.team],line,avg,rate,sport==='cfb'?cfbRoleGames(p,metric):null]}
+      renderRow={({p,hits,total,rate,avg})=><tr key={p.team+'-'+p.id}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}><PlayerPhoto id={p.id} name={p.name}/> {p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td>{sport==='cfb' && <td>{cfbRoleGames(p,metric)} of {total}</td>}</tr>}/>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
     {!top && rows.length>limit && <button className="outline-button" onClick={()=>setLimit(n=>n+40)}>Show More Players</button>}
   </section>;
 }

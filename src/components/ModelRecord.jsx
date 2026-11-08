@@ -1,3 +1,4 @@
+import SortableTable from './SortableTable.jsx';
 import HitRate from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import TrackedPicks,{useArchive} from './TrackedPicks.jsx';
@@ -12,6 +13,11 @@ function outcome(row){
   if(!direction(row.overall))return 'No Pick';
   if(!direction(row.final))return 'Tie';
   return direction(row.final)===direction(row.overall)?'Correct':'Incorrect';
+}
+function winRate(results){
+  const wins=results.filter(s=>s==='Correct' || s==='Hit').length;
+  const losses=results.filter(s=>s==='Incorrect' || s==='Miss').length;
+  return wins+losses?wins/(wins+losses):null;
 }
 function recordCell(results){
   const wins=results.filter(s=>s==='Correct' || s==='Hit').length;
@@ -34,8 +40,8 @@ function PerformanceSummary({games,picks,period,sport}){
   for(const row of games)add(sport==='nfl'?'Moneyline Winners':'Game Winners',row,outcome({...row,overall:overallScore(row)}));
   for(const row of picks)add(row.kind==='touchdown'?'Anytime Touchdown Scorers':row.label,row,row.result || 'Pending');
   return <section className="performance-summary"><h2>Performance by Category</h2>
-    <div className="board-scroll"><table className="game-log"><thead><tr><th>Category</th><th>Overall</th><th>{period?periodLabel(period,sport):'Selected Period'}</th></tr></thead>
-    <tbody>{[...groups].map(([label,group])=><tr key={label}><th scope="row">{label}</th><td>{recordCell(group.overall)}</td><td>{recordCell(group.selected)}</td></tr>)}</tbody></table></div>
+    <div className="board-scroll"><SortableTable headers={['Category','Overall',period?periodLabel(period,sport):'Selected Period']} rows={[...groups]} descending={[1,2]}
+      values={([label,g])=>[label,winRate(g.overall),winRate(g.selected)]} renderRow={([label,group])=><tr key={label}><th scope="row">{label}</th><td>{recordCell(group.overall)}</td><td>{recordCell(group.selected)}</td></tr>}/></div>
     <small>Win rates use decided picks. Overall includes the full published archive.</small></section>;
 }
 export default function ModelRecord({validation,sport='nfl'}){
@@ -61,8 +67,10 @@ export default function ModelRecord({validation,sport='nfl'}){
     <div className="usage-trend"><h3>{period==='all'?'Overall Game Record':'Selected Game Record'}</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>
       <small>{decided.length?<><HitRate rate={right/decided.length}/> accuracy · </>:''}{graded.length} graded · Average margin error {graded.length?(graded.reduce((sum,r)=>sum+Math.abs(margin(r.final)-margin(r.overall)),0)/graded.length).toFixed(1)+' pts':'—'}</small></div>
     {validation && <details><summary>2025 Held-Out Test · {validation.games} Games</summary><p>Average absolute error in points. Historical evaluation uses recorded starting QBs and outdoor conditions. The injury overlay is evaluated prospectively.</p>{Object.entries(validation.results).map(([k,v])=><p key={k}><b>{k}</b> · Team score {v.scoreMAE} · Margin {v.marginMAE}</p>)}</details>}
-    {rows?.length?<div className="board-scroll"><table className="game-log"><thead><tr>{[...((sport==='nba'||sport==='cbb')?['Game Date']:[]),'Matchup (Away First)','Overall Pick','Projected Score','Final','Result','Saved'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.id}>
+    {rows?.length?<div className="board-scroll"><SortableTable headers={[...(periodName==='Date'?['Game Date']:[]),'Matchup (Away First)','Overall Pick','Projected Score','Final','Result','Saved']} rows={rows}
+      values={r=>[...(periodName==='Date'?[recordPeriod(r,sport)]:[]),r.away+' at '+r.home,!r.overall?null:margin(r.overall)===0?'No Pick':margin(r.overall)>0?r.home:r.away,r.overall?.join(' – '),r.final?.join(' – '),outcome(r),Date.parse(r.saved)]}
+      renderRow={r=><tr key={r.id}>
       {(sport==='nba'||sport==='cbb') && <td>{periodLabel(recordPeriod(r,sport),sport)}</td>}<td><span className="team-name" style={{'--team-color':teamColor(r.away,r.colors)}}>{r.away}</span> at <span className="team-name" style={{'--team-color':teamColor(r.home,r.colors)}}>{r.home}</span></td><td>{!r.overall?'—':margin(r.overall)===0?'No Pick':margin(r.overall)>0?r.home:r.away}</td>
       <td>{r.overall?.join(' – ') || '—'}</td><td>{r.final?.join(' – ') || '—'}</td>
-      <td><strong className="record-result" data-result={outcome(r)}>{outcome(r)}</strong></td><td>{new Date(r.saved).toLocaleString()}</td></tr>)}</tbody></table></div>:<p>{failed?'Record unavailable.':rows?'No archived game predictions for this selection.':'Loading Record…'}</p>}</section>;
+      <td><strong className="record-result" data-result={outcome(r)}>{outcome(r)}</strong></td><td>{new Date(r.saved).toLocaleString()}</td></tr>}/></div>:<p>{failed?'Record unavailable.':rows?'No archived game predictions for this selection.':'Loading Record…'}</p>}</section>;
 }

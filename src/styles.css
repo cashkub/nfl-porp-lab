@@ -645,3 +645,8 @@ html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:
 .sport-cards .nba {--home-photo:url('/home-nba.webp');--home-crop:50% 8%}
 .sport-cards .cfb {--home-photo:url('/home-cfb.webp');--home-crop:50% 66%}
 .sport-cards .cbb {--home-photo:url('/home-cbb.webp');--home-crop:50% 60%}
+
+.column-sort {appearance:none;background:transparent;border:0;color:inherit;cursor:pointer;font:inherit;padding:4px 0;text-align:inherit}
+.column-sort span {color:var(--muted)}
+th[aria-sort] .column-sort span {color:var(--sport-accent)}
+.column-sort:focus-visible {outline:2px solid var(--sport-accent);outline-offset:2px}

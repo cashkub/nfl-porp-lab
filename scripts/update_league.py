@@ -66,6 +66,9 @@ def build_cfb(year,output):
         if category not in CFB_FIELDS or gid not in games or not games[gid]['final'] or not row['athlete_id']:
             continue
         name,stats=combined.setdefault((gid,team,athlete),(row['athlete_name'],dict.fromkeys(CFB_MARKETS,0)))
+        if category=='passing':
+            attempts=(row.get('completions/passingAttempts') or '0/0').split('/')[-1]
+            stats['attempts']=int(attempts)
         for key,field in CFB_FIELDS[category].items():
             stats[key]=int(row[field] or 0)
     rosters,allowed=defaultdict(dict),defaultdict(dict)
@@ -80,12 +83,14 @@ def build_cfb(year,output):
             totals=allowed[opp].setdefault(gid,dict.fromkeys(CFB_MARKETS,0))
             for k in CFB_MARKETS:
                 totals[k]+=stats[k]
-        if team not in teams:
+        if team not in teams or not athlete.isdigit() or int(athlete)<=0 or not (name or "").strip() or name.strip().casefold()=="team":
             continue
         day=datetime.fromisoformat(g['kickoff'].replace('Z','+00:00')).astimezone(ZoneInfo('America/New_York')).date().isoformat()
         player=rosters[team].setdefault(athlete,{'id':athlete,'name':name,'games':[]})
         player['games'].append({'id':gid,'week':g['week'],'season':year,'date':day,'opponent':opp,'abbr':abbr.get(opp,opp),
-                                'venue':'Neutral' if g['neutral'] else 'Home' if home else 'Away','stats':stats})
+                                'venue':'Neutral' if g['neutral'] else 'Home' if home else 'Away','stats':stats,
+                                'usage':{'attempts':stats.pop('attempts',0),'carries':stats['rushingAttempts'],
+                                         'opportunities':stats['rushingAttempts']+stats['receptions']}})
     if not rosters:
         raise ValueError(f'No FBS offensive player logs for {year}')
     ranks=write_player_files(output,year,rosters,teams,allowed,CFB_MARKETS)

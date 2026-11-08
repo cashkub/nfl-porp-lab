@@ -1,3 +1,4 @@
+import SortableTable from './SortableTable.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import React from 'react';
 import {ArrowUpRight} from 'lucide-react';
@@ -53,15 +54,14 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
     {!college && <MarketComparison game={g} blend={model.blend}/>}
     {college && Math.min(away.games,home.games)<5 && <small>Early Season · {away.games} and {home.games} games in the sample.</small>}
     <details className="report-fold"><summary>Offense &amp; Defense Breakdown</summary>
-      <table className="model-table"><caption>How the Score Is Built</caption><thead><tr><th>Points Per Game</th><th>{label(g.away)}</th><th>{label(g.home)}</th></tr></thead><tbody>
-      {[
+      <SortableTable className="model-table" caption="How the Score Is Built" headers={['Points Per Game',label(g.away),label(g.home)]} rows={[
         ['Adjusted Offense',s=>s.rating.offense.toFixed(1)],
         ['Opposing Defense vs. Average',s=>signed(s.defense)],
         ['Venue Adjustment',s=>signed(s.court)],
         ...Object.keys({...model.a.parts,...model.h.parts}).map(k=>[k,s=>signed(s.parts[k]||0)]),
         ...(!college?[['Injury Adjustment',s=>signed(-s.injuries)]]:[]),
         ['Team Projection',s=>s.score.toFixed(1)]
-      ].map(([name,value])=><tr key={name}><th>{name}</th><td>{value(model.a)}</td><td>{value(model.h)}</td></tr>)}</tbody></table>
+      ]} values={([name,value])=>[name,Number(value(model.a)),Number(value(model.h))]} renderRow={([name,value])=><tr key={name}><th>{name}</th><td>{value(model.a)}</td><td>{value(model.h)}</td></tr>}/>
       <p className="report-note">Start with adjusted offense. Add how many points the opponent allows above or below the league average of {away.baseline.toFixed(1)}, then apply the listed adjustments. Figures are rounded for display.</p>
       {[model.a,model.h].map(s=><div className="team-history" key={s.team}><b>{label(s.team)} · {s.rating.games} Games</b><small>Adjusted points allowed {s.rating.defense.toFixed(1)} · Schedule strength {signed(s.rating.scheduleStrength)} pts versus average</small><small>Wins against {s.rating.wins.map(label).join(', ') || 'no opponents yet'}.</small></div>)}
     </details></>:<p>Projection Pending · {college?'Each team needs a completed game before the selected day.':'Each team needs three completed games.'}</p>}
@@ -73,11 +73,9 @@ export function MatchReport({game:g,away,home,college=false,names={}}){
 
 function MarketComparison({game,blend}){
   return <details className="report-fold"><summary>Sportsbook Lines &amp; Market Comparison</summary>
-    <table className="model-table"><thead><tr><th>Market</th><th>{game.away}</th><th>{game.home}</th></tr></thead>
-      <tbody><tr><th>Moneyline</th><td>{priceText(game.awayPrice)}</td><td>{priceText(game.homePrice)}</td></tr>
-        <tr><th>Spread</th><td>{Number.isFinite(game.homeSpread)?priceText(-game.homeSpread):'—'}</td><td>{priceText(game.homeSpread)}</td></tr>
-        {blend && <tr><th>Market-Informed Score</th><td>{blend.away.toFixed(1)}</td><td>{blend.home.toFixed(1)}</td></tr>}
-      </tbody></table>
+    <SortableTable className="model-table" headers={['Market',game.away,game.home]}
+      rows={[['Moneyline',game.awayPrice,game.homePrice],['Spread',Number.isFinite(game.homeSpread)?-game.homeSpread:null,game.homeSpread],...(blend?[['Market-Informed Score',blend.away,blend.home]]:[])]}
+      values={row=>row} renderRow={([label,away,home])=><tr key={label}><th>{label}</th>{[away,home].map((v,i)=><td key={i}>{label==='Market-Informed Score'?v.toFixed(1):priceText(v)}</td>)}</tr>}/>
     {blend && <p className="report-note">This score gives the market <span className="context-value">{(100*blend.weight).toFixed(1)}%</span> weight, fitted on 2024 games. This weighting is included in the overall pick.</p>}
   </details>;
 }
