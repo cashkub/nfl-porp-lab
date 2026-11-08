@@ -4,19 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Choose a league · PropBets Preview</title>
-  <link rel="icon" href="../favicon.svg">
+  <title>League selection · PropBets</title>
+  <link rel="icon" href="./assets/mark.svg">
   <link rel="stylesheet" href="./league.css">
 </head>
 <body>
   <main>
-    <header><strong class="brand"><img src="../favicon.svg" width="28" height="28" alt="">PropBets</strong><a href="../#home">Current site ↗</a></header>
-    <h1>Choose your league<span>.</span></h1>
+    <header><a class="brand" href="./" aria-label="PropBets preview home"><img src="./assets/mark.svg" alt="">PropBets</a><a class="return" href="../#home">Current site ↗</a></header>
+    <h1>Choose your <em>league.</em></h1>
+    <a class="hero" href="./nfl/">
+      <div class="hero-copy"><small>Pro football</small><h2>NFL</h2><span class="action">Enter NFL <b aria-hidden="true">→</b></span></div>
+    </a>
     <div class="leagues">
-      <a class="tile nfl" href="./nfl/"><h2>NFL</h2><span>Explore NFL →</span></a>
-      <section class="tile cfb"><h2>CFB</h2><span>Coming later</span></section>
-      <section class="tile nba"><h2>NBA</h2><span>Coming later</span></section>
-      <section class="tile cbb"><h2>CBB</h2><span>Coming later</span></section>
+      <details class="college"><summary><small>College football</small><strong>CFB</strong><span>Coming later</span></summary><a href="../#cfb-home">Open current CFB tools ↗</a></details>
+      <details class="pro"><summary><small>Pro basketball</small><strong>NBA</strong><span>Coming later</span></summary><a href="../#nba-home">Open current NBA tools ↗</a></details>
+      <details class="hoops"><summary><small>College basketball</small><strong>CBB</strong><span>Coming later</span></summary><a href="../#cbb-home">Open current CBB tools ↗</a></details>
     </div>
   </main>
 </body>
