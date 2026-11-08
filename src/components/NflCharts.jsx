@@ -16,7 +16,6 @@ function TeamLogo({team}) {
 
 function GameChart({games,metric,line,direction}) {
   const [selected,setSelected]=useState('');
-  const [showUsage,setShowUsage]=useState(false);
   const info=chartMarkets[metric];
   const volume=usageFor(metric);
   const usageFields=metric==='scrimmageYards' || metric==='scoredTDs'?[['carries','Carries'],['targets','Targets']]:[[volume.key,volume.label]];
@@ -31,15 +30,14 @@ function GameChart({games,metric,line,direction}) {
   const active=rows.find(r=>r.game.gameId===selected) || rows.at(-1);
   if(!active)return <p>No recorded games match this venue and window.</p>;
   return <><div className="plot-heading"><span>{info.label}</span>{line!=null && <b>{direction} {line} · dashed line</b>}</div>
-    <button type="button" className="chart-usage-toggle" aria-expanded={showUsage} aria-controls="weekly-volume-chart" onClick={()=>setShowUsage(!showUsage)}>{showUsage?'Hide':'Show'} usage · {usageFields.map(([,label])=>label.toLowerCase()).join(' + ')}</button>
-    <div id="weekly-volume-chart" className="margin-scroll"><div className="margin-bars" style={{'--count':rows.length,'--target':position(line)+'%'}}>
+    <div className="margin-scroll"><div className="margin-bars" style={{'--count':rows.length,'--target':position(line)+'%'}}>
     {rows.map(r=><button key={r.game.gameId} type="button" data-result={r.outcome} aria-pressed={r===active}
       aria-label={'Week '+r.game.week+' against '+r.game.opponent+', '+r.value+' '+info.unit+', '+r.outcome}
       onClick={()=>setSelected(r.game.gameId)}>
       <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
       <TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@ ':'vs '}{r.game.opponent}</b><span>W{r.game.week} · {r.outcome}</span>
-      {showUsage && <span className="game-volume">{usageFields.map(([key,label])=><span key={key}><b>{r.game.usage?.[key] ?? '—'}</b> {label.toLowerCase()}</span>)}</span>}
+      <span className="game-volume">{usageFields.map(([key,label])=><span key={key}><b>{r.game.usage?.[key] ?? '—'}</b> {label.toLowerCase()}</span>)}</span>
     </button>)}</div></div>
     <p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p></>;
 }
