@@ -12,6 +12,8 @@ CACHE = ROOT / 'public/data/lines.json'
 API = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events'
 MARKETS = {'player_rush_attempts': 'rushingAttempts', 'player_pass_yds': 'passingYards', 'player_rush_yds': 'rushingYards',
            'player_reception_yds': 'receivingYards', 'player_receptions': 'receptions'}
+TD_MARKETS = {'player_pass_tds': 'passingTDs', 'player_rush_reception_tds': 'scoredTDs'}
+MARKETS.update(TD_MARKETS)
 TEAMS = dict(zip(
     'Cardinals Falcons Ravens Bills Panthers Bears Bengals Browns Cowboys Broncos Lions Packers Texans Colts Jaguars Chiefs Chargers Rams Raiders Dolphins Vikings Patriots Saints Giants Jets Eagles Steelers Seahawks 49ers Buccaneers Titans Commanders'.split(),
     'ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LAC LAR LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WAS'.split(), strict=True))
@@ -59,19 +61,24 @@ def main():
     events, remaining = request('')
     for event in sorted(events, key=lambda e: e['commence_time']):
         kickoff = datetime.fromisoformat(event['commence_time'])
-        if games.get(event['id'], {}).get('version') == 2 or not now < kickoff <= now + timedelta(hours=24):
+        previous = games.get(event['id'], {})
+        if previous.get('version') == 3 or not now < kickoff <= now + timedelta(hours=24):
             continue
         home = TEAMS.get(event['home_team'].split()[-1])
         away = TEAMS.get(event['away_team'].split()[-1])
         if not home or not away:
             continue
-        if remaining < len(MARKETS):
+        markets = TD_MARKETS if previous.get('version') == 2 else MARKETS
+        if remaining < len(markets):
             break
         details, remaining = request('/' + event['id'] + '/odds', bookmakers='draftkings',
-                                     markets=','.join(MARKETS), oddsFormat='american')
+                                     markets=','.join(markets), oddsFormat='american')
         lines = extract_lines(details, now.isoformat())
-        if lines:
-            games[event['id']] = {'version':2, 'id':event['id'], 'home':home, 'away':away,
+        if previous.get('version') == 2:
+            previous['lines'] = [line for line in previous['lines'] if line['metric'] not in TD_MARKETS.values()] + lines
+            previous['version'] = 3
+        elif lines:
+            games[event['id']] = {'version':3, 'id':event['id'], 'home':home, 'away':away,
                                   'kickoff':event['commence_time'], 'lines':lines}
     CACHE.write_text(json.dumps({'games':list(games.values())}, separators=(',', ':')) + '\n')
 

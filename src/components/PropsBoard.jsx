@@ -1,3 +1,4 @@
+import {availableStats} from '../lib/availableStats.js';
 import HitRate, {defenseRankStyle} from './HitRate.jsx';
 import React, {useMemo, useState} from 'react';
 import {playerKey, priceText} from '../lib/bookLine.js';
@@ -8,7 +9,7 @@ const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
 const day = date => new Date(date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const gameTime = date => new Date(date).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
 
-export default function PropsBoard({ranked=false,games,players,season,now,onOpen}) {
+export default function PropsBoard({ranked=false,games,schedule,players,season,now,onOpen}) {
   const [match,setMatch] = useState('');
   const [team,setTeam] = useState('');
   const [stat,setStat] = useState('');
@@ -19,7 +20,20 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
   const [minimum,setMinimum] = useState('5');
   const [search,setSearch] = useState('');
   const [limit,setLimit] = useState(30);
-  const slate = useMemo(()=>games.filter(g=>Date.parse(g.kickoff)>now).sort((a,b)=>Date.parse(a.kickoff)-Date.parse(b.kickoff)),[games,now]);
+  const touchdown = stat==='passingTDs' || stat==='scoredTDs';
+  const slate = useMemo(()=>{
+    const upcoming=games.filter(g=>Date.parse(g.kickoff)>now);
+    if(touchdown){
+      for(const g of schedule || []){
+        const start=Date.parse(g.kickoff);
+        if(start<=now || start-now>7*86400000)continue;
+        if(!upcoming.some(b=>b.home===g.home && b.away===g.away && Math.abs(Date.parse(b.kickoff)-start)<12*3600000)){
+          upcoming.push({...g,lines:[]});
+        }
+      }
+    }
+    return upcoming.sort((a,b)=>Date.parse(a.kickoff)-Date.parse(b.kickoff));
+  },[games,schedule,now,touchdown]);
   const rows = useMemo(()=>{
     const names = new Map(), rankCache = new Map();
     for (const p of players) {
@@ -29,7 +43,20 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
       if (!names.has(key)) names.set(key,[]);
       names.get(key).push({p,team:teamCode(history.at(-1).team || p.team),history});
     }
-    return slate.flatMap(g=>g.lines.flatMap(line=>{
+    return slate.flatMap(g=>{
+      const lines=[...g.lines];
+      if(touchdown){
+        const priced=new Set(lines.filter(l=>l.metric===stat).map(l=>playerKey(l.player)));
+        for(const [key,entries] of names){
+          if(priced.has(key))continue;
+          for(const e of entries){
+            if(e.team!==g.home && e.team!==g.away)continue;
+            if(!availableStats({[stat]:METRICS[stat]},e.history).length)continue;
+            lines.push({player:e.p.name,metric:stat,point:METRICS[stat].defaultLine,preset:true});
+          }
+        }
+      }
+      return lines.flatMap(line=>{
       const matches=(names.get(playerKey(line.player)) || []).filter(x=>x.team===g.home || x.team===g.away);
       const entry=matches.length===1 ? matches[0] : null;
       let rank;
@@ -44,8 +71,8 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
       return sides.map(pick => ({g,line,entry,rank,pick,
         summary:entry ? summarize(entry.history.slice(-10),line.metric,line.point,pick) : null
       }));
-    }));
-  },[slate,players,season,side]);
+    });});
+  },[slate,players,season,side,stat,touchdown]);
   const visibleGames = slate.filter(g => !when || day(g.kickoff) === day(now));
   const matchup = visibleGames.find(g => g.id === match);
   const choices = matchup ? [matchup.away,matchup.home] :
@@ -76,7 +103,7 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
   const title = ranked ? 'Best Hit Rates' : 'Props Board';
   function filter(setter,event) {setter(event.target.value);setLimit(30);}
   return <section className="panel props-board" aria-label={title}>
-    <header><h1>{title}</h1><p>DraftKings Pregame Snapshots · {filtered.length} {ranked ? 'ranked sides' : 'props'}</p></header>
+    <header><h1>{title}</h1><p>{touchdown?'DraftKings Lines and Research Presets':'DraftKings Pregame Snapshots'} · {filtered.length} {ranked ? 'ranked sides' : 'props'}</p></header>
     <div className="board-controls">
       <label>Games<select value={when} onChange={e=>{filter(setWhen,e);setMatch('');setTeam('');}}><option value="">Upcoming</option><option value="today">Today (ET)</option></select></label>
       <label>Matchup<select value={matchup?.id || ''} onChange={e=>{filter(setMatch,e);setTeam('');}}><option value="">All Matchups</option>{visibleGames.map(g=><option value={g.id} key={g.id}>{g.away} at {g.home}</option>)}</select></label>
@@ -93,7 +120,7 @@ export default function PropsBoard({ranked=false,games,players,season,now,onOpen
     <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button></th>)}</tr></thead>
     <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,summary,pick})=><tr key={[g.id,line.player,line.metric,line.point,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
       <td><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
-      <td><strong>{ranked && (pick==='over' ? 'Over ' : 'Under ')}{line.point}</strong> {METRICS[line.metric]?.label}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
+      <td><strong>{ranked && (pick==='over' ? 'Over ' : 'Under ')}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
       <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td style={defenseRankStyle(rank)}>{rank ? '#'+rank : '—'}</td>
     </tr>)}</tbody></table></div>
     {!filtered.length && <p className="board-foot">No saved props match these filters.</p>}

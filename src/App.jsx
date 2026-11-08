@@ -273,7 +273,7 @@ export default function App() {
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        page==='cbb-games' ? <CbbGames/> :
        cbb ? <CbbBoard top={page==='cbb-top'} key={page} ranked={page==='cbb-best'} onOpen={pick=>{setInitialCbb(pick);window.location.hash='cbb';}}/> :
-       page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+       page!=='analyzer' ? <PropsBoard key={page} ranked={page==='best'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
       <section className="match-header" aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>
