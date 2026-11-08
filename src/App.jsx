@@ -124,10 +124,10 @@ function GameLog({ multi, games, metric, line, direction }) {
   </div>;
 }
 
-function activePage() {
+function activePage(hash=window.location.hash) {
   return ({'#nfl-home':'nfl-home','#cbb-home':'cbb-home','#analyzer':'analyzer','#game-log':'analyzer',
     '#about':'analyzer','#cbb':'cbb','#props':'board','#best-hit-rates':'best',
-    '#top-five':'nfl-top','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[window.location.hash] || 'home';
+    '#top-eight':'nfl-top','#cbb-top-eight':'cbb-top','#top-five':'nfl-top','#moneylines':'moneylines','#cbb-top':'cbb-top','#cbb-games':'cbb-games','#cbb-props':'cbb-props','#cbb-best':'cbb-best'})[hash] || 'home';
 }
 
 export default function App() {
@@ -271,7 +271,7 @@ export default function App() {
       <div className="shell topbar-inner">
         <a className="brand" href="/" aria-label="PropBets home"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" />
           <span className="brand-name">Prop<span>Bets</span></span></a>
-        {!launch && <nav className="view-tabs" aria-label="Sport Tools"><a href={cbb?'#cbb-home':'#nfl-home'}>{cbb?'CBB':'NFL'}</a>{toolsBySport[cbb?'cbb':'nfl'].map(([label,path])=><a key={path} href={'#'+path} aria-current={activePage()===page && window.location.hash==='#'+path?'page':undefined}>{label}</a>)}</nav>}
+        {!launch && <nav className="view-tabs" aria-label="Sport Tools"><a href={cbb?'#cbb-home':'#nfl-home'}>{cbb?'CBB':'NFL'}</a>{toolsBySport[cbb?'cbb':'nfl'].map(([label,path])=><a key={path} href={'#'+path} aria-current={activePage('#'+path)===page?'page':undefined}>{label}</a>)}</nav>}
         <button className="theme-button" aria-label={dark?'Switch to light mode':'Switch to dark mode'} onClick={()=>setDark(!dark)}>{dark ? '☀ Light' : '☾ Dark'}</button>
         {!launch && <div className={`data-status ${isDemo ? 'status-demo' : ''}`}><span className="status-light" />{cbb ? 'HOOPR DATA' : loading ? 'Checking data…' : isDemo ? 'DEMO DATA' : 'NFLVERSE DATA'}</div>}
       </div>

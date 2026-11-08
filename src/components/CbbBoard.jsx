@@ -32,7 +32,7 @@ export default function CbbBoard({ranked,top,onOpen}){
     return results.sort((a,b)=>(ranked && (b.rate-a.rate || b.total-a.total)) || a.p.name.localeCompare(b.p.name));
   },[board.data,meta.data,conference,team,search,metric,line,side,minimum,ranked]);
   const failed=[index,meta,board].find(x=>x.error);
-  return <section className="panel props-board cbb-board"><header><h1>CBB {top?'Top 5':ranked?'Best Hit Rates':'Props Board'}</h1>
+  return <section className="panel props-board cbb-board"><header><h1>CBB {top?'Top 8':ranked?'Best Hit Rates':'Props Board'}</h1>
     <p>Manual Lines · Last 10 Recorded Games · {rows.length} Players</p></header>
     <div className="board-controls">
       <label>Season<select value={season || ''} onChange={e=>{setYear(Number(e.target.value));setConference('');setTeam('');}}>{index.data?.seasons.map(y=><option key={y} value={y}>{y-1}–{String(y).slice(-2)}</option>)}</select></label>
@@ -61,9 +61,9 @@ function CollegePicks({rows,schedule,meta,metric,line,side,onOpen}){
   }
   const score=r=>(r.hits+2)/(r.total+4);
   const picks=rows.filter(r=>next.has(r.p.team) && r.p.minutes>=15 && score(r)>.5)
-    .sort((a,b)=>score(b)-score(a) || b.p.minutes-a.p.minutes).slice(0,5);
+    .sort((a,b)=>score(b)-score(a) || b.p.minutes-a.p.minutes).slice(0,8);
   return <><p>Upcoming Games · Manual Research Line · Ranked by recent hit rate with four games of 50% prior weight. Players must average at least 15 minutes.</p>
-    <div className="research-grid">{picks.map(({p,hits,total,avg},i)=>{
+    <div className="research-grid picks-grid">{picks.map(({p,hits,total,avg},i)=>{
       const game=next.get(p.team),opp=game.home===p.team?game.away:game.home;
       const rank=meta.ranks?.[opp]?.[metric];
       return <MatchCard key={p.team+p.id} game={game} colors={meta.colors || {}}><PickReport number={i+1} name={p.name} side={side} line={line} metric={markets[metric].label} price="Manual Line" hits={hits} total={total} average={avg} rank={rank} results={p.recent[metric]} reason={'At this line, the sample-adjusted hit rate is '+(100*(hits+2)/(total+4)).toFixed(1)+'%. '+p.name+' averaged '+p.minutes+' minutes per game.'} onOpen={()=>onOpen(p)}/></MatchCard>;

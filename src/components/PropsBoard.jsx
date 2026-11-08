@@ -88,9 +88,9 @@ export default function PropsBoard({ranked=false,top=false,games,players,season,
       .sort((a,b)=>score(b)-score(a)).filter(r=>{
         if(seen.has(r.entry.p.id))return false;
         seen.add(r.entry.p.id);return true;
-      }).slice(0,5);
-    return <section className="panel props-board"><h1>NFL Top 5</h1><p>DraftKings · Ranked by last-10 hit rate, adjusted toward 50%, minus the price’s break-even rate. Minimum five games.</p>
-      <div className="research-grid">{picks.map(({entry,g,line,pick,summary,rank},i)=>{
+      }).slice(0,8);
+    return <section className="panel props-board"><h1>NFL Top 8</h1><p>DraftKings · Ranked by last-10 hit rate, adjusted toward 50%, minus the price’s break-even rate. Minimum five games.</p>
+      <div className="research-grid picks-grid">{picks.map(({entry,g,line,pick,summary,rank},i)=>{
         const price=line[pick],breakEven=price<0?-price/(100-price):100/(100+price);
         const adjusted=(summary.hits+2)/(summary.total+4);
         return <MatchCard key={entry.p.id} game={g}><PickReport number={i+1} name={line.player} side={pick} line={line.point} metric={METRICS[line.metric].label} price={'DraftKings '+priceText(price)} hits={summary.hits} total={summary.total} average={summary.average} rank={rank} results={entry.history.slice(-10).map(g=>g.stats[line.metric])} reason={'Its adjusted historical hit rate of '+(adjusted*100).toFixed(1)+'% is above the '+(breakEven*100).toFixed(1)+'% break-even rate at this price.'} onOpen={()=>onOpen(entry.p,line,pick,g)}/></MatchCard>;})}</div>{!picks.length && <p>No Upcoming Priced Props Meet the Screen.</p>}</section>;
