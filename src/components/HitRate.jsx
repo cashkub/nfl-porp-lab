@@ -22,7 +22,7 @@ export function DefenseRank({rank,total=32,label,position,compact=false}) {
   const ordinal = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
   const placement = rank === 1 ? 'Most' : rank === 2 ? '2nd Most' : rank === total ? 'Least' : rank === total - 1 ? '2nd Least' : `${ordinal} Most`;
   const description = label && position ? `Allows ${placement} ${label} to ${position}` : '';
-  return <span title={description || `Defense rank ${rank} of ${total}`}>
+  return <span style={defenseRankStyle(rank,total)} title={description || `Defense rank ${rank} of ${total}`}>
     {description || `#${rank}`}
   </span>;
 }
