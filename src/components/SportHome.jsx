@@ -4,7 +4,7 @@ import React from 'react';
 import {ArrowUpRight, ChevronRight, SlidersHorizontal, ListFilter, Trophy, Star, CalendarDays} from 'lucide-react';
 
 export const toolsBySport = {
-  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Top Props','top-eight'],['Moneylines','moneylines'],['Model Record','model-record']],
+  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Top Looks','top-eight'],['Moneylines','moneylines'],['Model Record','model-record']],
   cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Top Props','cbb-top-eight'],['Games','cbb-games'],['Model Record','cbb-record']]
 };
 for(const sport of ['nba','cfb']){
