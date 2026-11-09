@@ -5,13 +5,16 @@ import NflToolHeader from './NflToolHeader.jsx';
 import {availableStats} from '../lib/availableStats.js';
 import {bookLine,playerKey} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
+import {teamColor} from '../lib/teamColors.js';
 import {getPlayerGames,formatRate,isHit} from '../lib/stats.js';
 import {METRICS} from '../lib/stats.js';
 import {rateStyle} from './HitRate.jsx';
 import './TopLooks.css';
 
 const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
-const dayLabel=value=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'long',month:'short',day:'numeric'}).format(new Date(value));
+// `value` is an Eastern calendar date (YYYY-MM-DD), not a UTC instant.
+// Noon UTC keeps it on that same calendar day when formatted in Eastern time.
+const dayLabel=value=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'long',month:'short',day:'numeric'}).format(new Date(value+'T12:00:00Z'));
 const ordinal=n=>n===1?'1st':n===2?'2nd':n===3?'3rd':n+'th';
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 const mean=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:null;
@@ -210,6 +213,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
   const [type,setType]=useState(()=>initialParams.get('topType')==='anytime'?'anytime':'props');
   const [mode,setMode]=useState(()=>initialParams.get('topMode')==='week'?'week':'day');
   const [selected,setSelected]=useState(()=>initialParams.get('topSelection')||'');
+  const [openWhy,setOpenWhy]=useState('');
   const options=mode==='day'?days:weeks;
   const value=options.includes(selected)?selected:options[0]||'';
   const slate=future.filter(game=>mode==='day'?dayKey(game.kickoff)===value:String(game.week)===value);
@@ -237,7 +241,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
         const average=mean(history.map(row=>Number(row.stats[metric]??0)));
         if(!Number.isFinite(quote?.point)&&average<=0)continue;
         const line=Number.isFinite(quote?.point)?quote.point:(type==='anytime'?0.5:Number(average.toFixed(1)));
-        const selectedQuote=quote?{...quote}:{point:line,over:null,under:null,isBookLine:false,anytime:type==='anytime'};
+        const selectedQuote=quote?{...quote,isBookLine:true}:{point:line,over:null,under:null,isBookLine:false,anytime:type==='anytime'};
         const market={label:type==='anytime'?'Anytime Touchdown':METRICS[metric].label,unit:METRICS[metric].unit,short:metric};
         const posMetric=player.position+'|'+metric+'|'+game.week;
         if(!cache.has(posMetric))cache.set(posMetric,defenseTable(players,season,player.position,metric,game.week));
@@ -283,20 +287,24 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
         const context=gameContext(pick.game,pick);
         const recentLabel=pick.recent.length?'last '+pick.recent.length:'recent';
         const shareLabel=pick.usageKey==='targets'?'Target Share':pick.usageKey==='carries'?'Carry Share':pick.usageKey==='attempts'?'Attempt Share':'Touch Share';
-        return <article className="top-pick panel" key={pick.game.id+pick.player.id+pick.metric+pick.side}>
+        const pickKey=pick.game.id+'|'+pick.player.id+'|'+pick.metric+'|'+pick.side;
+        const whyId='pick-why-'+index;
+        const whyOpen=openWhy===pickKey;
+        return <article className="top-pick panel" key={pick.game.id+pick.player.id+pick.metric+pick.side} style={{'--club':teamColor(pick.player.team)||'#a775cf'}}>
           <div className="pick-rank">{String(index+1).padStart(2,'0')}</div>
           <PlayerPhoto id={pick.player.id} name={pick.player.name} url={pick.player.photo}/>
           <div className="top-pick-main">
             <div className="top-matchup">{pick.player.team} · {pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
             <h2>{pick.player.name}</h2><p>{pick.quote.anytime?(pick.side==='over'?'ANYTIME TD · YES':'ANYTIME TD · NO'):pick.side.toUpperCase()+' '+pick.line+' '+markets[pick.metric]}</p>
-            <small className={'line-origin '+(pick.quote.isBookLine?'sportsbook':'average')}>{pick.quote.anytime?(pick.quote.isBookLine?'DRAFTKINGS ANYTIME TD ODDS':'MODEL ESTIMATE · NO ODDS'):pick.quote.isBookLine?'DRAFTKINGS LINE':'PLAYER AVERAGE LINE'}</small>
+            <div className="pick-meta-row"><small className={'line-origin '+(pick.quote.isBookLine?'sportsbook':'average')}>{pick.quote.anytime?(pick.quote.isBookLine?'DRAFTKINGS ANYTIME TD ODDS':'MODEL ESTIMATE · NO ODDS'):pick.quote.isBookLine?'DRAFTKINGS LINE':'PLAYER AVERAGE LINE'}</small><button className="why-toggle" type="button" aria-expanded={whyOpen} aria-controls={whyId} onClick={()=>setOpenWhy(whyOpen?'':pickKey)}><Info size={14}/>{whyOpen?'Hide Why':'Why This Pick'}<ChevronDown size={14}/></button></div>
           </div>
           <div className="top-pick-stat projection-stat"><small>PROJECTION</small><b>{pick.projection.toFixed(1)}</b><small>vs. {pick.line} Line</small></div>
           <div className="top-pick-stat chance-stat"><small>EST. HIT RATE</small><b style={rateStyle(pick.chance)}>{formatRate(pick.chance)}</b><small>{pick.hits}/{pick.history.length} prior</small></div>
           <div className="top-pick-stat defense-stat"><small>MATCHUP</small><b>{pick.matchup||'—'}</b><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
           <div className="top-pick-actions">
             <button type="button" onClick={()=>onOpen(pick.player,{metric:pick.metric,point:pick.line,source:pick.quote.anytime?(pick.quote.isBookLine?'DraftKings Anytime TD Odds':'Model Estimate'):(pick.quote.isBookLine?'DraftKings':'Player Average')},pick.side,pick.game)}><Activity size={15}/>Charts</button>
-            <details><summary><Info size={15}/>Why This Pick?</summary>
+          </div>
+          <div id={whyId} className={'pick-reason-collapse'+(whyOpen?' is-open':'')} aria-hidden={!whyOpen}>
               <div className="pick-reason">
                 <b>WHY THE MODEL LIKES THIS PICK</b>
                 <div className="pick-reason-grid">
@@ -312,7 +320,6 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
                 </div>
                 <small>The model weighs recent results, projection, matchup, relevant workload share, scoring-area usage, injuries, weather and available market prices. It only surfaces picks with a positive estimated edge and directional projection support. Estimated hit rate is not calibrated against completed Top Looks slates.</small>
               </div>
-            </details>
           </div>
         </article>;
       })}</section>:
