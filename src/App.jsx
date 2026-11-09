@@ -14,7 +14,7 @@ import StatCard from './components/StatCard.jsx';
 import {availableStats} from './lib/availableStats.js';
 import ModelRecord from './components/ModelRecord.jsx';
 import HitRate from './components/HitRate.jsx';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, ArrowUpRight, BarChart3, ChevronDown,
   ChevronRight, Info, Search, ShieldCheck,
@@ -130,6 +130,12 @@ function activePage(hash=window.location.hash) {
 
 export default function App() {
   const [page, setPage] = useState(activePage);
+  const propListReturn=useRef(null);
+  useLayoutEffect(()=>{
+    if(page==='prop-lists' && propListReturn.current){
+      window.scrollTo({top:propListReturn.current.top,behavior:'instant'});
+    }
+  },[page]);
   const launch = page==='home' || page.endsWith('-home');
   const sport = ['cbb','nba','cfb'].find(s=>page.startsWith(s)) || 'nfl';
   const manualLeague = sport!=='nfl';
@@ -147,7 +153,11 @@ export default function App() {
     try { localStorage.setItem('propbets-theme',dark ? 'dark' : 'light'); } catch {}
   },[dark]);
   useEffect(() => {
-    const changePage = () => { setPage(activePage()); window.scrollTo(0,0); };
+    const changePage = () => {
+      const next=activePage();
+      if(next!=='prop-lists' || !propListReturn.current)window.scrollTo(0,0);
+      setPage(next);
+    };
     window.addEventListener('hashchange',changePage);
     return () => window.removeEventListener('hashchange',changePage);
   },[]);
@@ -318,21 +328,24 @@ export default function App() {
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   if(previewTools){
-    if(page==='prop-lists')return <ManualLeague.Provider value="nfl"><NflPropList players={players} roster={seasonPlayers}
+    if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
+    return <ManualLeague.Provider value="nfl">
+      {(page==='prop-lists' || propListReturn.current) && <div hidden={page!=='prop-lists'}>
+      <NflPropList players={players} roster={seasonPlayers}
       schedule={nflSchedule} season={scheduleSeason} books={bookGames} markets={chartMarkets} now={now} loading={loading} error={error}
       onOpen={({player:p,game,metric:key,quote:saved,point},side,historyVenue)=>{
+        propListReturn.current={top:window.scrollY};
         chartSlate.changeWeek(String(game.week));chartSlate.changeMatch(game.id);
         boardSelection.current=p.id!==player?.id?p.id:null;
         setTeam('ALL');setVenue(historyVenue);setOpponent('ALL');setWindowSize('10');
         setSelectedId(p.id);setMetric(key);setDirection(side);
         setCustom(saved?null:{context:[p.id,key,game.kickoff].join('|'),value:point,source:'Player Average'});
         window.location.hash='analyzer';
-      }}/></ManualLeague.Provider>;
-    if(page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
-    return <ManualLeague.Provider value="nfl"><NflCharts players={players} seasons={seasons} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
+      }}/></div>}
+      {page==='analyzer' && <NflCharts players={players} seasons={seasons} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
       metric={metric} onMetric={onMetricChange} line={line} setLine={setLine} quote={quote} manual={manual} manualLabel={custom?.source || 'Custom Line'} direction={direction} setDirection={setDirection}
       windowSize={windowSize} setWindowSize={setWindowSize} upcoming={upcoming} defenses={defenseRows}
-      loading={loading} error={error}/></ManualLeague.Provider>;
+      loading={loading} error={error}/>}</ManualLeague.Provider>;
   }
   return <ManualLeague.Provider value={sport}><div className="app" data-sport={page==='home'?undefined:sport}>
     
