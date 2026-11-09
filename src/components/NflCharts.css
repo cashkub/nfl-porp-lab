@@ -1,6 +1,6 @@
 @font-face{font-family:LabDisplay;src:url('/preview/assets/display.ttf') format('truetype');font-weight:800;font-style:italic;font-display:swap}
 .chart-lab{max-width:68rem;margin:0 auto;padding:0 clamp(1rem,4vw,3rem) 3rem;color:#f6effa;--lab-rule:#553869;color-scheme:dark}
-body:has(.chart-lab){background:#190c22 url('/preview/assets/playbook.svg') center top/90rem auto}
+body:has(.chart-lab){background:#111316 url('/preview/assets/playbook.svg') center top/90rem auto}
 .chart-lab header,.lab-player,.lab-rate,.lab-controls,.lab-splits{display:flex}
 .chart-lab header{align-items:center;justify-content:space-between;padding:1.25rem 0;border-bottom:1px solid var(--lab-rule)}
 .chart-lab header a{display:flex;align-items:center;gap:.5rem;color:#eac8ff;text-decoration:none;font-weight:750}
@@ -53,7 +53,7 @@ body:has(.chart-lab){background:#190c22 url('/preview/assets/playbook.svg') cent
 .history-scroll{overflow-x:auto}.history-scroll table{width:100%;border-collapse:collapse}.history-scroll :is(td,th){padding:.6rem .55rem;border-bottom:1px solid var(--lab-rule);white-space:nowrap}.history-scroll td[data-result]{color:var(--outcome)}
 .margin-bars [data-result=Unrated]{--outcome:#ba8fd7}
 .margin-bars [data-result=Unrated] .bar-space::after{display:none}
-.game-volume{display:grid;gap:.15rem;padding:.35rem 0;font-size:.72rem;line-height:1.3;color:#ccb4dc}.game-volume b{color:#f7f2fb}
+.game-volume{display:grid;gap:.15rem;padding:.35rem 0;font-size:.72rem;line-height:1.3;color:#ccb4dc}.game-volume b{color:#f7f2fb}.game-volume small{display:inline;color:#d8baef;font-size:.63rem;font-weight:750;letter-spacing:0}
 .line-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;width:100%}
 .line-compare button{display:grid;gap:.2rem;min-height:44px;padding:.25rem .4rem;text-align:center;color:#dbdce0;background:#241130;border:1px solid #634378;border-radius:.5rem}
 .line-compare button[aria-pressed=true]{border-color:#c7a3df;background:#3c1c51;box-shadow:inset 0 -2px #c7a3df}
@@ -76,8 +76,11 @@ body:has(.chart-lab){background:#190c22 url('/preview/assets/playbook.svg') cent
 .log-body dt{font-size:.72rem}.log-body dd{font-variant-numeric:tabular-nums}
 
 .bar-report{margin-top:.7rem;border:1px solid #65467a;border-radius:.5rem;background:#2a1438}.bar-report h3{margin:.7rem 0 .3rem}.bar-hint{font-size:.8rem}
-.log-table thead th{font-size:.76rem;color:#d6bde7}.log-table td{font-variant-numeric:tabular-nums}.log-table th:first-child{position:sticky;left:0;background:#2a1439;box-shadow:1px 0 #523665}
+.log-table thead th{font-size:.76rem;color:#d6bde7}.log-table td{font-variant-numeric:tabular-nums}.log-table td>b[data-result]{display:inline-block;min-width:2rem;padding:.08rem .24rem;border-radius:.25rem;background:#252329;font-variant-numeric:tabular-nums}.log-table th:first-child{position:sticky;left:0;background:#25262b;box-shadow:1px 0 #6e5482}
 .log-table-team{display:flex;align-items:center;justify-content:center;gap:.4rem}.log-table-team img{width:1.8rem;height:1.8rem}
+.margin-bars .chart-opponent{display:flex;align-items:center;justify-content:center;gap:.2rem;min-width:0}.margin-bars .chart-opponent b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem}
+.game-details-toggle{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;min-height:40px;margin:.45rem 0;padding:.4rem .8rem;border:1px solid #8659a2;border-radius:.45rem;background:#271332;color:#f4eafd;font:750 .8rem system-ui;cursor:pointer;box-shadow:0 0 .65rem #a550fb20}.game-details-toggle[aria-expanded=true] svg{transform:rotate(180deg)}
+.game-usage-details{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}.game-usage-details span{padding:.35rem .55rem;border:1px solid #5b3d70;border-radius:.35rem;background:#211128;color:#ded0e8;font-size:.75rem}.game-usage-details b{color:#fff}
 
 .chart-filter {display:grid;gap:.3rem;min-width:0}
 .chart-select-row {display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:2px}
