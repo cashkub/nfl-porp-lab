@@ -5,7 +5,7 @@ export function useChartSlate(schedule,now) {
   const [week,setWeek]=useState('');
   const [match,setMatch]=useState('');
   const [team,setTeam]=useState('');
-  const weeks=[...new Set(schedule.map(g=>String(g.week)))];
+  const weeks=[...new Set(schedule.map(g=>String(g.week)))].sort((a,b)=>Number(a)-Number(b));
   const next=schedule.find(g=>Date.parse(g.kickoff)>now);
   const activeWeek=weeks.includes(week)?week:String(next?.week || weeks[0] || '');
   const games=schedule.filter(g=>String(g.week)===activeWeek);

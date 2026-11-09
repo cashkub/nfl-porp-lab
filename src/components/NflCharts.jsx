@@ -272,7 +272,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls primary-controls">
       <ChartSelect label="Player" value={player.id} onChange={onPlayer}>{roster.map(p=><option key={p.id} value={p.id}>{p.name} · {p.team}</option>)}</ChartSelect>
-      <ChartSelect label="Market" value={metric} onChange={onMetric}>{statOrder(player.position).filter(m=>markets.includes(m)).map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
+      <ChartSelect label="Market" value={metric} onChange={onMetric}>{markets.map(m=><option key={m} value={m}>{chartMarkets[m].label}</option>)}</ChartSelect>
     </div>
     <button type="button" className="filter-toggle chart-disclosure" aria-controls="chart-filters" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(!filtersOpen)}>
       <ControlLabel>Filters</ControlLabel>
