@@ -251,3 +251,19 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
   .chart-disclosure::after{transition:transform .2s ease}
   .chart-disclosure,.prop-chart-link,.line-compare button{transition:background-color .16s,box-shadow .16s,border-color .16s}
 }
+
+html:has(.chart-lab){background:#111316}
+.chart-lab{width:100%;min-height:100vh;min-height:100dvh}
+.chart-lab .nfl-tool-header{gap:.6rem}
+.nfl-tool-header nav{display:flex;align-items:stretch;padding:3px;gap:2px;border:1px solid #705c82;border-radius:.65rem;background:#191b20}
+.chart-lab .nfl-tool-header nav a{justify-content:center;min-height:40px;padding:.35rem .85rem;border:1px solid transparent;border-radius:.44rem;color:#ddd9e3;font-size:.86rem;white-space:nowrap}
+.chart-lab .nfl-tool-header nav a:hover{background:#29272f;color:white}
+.chart-lab .nfl-tool-header nav a[aria-current=page]{border-color:#a988c4;background:#332a3d;color:#f8edff;box-shadow:inset 0 -2px #bd99dc}
+@media(max-width:680px){
+  .chart-lab{padding:env(safe-area-inset-top,0px) max(.5rem,env(safe-area-inset-right,0px)) max(1rem,env(safe-area-inset-bottom,0px)) max(.5rem,env(safe-area-inset-left,0px))}
+  .chart-lab .nfl-tool-header{padding:.5rem 0;flex-wrap:wrap}
+  .chart-lab .nfl-tool-header nav{flex:1;max-width:20rem}
+  .chart-lab .nfl-tool-header nav a{flex:1;padding:.25rem .3rem;font-size:.8rem}
+  .chart-lab .lab-block{padding:.75rem}
+  .chart-lab .chart-filter :is(input,select),.chart-lab #chart-line{font-size:16px}
+}

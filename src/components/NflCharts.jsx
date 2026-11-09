@@ -1,3 +1,4 @@
+import NflToolHeader from './NflToolHeader.jsx';
 import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
@@ -266,7 +267,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const meanUsage=observedUsage.length ? observedUsage.reduce((sum,value)=>sum+value,0)/observedUsage.length : null;
   const recentUsage=displayed.slice(-3).map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
   return <main className="chart-lab" style={{'--club':teamColor(player?.team) || '#be98ed'}}>
-    <header><a href="/preview/"><img alt="" src="/preview/assets/mark.svg"/> PropBets</a><a href="/preview/nfl/">← NFL Menu</a></header>
+    <NflToolHeader active="charts"/>
     <h1>Player <em>Charts</em></h1>
     {!loading && !error && !player && <ChartSlate slate={slate}/>}
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>

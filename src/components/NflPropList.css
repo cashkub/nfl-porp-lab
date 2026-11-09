@@ -6,9 +6,9 @@
 .prop-research-table [aria-sort] .column-sort{color:white;text-decoration:underline;text-underline-offset:4px}
 .prop-table-scroll .prop-research-table :is(th,td):first-child{position:sticky;left:0;z-index:1;background:#282a2e;box-shadow:1px 0 #755686}
 .prop-table-scroll .prop-research-table td:first-child{background:linear-gradient(95deg,color-mix(in srgb,var(--club) 24%,#1c1e22),#202226);border-left:3px solid var(--club)}
-.prop-chart-link{display:flex;align-items:center;justify-content:center;gap:.4rem;width:100%;min-height:38px;padding:0 .15rem;cursor:pointer;color:#f8edff;background:transparent;border:0;font:inherit}
+.prop-chart-link{display:grid;grid-template-columns:1.8rem minmax(6.5rem,1fr) auto;align-items:center;gap:.4rem;width:100%;min-height:38px;padding:0 .15rem;cursor:pointer;color:#f8edff;background:transparent;border:0;font:inherit}
 .prop-chart-link .player-photo{flex:none;width:1.8rem;height:1.8rem;background:var(--club);border:1px solid color-mix(in srgb,var(--club) 60%,white)}
-.prop-chart-link b{color:#f1eef5}
+.prop-chart-link b{color:#f1eef5;white-space:normal;overflow-wrap:anywhere;text-align:center}
 .prop-chart-link:is(:hover,:focus-visible) b{text-decoration:underline;text-underline-offset:3px}
 .prop-research-table .sort-chevron{display:inline-block;width:.42rem;height:.42rem;margin-left:.35rem;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);vertical-align:.15em}
 .prop-research-table [aria-sort=ascending] .sort-chevron{transform:rotate(225deg);vertical-align:baseline}
@@ -16,7 +16,7 @@
 .prop-list-more{display:block;margin:1rem auto;border:1px solid #b787d6;border-radius:.4rem;color:#f6e8ff;background:#28282f;min-height:40px;padding:.35rem .75rem;cursor:pointer}
 @media(max-width:680px){
   .prop-list-filters{grid-template-columns:1fr 1fr}
-  .prop-chart-link b{white-space:normal;min-width:4.2rem;max-width:6rem}
+
 }
 .prop-list .prop-picker{position:relative;overflow:visible}
 .prop-picker-input{display:flex;align-items:center;min-width:0}
@@ -29,7 +29,11 @@
 .prop-picker-menu [role=option]:is(:hover,[data-active=true]){background:#37323e}
 .prop-picker-menu small{color:#d2b7e4;margin:.3rem}
 .prop-charts-tag{padding:.18rem .38rem;border:1px solid #bc8bda;border-radius:.35rem;background:#29262f;color:#f9ebff;font-size:.7rem;font-weight:750}
-@media(max-width:680px){.prop-chart-link{display:grid;grid-template-columns:auto 1fr;gap:.15rem .4rem}.prop-chart-link .player-photo{grid-row:span 2}.prop-charts-tag{justify-self:center}}
+@media(max-width:680px){
+  .prop-chart-link{grid-template-columns:1.8rem 5.6rem;grid-template-rows:minmax(2.3em,auto) auto;gap:.15rem .35rem}
+  .prop-chart-link .player-photo{grid-row:span 2}
+  .prop-charts-tag{justify-self:center}
+}
 
 .prop-primary{grid-template-columns:minmax(0,.65fr) minmax(0,1.1fr) minmax(0,1.45fr);margin-bottom:.55rem}
 .prop-advanced>summary{list-style:none;margin:0}

@@ -1,3 +1,4 @@
+import NflToolHeader from './NflToolHeader.jsx';
 import React,{useMemo,useState} from 'react';
 import {availableStats} from '../lib/availableStats.js';
 import {bookLine,priceText} from '../lib/bookLine.js';
@@ -73,7 +74,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Pos',value:r=>r.player.position},
   ];
   return <main className="chart-lab prop-list">
-    <header><a href="/preview/"><img src="/preview/assets/mark.svg" alt=""/> PropBets</a><a href="/preview/nfl/">NFL Menu</a></header>
+    <NflToolHeader active="props"/>
     <h1>Prop <em>Lists</em></h1>
     {loading || error?<p>{error || 'Loading Player Props…'}</p>:<>
       <div className="prop-list-filters prop-primary">
