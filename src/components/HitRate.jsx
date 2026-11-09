@@ -12,17 +12,17 @@ export function rateStyle(rate) {
 }
 
 // First rank represents the highest value on the color scale.
-export function defenseRankStyle(rank,total=32) {
+export function defenseRankStyle(rank,total=32,side='over') {
   if (!Number.isInteger(rank) || rank < 1 || rank > total || !Number.isInteger(total) || total < 2) return undefined;
-  return rateStyle((total - rank) / (total - 1));
+  return rateStyle(side==='under'?(rank-1)/(total-1):(total-rank)/(total-1));
 }
 
-export function DefenseRank({rank,total=32,label,position,compact=false}) {
+export function DefenseRank({rank,total=32,label,position,compact=false,side='over'}) {
   if (!Number.isInteger(rank) || rank < 1) return '—';
   const ordinal = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
   const placement = rank === 1 ? 'Most' : rank === 2 ? '2nd Most' : rank === total ? 'Least' : rank === total - 1 ? '2nd Least' : `${ordinal} Most`;
   const description = label && position ? `Allows ${placement} ${label} to ${position}` : '';
-  return <span style={defenseRankStyle(rank,total)} title={description || `Defense rank ${rank} of ${total}`}>
+  return <span style={defenseRankStyle(rank,total,side)} title={description || `Defense rank ${rank} of ${total}`}>
     {description || `#${rank}`}
   </span>;
 }
