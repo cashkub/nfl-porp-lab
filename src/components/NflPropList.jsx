@@ -82,7 +82,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Source',value:r=>r.quote?'DraftKings':'Player Average'},
     {label:'Team',value:r=>r.player.team},
     {label:'Opponent',value:r=>r.game.opponent,render:r=>(r.game.venue==='Away'?'@ ':'vs. ')+r.game.opponent},
-    {label:'DEF Rank',value:r=>r.rank,highFirst:true,render:r=><DefenseRank rank={r.rank} total={r.teams} label={markets[r.metric].label} position={r.player.position+'s'}/>},
+    {label:'DEF Rank',value:r=>r.rank,highFirst:true,render:r=><DefenseRank rank={r.rank} total={r.teams} label={markets[r.metric].label} position={r.player.position+'s'} side={side}/>},
     {label:'Pos',value:r=>r.player.position},
   ];
   return <main className="chart-lab prop-list">
