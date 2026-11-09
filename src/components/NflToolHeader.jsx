@@ -12,7 +12,7 @@ const destinations=[
 
 export default function NflToolHeader({active}){
   return <header className="nfl-tool-header">
-    <a href="/preview/" className="nfl-tool-brand"><img alt="" src="/preview/assets/mark.svg"/>PropBets</a>
+    <a href="/preview/" className="pb-brand" aria-label="PropBets preview home"><img alt="" src="/preview/assets/mark.svg"/><span className="pb-wordmark">Prop<span>Bets</span></span></a>
     <nav aria-label="NFL Navigation">
       {destinations.map(({name,icon:Icon,href,key})=>{
         const content=<><Icon size={18} strokeWidth={1.8} aria-hidden="true"/><span>{name}</span></>;

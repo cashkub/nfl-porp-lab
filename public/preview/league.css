@@ -1,4 +1,3 @@
-@font-face { font-family:'Archivo Black'; src:url('./assets/archivo-black.ttf') format('truetype'); font-weight:400; font-display:swap }
 @font-face { font-family: Barlow; src: url('./assets/display.ttf') format('truetype'); font-style: italic; font-weight: 800; font-display: swap }
 :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; color: #f3f3f2; background: #110f16; --display: Barlow, Impact, sans-serif; --fire: #d9b3ff; --violet:#c49bff; --frame:#ca91ff; --glow:inset 0 0 0 1px #c993ff22,0 0 12px #a550fb1e }
 * { box-sizing: border-box }
@@ -6,10 +5,6 @@ body { min-height:100vh; margin:0; background-color:#0e192c }
 main { max-width: 76rem; margin: auto; padding: 0 clamp(1rem,5vw,4rem) 4rem }
 header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 1px solid #e6d2cc30 }
 a { color: inherit; text-decoration: none }
-.brand { display: inline-flex; align-items: center; gap: .42rem; font: italic 800 2.15rem/.95 var(--display); letter-spacing: -.035em }
-.brand img { width:clamp(2.8rem,4.8vw,3.8rem); height:auto; filter:drop-shadow(0 0 7px #efaeff85) }
-.wordmark { font:italic 400 clamp(1.55rem,3.25vw,2.6rem)/1 'Archivo Black',system-ui,sans-serif; letter-spacing:-.065em; color:#f5eaff; text-shadow:0 2px 0 #382044,0 0 10px #c49bff66 }
-.wordmark span { color:#efaeff; text-shadow:0 2px 0 #51265e,0 0 12px #ed99ff66 }
 .return { padding: .65rem .9rem; border: 1px solid #88649c; border-radius: 2rem; background:#1b1e23; color:#efdbff; font-weight:700; font-size: .82rem }
 h1,h2,strong { font-family: var(--display); font-style: italic; font-weight: 800 }
 h1 { margin: clamp(1.5rem,4vw,3rem) 0 1.2rem; font-size: clamp(3.4rem,7.2vw,6.3rem); line-height: .98; text-transform: uppercase; letter-spacing: -.035em }
