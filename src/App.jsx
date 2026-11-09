@@ -322,6 +322,16 @@ export default function App() {
     setCustom(saved?.point === market.point ? null : {context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point});
     setPage('analyzer'); window.location.hash='analyzer'; window.scrollTo(0,0);
   }
+  function openTopLookChart(p, market, side, game) {
+    const latest=Math.max(...seasons);
+    const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(game.kickoff));
+    setTeam('ALL');setSeason(latest);setVenue('ALL');setOpponent('ALL');setWindowSize('10');
+    setSelectedId(p.id);setMetric(market.metric);setDirection(side);
+    setCustom({context:[p.id,market.metric,game.kickoff].join('|'),value:market.point,source:'DraftKings'});
+    if(previewTools){chartSlate.changeWeek(String(game.week));chartSlate.changeMatch(game.id);}
+    else gameFilter.select(day,[day,game.away,game.home].join('|'));
+    setPage('analyzer');window.location.hash='analyzer';window.scrollTo(0,0);
+  }
   const nextDate = upcoming && new Intl.DateTimeFormat('en-US', {
     weekday:'short', month:'short', day:'numeric', timeZone:'America/New_York',
     ...(upcoming.timeKnown ? {hour:'numeric', minute:'2-digit', timeZoneName:'short'} : {})
@@ -329,7 +339,7 @@ export default function App() {
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   if(previewTools){
-    if(page==='nfl-top')return <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openFromBoard}/>;
+    if(page==='nfl-top')return <ManualLeague.Provider value="nfl"><TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/></ManualLeague.Provider>;
     if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl">
       {(page==='prop-lists' || propListReturn.current) && <div hidden={page!=='prop-lists'}>
@@ -364,7 +374,7 @@ export default function App() {
       {launch ? <SportHome sport={page==='home'?null:sport}/> :
        manualLeague && page===sport ? <CbbAnalyzer key={sport} initial={initialCbb.sport===sport?initialCbb:{}}/> :
        (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
-       page==='nfl-top' ? <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openFromBoard}/> :
+       page==='nfl-top' ? <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/> :
        page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        manualLeague && page===sport+'-games' ? <CbbGames key={sport}/> :
