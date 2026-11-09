@@ -24,8 +24,8 @@ function makePick(player,game,metric,market,quote,history,defense,side) {
   const sd=Math.sqrt(variance);
   const hits=values.filter(n=>isHit(n,line,side)).length;
   const raw=(hits+1)/(values.length+2);
-  const distance=sd?Math.abs(projection-line)/sd:0;
-  const projectionChance=Math.min(.88,Math.max(.12,.5+distance*.18));
+  const signedDistance=sd?(side==='over'?projection-line:line-projection)/sd:0;
+  const projectionChance=Math.min(.88,Math.max(.12,.5+signedDistance*.18));
   const chance=raw*.65+projectionChance*.35;
   const usageKey=metric==='passingYards'||metric==='passingTDs'?'attempts':metric==='rushingYards'||metric==='rushingAttempts'?'carries':metric==='scoredTDs'?'opportunities':'targets';
   const usage=history.map(g=>g.usage?.[usageKey]).filter(Number.isFinite);
