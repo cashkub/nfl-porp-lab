@@ -15,12 +15,12 @@ import PlayerPhoto from './PlayerPhoto.jsx';
 import './NflPropList.css';
 
 function LastFive({row,side}) {
-  return <span className="last-five">{row.lastFive.map(game=>{
+  return <span className="last-five" aria-label="Last five games, oldest to newest">{row.lastFive.map(game=>{
     const value=game.stats[row.metric] ?? 0;
     const result=value===row.point?'Push':isHit(value,row.point,side)?'Hit':'Miss';
     const detail=`Week ${game.week} vs. ${game.opponent} · ${value} · ${result} (${side} ${row.point})`;
-    return <span key={game.gameId} data-result={result} title={detail} aria-label={detail}>
-      <small>{result[0]}</small>{value}
+    return <span key={game.gameId} className="last-five-game" data-result={result} title={detail} aria-label={detail}>
+      <i aria-hidden="true"/>{value}
     </span>;
   })}</span>;
 }
@@ -82,7 +82,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Source',value:r=>r.quote?'DraftKings':'Player Average'},
     {label:'Team',value:r=>r.player.team},
     {label:'Opponent',value:r=>r.game.opponent,render:r=>(r.game.venue==='Away'?'@ ':'vs. ')+r.game.opponent},
-    {label:'DEF Rank',value:r=>r.rank,highFirst:side==='under',render:r=><DefenseRank rank={r.rank} total={r.teams} side={side}/>},
+    {label:'DEF Rank',value:r=>r.rank,highFirst:true,render:r=><DefenseRank rank={r.rank} total={r.teams} label={markets[r.metric].label} position={r.player.position+'s'}/>},
     {label:'Pos',value:r=>r.player.position},
   ];
   return <main className="chart-lab prop-list">
@@ -115,7 +115,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
             {columns.map(c=><td key={c.label}>{c.render?c.render(r):c.value(r)}</td>)}
           </tr>}/>
       </div>}
-      {filtered.length>0 && <p className="prop-list-note">Player Averages And Hit Rates Use Up To 10 Prior {venue==='H'?'Home Games':venue==='A'?'Away Games':'Games'} This Season. Last 5 Runs Oldest To Newest. H = Hit · M = Miss · P = Push.</p>}
+      {filtered.length>0 && <p className="prop-list-note">Player Averages And Hit Rates Use Up To 10 Prior {venue==='H'?'Home Games':venue==='A'?'Away Games':'Games'} This Season. Last 5 Runs Oldest To Newest · Green = Hit · Red = Miss · Gold = Push.</p>}
       {!filtered.length && <p>No Upcoming Props Match These Filters.</p>}
       {filtered.length>limit && <button className="prop-list-more" onClick={()=>setLimit(limit+24)}>Show More Props</button>}
     </>}

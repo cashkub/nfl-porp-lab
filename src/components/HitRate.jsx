@@ -17,17 +17,13 @@ export function defenseRankStyle(rank,total=32) {
   return rateStyle((total - rank) / (total - 1));
 }
 
-export function DefenseRank({rank,total=32,side,compact=false}) {
+export function DefenseRank({rank,total=32,label,position,compact=false}) {
   if (!Number.isInteger(rank) || rank < 1) return '—';
-  const under = String(side).toLowerCase() === 'under';
-  const strength = total > 1 && rank <= total
-    ? (under ? rank - 1 : total - rank) / (total - 1)
-    : null;
-  const sideName = under ? 'Under' : 'Over';
-  const assessment = strength == null ? '' : strength >= 0.75 ? 'Favorable' : strength <= 0.25 ? 'Tough' : 'Neutral';
-  const description = assessment ? assessment + ' For ' + sideName : '';
-  return <span style={rateStyle(strength)} title={`Defense #${rank} By Most Allowed${description ? ' · ' + description : ''}`}>
-    #{rank}{description && <>{compact ? <br/> : ' · '}{compact ? assessment : description}</>}
+  const ordinal = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+  const placement = rank === 1 ? 'Most' : rank === 2 ? '2nd Most' : rank === total ? 'Least' : rank === total - 1 ? '2nd Least' : `${ordinal} Most`;
+  const description = label && position ? `Allows ${placement} ${label} to ${position}` : '';
+  return <span title={description || `Defense rank ${rank} of ${total}`}>
+    {description || `#${rank}`}
   </span>;
 }
 
