@@ -255,10 +255,22 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
 html:has(.chart-lab){background:#111316}
 .chart-lab{width:100%;min-height:100vh;min-height:100dvh}
 .chart-lab .nfl-tool-header{gap:.6rem}
-.nfl-tool-header nav{display:flex;align-items:stretch;padding:3px;gap:2px;border:1px solid #705c82;border-radius:.65rem;background:#191b20}
-.chart-lab .nfl-tool-header nav :is(a,button){justify-content:center;min-height:40px;padding:.35rem .85rem;border:1px solid transparent;border-radius:.44rem;color:#ddd9e3;font-size:.86rem;white-space:nowrap}
-.chart-lab .nfl-tool-header nav a:hover{background:#29272f;color:white}
-.chart-lab .nfl-tool-header nav a[aria-current=page]{border-color:#a988c4;background:#332a3d;color:#f8edff;box-shadow:inset 0 -2px #bd99dc}
+.nfl-tool-header nav{
+  display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:4px;
+  border:1px solid #48444f;border-radius:.75rem;background:linear-gradient(165deg,#202329,#131518);
+  box-shadow:inset 0 1px #ffffff0d,0 4px 12px #090a0c40
+}
+.chart-lab .nfl-tool-header nav :is(a,button){
+  position:relative;display:flex;align-items:center;justify-content:center;gap:.42rem;
+  min-height:46px;padding:.4rem .48rem;border:1px solid #494650;border-radius:.48rem;
+  color:#e9e7eb;background:linear-gradient(#2d3035,#222428);
+  font-size:.82rem;font-weight:750;line-height:1.15;text-align:center
+}
+.nfl-tool-header nav svg{flex:none;color:#c6afdc}
+.chart-lab .nfl-tool-header nav a:hover{border-color:#9784aa;color:white}
+.chart-lab .nfl-tool-header nav a[aria-current=page]{border-color:#af89ce;color:#fff6ff;background:linear-gradient(120deg,#37303f,#27272e);box-shadow:inset 0 1px #e8d3ff20}
+.nfl-tool-header nav a[aria-current=page]::after{content:'';position:absolute;bottom:0;left:28%;right:28%;height:2px;border-radius:2px;background:#d7b2f8;box-shadow:0 0 7px #c293ed99}
+.nfl-tool-header nav a[aria-current=page] svg{color:#e0bdff}
 @media(max-width:680px){
   .chart-lab{padding:env(safe-area-inset-top,0px) max(.5rem,env(safe-area-inset-right,0px)) max(1rem,env(safe-area-inset-bottom,0px)) max(.5rem,env(safe-area-inset-left,0px))}
   .chart-lab .nfl-tool-header{padding:.5rem 0;flex-wrap:wrap}
@@ -266,9 +278,19 @@ html:has(.chart-lab){background:#111316}
   .chart-lab .chart-filter :is(input,select),.chart-lab #chart-line{font-size:16px}
 }
 
-.chart-lab .nfl-tool-header nav button:disabled{background:transparent;color:#98959e;cursor:default;font-weight:600}
+.chart-lab .nfl-tool-header nav button:disabled{background:#191b1f;border-color:#32343a;color:#a5a5ad;cursor:default;font-weight:600}
+.nfl-tool-header nav button:disabled svg{color:#888590}
 @media(max-width:900px){
   .chart-lab .nfl-tool-header{flex-wrap:wrap}
   .chart-lab .nfl-tool-header nav{flex:1 0 100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
   .chart-lab .nfl-tool-header nav :is(a,button){padding:.25rem .15rem;font-size:.8rem}
+}
+
+@media(max-width:420px){
+  .chart-lab .nfl-tool-header nav :is(a,button){gap:.28rem;font-size:.74rem}
+  .nfl-tool-header nav svg{width:15px;height:15px}
+}
+@media(prefers-reduced-motion:no-preference){
+  .nfl-tool-header nav a{transition:border-color .15s,transform .15s}
+  .nfl-tool-header nav a:active{transform:translateY(1px)}
 }

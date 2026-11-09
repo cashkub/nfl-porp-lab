@@ -1,13 +1,25 @@
 import React from 'react';
+import {LayoutGrid, Activity, ListFilter, Crosshair, CalendarDays, BarChart3} from 'lucide-react';
+
+const destinations=[
+  {name:'NFL Menu',icon:LayoutGrid,href:'/preview/nfl/'},
+  {name:'Player Charts',icon:Activity,href:'#analyzer',key:'charts'},
+  {name:'Prop Lists',icon:ListFilter,href:'#prop-lists',key:'props'},
+  {name:'Top Looks',icon:Crosshair},
+  {name:'Games',icon:CalendarDays},
+  {name:'Model Record',icon:BarChart3},
+];
 
 export default function NflToolHeader({active}){
   return <header className="nfl-tool-header">
     <a href="/preview/" className="nfl-tool-brand"><img alt="" src="/preview/assets/mark.svg"/>PropBets</a>
     <nav aria-label="NFL Navigation">
-      <a href="/preview/nfl/">NFL Menu</a>
-      <a href="#analyzer" aria-current={active==='charts'?'page':undefined}>Player Charts</a>
-      <a href="#prop-lists" aria-current={active==='props'?'page':undefined}>Prop Lists</a>
-      {['Top Looks','Games','Model Record'].map(name=><button key={name} type="button" disabled title="Not available yet">{name}</button>)}
+      {destinations.map(({name,icon:Icon,href,key})=>{
+        const content=<><Icon size={18} strokeWidth={1.8} aria-hidden="true"/><span>{name}</span></>;
+        return href
+          ? <a key={name} href={href} aria-current={active===key?'page':undefined}>{content}</a>
+          : <button key={name} type="button" disabled title="Not available yet">{content}</button>;
+      })}
     </nav>
   </header>;
 }
