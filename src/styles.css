@@ -239,7 +239,7 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
 .rail-graphics {position:sticky;top:14px;margin-top:16px}
 .venue-splits {
   border-radius:12px;padding:20px;color:white;overflow:hidden;
-  background:linear-gradient(120deg,#101f38fa,#173e6bea),url('/playbook.svg') center / 430px auto;
+  background:linear-gradient(120deg,#202227f5,#17191dF2),url('/playbook.svg') center / 430px auto;background-blend-mode:normal,luminosity;border:1px solid #62506f;
   box-shadow:0 5px 15px #1936541c;
 }
 .venue-splits h2 {font-size:20px}
@@ -304,17 +304,18 @@ footer {margin-top:25px;border-top:1px solid var(--rule);padding:18px 0 24px;fon
 .props-board td small {display:block;color:var(--muted);font-size:10px}
 .props-board .outline-button,.board-foot {margin-top:12px}
 .chart-main {height:337px}
-html[data-theme=dark] {color-scheme:dark;background:#0c1420;color:#e4edf8;--ink:#e4edf8;--blue:#93bbff;--muted:#a9b9cc;--rule:#324255;--ice:#1e3049}
-[data-theme=dark] .app {background-color:#101b28;background-image:linear-gradient(90deg,#0d1826c9,#101c2bee 25%,#101c2bee 75%,#0d1826c9),url('/playbook.svg')}
-[data-theme=dark] :is(.panel,.topbar,.stat-card,.small-card,.line-menu,.search-results,.player-result,.outline-button,.phone-settings,.line-menu button) {background:#182535;border-color:var(--rule);color:var(--ink)}
-[data-theme=dark] :is(.segmented,.select-wrap,.search-input-shell,.game-log th,.board-controls select,.board-controls input,.line-menu input,.matchup-head .select-wrap) {color:var(--ink);background:#111e2d;border-color:#415168}
-[data-theme=dark] :is(.field label,.chart-game-label,.chart-bar-value,.search-input-shell input::placeholder,.result-header,.small-card span) {color:#bdcce0}
-[data-theme=dark] :is(.stat-card-selected,.line-trigger,.chart-defense,.result-pill.hit,.line-menu button[aria-pressed=true],.player-result:hover,.result-focused) {background:#223b5b;color:#c5e0ff;border-color:#4c79ac}
-[data-theme=dark] .matchup-head {background:linear-gradient(100deg,#203551,#182535)}
-[data-theme=dark] .chart-target {border-color:#c2ddff}
-[data-theme=dark] .chart-gridline {border-color:#47596f}
-[data-theme=dark] .rate-track {background:#34455b}
-[data-theme=dark] .venue-pill,[data-theme=dark] .result-pill.miss {background:#314055;color:#d1dcec}
+html[data-theme=dark] {color-scheme:dark;background:#111316;color:#eeeef2;--ink:#eeeef2;--blue:#c49bff;--muted:#b5b0bd;--rule:#51475b;--ice:#29262f}
+[data-theme=dark] .app {background-color:#111316;background-image:linear-gradient(90deg,#111316f2,#17191df5 25%,#17191df5 75%,#111316f2),url('/playbook.svg');background-blend-mode:normal,luminosity}
+[data-theme=dark] :is(.panel,.topbar,.stat-card,.small-card,.line-menu,.search-results,.player-result,.outline-button,.phone-settings,.line-menu button) {background:#1b1d21;border-color:var(--rule);color:var(--ink)}
+[data-theme=dark] :is(.segmented,.select-wrap,.search-input-shell,.game-log th,.board-controls select,.board-controls input,.line-menu input,.matchup-head .select-wrap) {color:var(--ink);background:#17191d;border-color:#685776}
+[data-theme=dark] :is(.field label,.chart-game-label,.chart-bar-value,.search-input-shell input::placeholder,.result-header,.small-card span) {color:#d3c9dc}
+[data-theme=dark] :is(.stat-card-selected,.line-trigger,.chart-defense,.result-pill.hit,.line-menu button[aria-pressed=true],.player-result:hover,.result-focused) {background:#352a40;color:#f0dcff;border-color:#a477c4}
+[data-theme=dark] .matchup-head {background:linear-gradient(100deg,#29262f,#1b1d21)}
+[data-theme=dark] .chart-target {border-color:#c49bff}
+[data-theme=dark] .chart-gridline {border-color:#4d4654}
+[data-theme=dark] .rate-track {background:#393640}
+[data-theme=dark] .venue-pill,[data-theme=dark] .result-pill.miss {background:#312b37;color:#e2d7e9}
+[data-theme=dark] .venue-splits {background:linear-gradient(120deg,#292b30f5,#17191df2),url('/playbook.svg') center / 430px auto;background-blend-mode:normal,luminosity;border-color:#665075}
 [data-theme=dark] .positive {color:#76d6ae}
 [data-theme=dark] .negative {color:#ffa29e}
 [data-theme=dark] .footer-logo strong {color:#e4edf8}
