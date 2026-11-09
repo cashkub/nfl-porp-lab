@@ -10,7 +10,10 @@
 .prop-table-scroll .prop-research-table td:first-child{background:linear-gradient(95deg,color-mix(in srgb,var(--club) 24%,#211827),#241c2c);border-left:3px solid var(--club)}
 .prop-chart-link{display:flex;align-items:center;justify-content:center;gap:.4rem;width:100%;min-height:38px;padding:0 .15rem;cursor:pointer;color:#f8edff;background:transparent;border:0;font:inherit}
 .prop-chart-link .player-photo{flex:none;width:1.8rem;height:1.8rem;background:var(--club);border:1px solid color-mix(in srgb,var(--club) 60%,white)}
-.prop-chart-link span:last-child{color:#d9b3ff}
+.prop-chart-link b{color:#ead1ff}
+.prop-chart-link:is(:hover,:focus-visible) b{text-decoration:underline;text-underline-offset:3px}
+.prop-research-table .sort-chevron{display:inline-block;width:.42rem;height:.42rem;margin-left:.35rem;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);vertical-align:.15em}
+.prop-research-table [aria-sort=ascending] .sort-chevron{transform:rotate(225deg);vertical-align:baseline}
 .prop-point{text-transform:capitalize;color:#edd7ff}
 .prop-list-more{display:block;margin:1rem auto;border:1px solid #b787d6;border-radius:.4rem;color:#f6e8ff;background:#452958;min-height:40px;padding:.35rem .75rem;cursor:pointer}
 @media(max-width:680px){

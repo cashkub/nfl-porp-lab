@@ -1,7 +1,7 @@
 import React,{useState} from 'react';
 
 const collator=new Intl.Collator('en',{numeric:true,sensitivity:'base'});
-export default function SortableTable({headers,rows,values,renderRow,limit,sort,onSort,descending=[],caption,className='game-log'}){
+export default function SortableTable({headers,rows,values,renderRow,limit,sort,onSort,descending=[],caption,quietSort=false,className='game-log'}){
   const [local,setLocal]=useState(null);
   const active=sort || local;
   const column=active?.column;
@@ -18,6 +18,6 @@ export default function SortableTable({headers,rows,values,renderRow,limit,sort,
       return active.asc?diff:-diff;
     }).map(entry=>entry.row);
   }
-  return <table className={className}>{caption && <caption>{caption}</caption>}<thead><tr>{headers.map((h,i)=><th scope="col" key={i} aria-sort={column===i?(active.asc?'ascending':'descending'):undefined}><button className="column-sort" type="button" onClick={()=>change(i)}>{h} <span aria-hidden="true">{column===i?(active.asc?'↑':'↓'):'↕'}</span></button></th>)}</tr></thead>
+  return <table className={className}>{caption && <caption>{caption}</caption>}<thead><tr>{headers.map((h,i)=><th scope="col" key={i} aria-sort={column===i?(active.asc?'ascending':'descending'):undefined}><button className="column-sort" type="button" onClick={()=>change(i)}>{h}{quietSort ? column===i && <span aria-hidden="true" className="sort-chevron"/> : <span aria-hidden="true"> {column===i?(active.asc?'↑':'↓'):'↕'}</span>}</button></th>)}</tr></thead>
     <tbody>{(limit==null?ordered:ordered.slice(0,limit)).map(renderRow)}</tbody></table>;
 }

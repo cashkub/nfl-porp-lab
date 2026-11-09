@@ -57,7 +57,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
   const columns=[
     {label:'Player',value:r=>r.player.name,render:r=><button type="button" className="prop-chart-link"
       aria-label={'Open Charts for '+r.player.name+', '+side+' '+r.point+' '+markets[r.metric].label} onClick={()=>onOpen(r,side)}>
-      <PlayerPhoto id={r.player.id} name={r.player.name} url={r.player.photo}/><b>{r.player.name}</b><span aria-hidden="true">↗</span></button>},
+      <PlayerPhoto id={r.player.id} name={r.player.name} url={r.player.photo}/><b>{r.player.name}</b></button>},
     {label:'Market',value:r=>markets[r.metric].label},
     {label:'Line',value:r=>r.point,render:r=><strong className="prop-point">{side} {r.point}</strong>},
     {label:'Hit Rate',value:r=>r.summary.rate,highFirst:true,render:r=><b style={rateStyle(r.summary.rate)}>{formatRate(r.summary.rate)}</b>},
@@ -70,7 +70,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Pos',value:r=>r.player.position},
   ];
   return <main className="chart-lab prop-list">
-    <header><a href="/preview/"><img src="/preview/assets/mark.svg" alt=""/> PropBets</a><a href="/preview/nfl/">← NFL Menu</a></header>
+    <header><a href="/preview/"><img src="/preview/assets/mark.svg" alt=""/> PropBets</a><a href="/preview/nfl/">NFL Menu</a></header>
     <h1>Prop <em>Lists</em></h1>
     {loading || error?<p>{error || 'Loading Player Props…'}</p>:<>
       <ChartSlate slate={slate}/>
@@ -82,9 +82,9 @@ export default function NflPropList({players,roster,schedule,season,books,market
         <ChartSelect label="Minimum Games" value={minimum} onChange={setMinimum}>{[1,3,5,10].map(n=><option key={n} value={n}>{n}+</option>)}</ChartSelect>
         <ChartSelect label="Side" value={side} onChange={setSide}><option value="over">Over</option><option value="under">Under</option></ChartSelect>
       </div>
-      <p className="prop-list-note">{filtered.length} Props · {sort ? 'Sorted By '+columns[sort.column].label+(sort.asc?' ↑':' ↓') : 'Sportsbook Lines First, Then Highest Hit Rate'}. Select A Player To Open Charts.</p>
+      <p className="prop-list-note">{filtered.length} Props · {sort ? 'Sorted By '+columns[sort.column].label+(sort.asc?' (Ascending)':' (Descending)') : 'Sportsbook Lines First, Then Highest Hit Rate'}. Tap A Header To Sort Or A Player To Open Charts.</p>
       {filtered.length>0 && <div className="history-scroll prop-table-scroll" role="region" aria-label="Sortable NFL Prop List" tabIndex="0">
-        <SortableTable className="prop-research-table" headers={columns.map(c=>c.label)} rows={filtered} limit={limit}
+        <SortableTable quietSort className="prop-research-table" headers={columns.map(c=>c.label)} rows={filtered} limit={limit}
           values={r=>columns.map(c=>c.value(r))} sort={sort} onSort={setSort}
           descending={columns.flatMap((c,i)=>c.highFirst?[i]:[])}
           renderRow={r=><tr key={r.game.id+r.player.id+r.metric} style={{'--club':teamColor(r.player.team)??'#9073a8'}}>
