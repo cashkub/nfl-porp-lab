@@ -11,6 +11,9 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
   const league = leagueGames ? rows.reduce((n,r) => n + r.total, 0) / leagueGames : 0;
   const row = rows.find(r => r.team === (selection ?? upcomingOpponent) || (selection == null && r.team === 'LA' && upcomingOpponent === 'LAR'));
   const history = row ? summarize(getPlayerGames(player, season, row.team), metric, line, direction) : null;
+  const matchupFit = row && row.average !== league
+    ? (direction === 'under' ? row.average < league : row.average > league) ? 'favorable' : 'tough'
+    : 'equal';
   const period = season === 'ALL' ? 'across available seasons' : 'this season';
   const unit = METRICS[metric].unit;
   return <section className="panel matchup" aria-labelledby="matchup-title">
@@ -21,7 +24,7 @@ export default function Matchup({upcomingOpponent, rows, player, season, metric,
       </FilterMenu><ChevronDown size={14}/></div></div>
     {row ? <>
       <div className="scout-grid">
-        <div><small>{row.team} allowed</small><strong>{formatNumber(row.average)} <em>{unit}</em></strong><span>{row.games} games</span></div>
+        <div data-vs-league={matchupFit}><small>{row.team} Allowed</small><strong>{formatNumber(row.average)} <em>{unit}</em></strong><span>{row.games} Games</span></div>
         <div><small>Defense Rank</small><strong><DefenseRank rank={row.rank} total={rows.length} side={direction}/></strong></div>
         <div><small>League Average</small><strong>{formatNumber(league)} <em>{unit}</em></strong><span>Per Defense-Game</span></div>
       </div>
