@@ -1,19 +1,19 @@
 .prop-list-filters{display:grid;gap:.65rem;grid-template-columns:repeat(3,minmax(0,1fr))}
-.prop-list-note{color:#d6c3df;font-size:.8rem;line-height:1.55}
-.prop-research-table{font-size:.83rem;font-variant-numeric:tabular-nums;background:#1b1522}
+.prop-list-note{color:#c7c8ce;font-size:.8rem;line-height:1.55}
+.prop-research-table{font-size:.83rem;font-variant-numeric:tabular-nums;background:#17191c}
 .prop-table-scroll .prop-research-table :is(th,td){text-align:center;padding:.28rem .48rem;border-right:1px solid #b78cc52b}
 .prop-research-table .column-sort{background:transparent;color:#eedcff;border:0;min-height:38px;font:inherit;font-weight:750;cursor:pointer}
 .prop-research-table [aria-sort] .column-sort{color:white;text-decoration:underline;text-underline-offset:4px}
-.prop-table-scroll .prop-research-table :is(th,td):first-child{position:sticky;left:0;z-index:1;background:#2c2035;box-shadow:1px 0 #755686}
-.prop-table-scroll .prop-research-table td:first-child{background:linear-gradient(95deg,color-mix(in srgb,var(--club) 24%,#211827),#241c2c);border-left:3px solid var(--club)}
+.prop-table-scroll .prop-research-table :is(th,td):first-child{position:sticky;left:0;z-index:1;background:#282a2e;box-shadow:1px 0 #755686}
+.prop-table-scroll .prop-research-table td:first-child{background:linear-gradient(95deg,color-mix(in srgb,var(--club) 24%,#1c1e22),#202226);border-left:3px solid var(--club)}
 .prop-chart-link{display:flex;align-items:center;justify-content:center;gap:.4rem;width:100%;min-height:38px;padding:0 .15rem;cursor:pointer;color:#f8edff;background:transparent;border:0;font:inherit}
 .prop-chart-link .player-photo{flex:none;width:1.8rem;height:1.8rem;background:var(--club);border:1px solid color-mix(in srgb,var(--club) 60%,white)}
-.prop-chart-link b{color:#ead1ff}
+.prop-chart-link b{color:#f1eef5}
 .prop-chart-link:is(:hover,:focus-visible) b{text-decoration:underline;text-underline-offset:3px}
 .prop-research-table .sort-chevron{display:inline-block;width:.42rem;height:.42rem;margin-left:.35rem;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);vertical-align:.15em}
 .prop-research-table [aria-sort=ascending] .sort-chevron{transform:rotate(225deg);vertical-align:baseline}
-.prop-point{text-transform:capitalize;color:#edd7ff}
-.prop-list-more{display:block;margin:1rem auto;border:1px solid #b787d6;border-radius:.4rem;color:#f6e8ff;background:#452958;min-height:40px;padding:.35rem .75rem;cursor:pointer}
+.prop-point{text-transform:capitalize;color:#ebe9ef}
+.prop-list-more{display:block;margin:1rem auto;border:1px solid #b787d6;border-radius:.4rem;color:#f6e8ff;background:#28282f;min-height:40px;padding:.35rem .75rem;cursor:pointer}
 @media(max-width:680px){
   .prop-list-filters{grid-template-columns:1fr 1fr}
   .prop-chart-link b{white-space:normal;min-width:4.2rem;max-width:6rem}
@@ -24,9 +24,9 @@
 .prop-picker-input input::placeholder{color:#e3d2ee;opacity:1}
 .prop-picker-input button{min-height:40px;padding:0 .5rem;background:none;color:#dec0f5;border:0;cursor:pointer}
 .prop-picker-input i{display:block;width:.4rem;height:.4rem;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
-.prop-picker-menu{position:absolute;z-index:5;left:0;top:100%;margin-top:3px;min-width:100%;width:max-content;max-width:min(20rem,85vw);max-height:15rem;overflow:auto;background:#261d30;border:1px solid #b989dd;border-radius:.45rem;box-shadow:0 6px 20px #140c1ee0}
+.prop-picker-menu{position:absolute;z-index:5;left:0;top:100%;margin-top:3px;min-width:100%;width:max-content;max-width:min(20rem,85vw);max-height:15rem;overflow:auto;background:#22252a;border:1px solid #b989dd;border-radius:.45rem;box-shadow:0 6px 20px #140c1ee0}
 .prop-picker-menu [role=option]{padding:.55rem .7rem;font-size:.85rem;cursor:pointer}
-.prop-picker-menu [role=option]:is(:hover,[data-active=true]){background:#4e315f}
+.prop-picker-menu [role=option]:is(:hover,[data-active=true]){background:#37323e}
 .prop-picker-menu small{color:#d2b7e4;margin:.3rem}
-.prop-charts-tag{padding:.18rem .38rem;border:1px solid #bc8bda;border-radius:.35rem;background:#4b2b61;color:#f9ebff;font-size:.7rem;font-weight:750}
+.prop-charts-tag{padding:.18rem .38rem;border:1px solid #bc8bda;border-radius:.35rem;background:#29262f;color:#f9ebff;font-size:.7rem;font-weight:750}
 @media(max-width:680px){.prop-chart-link{display:grid;grid-template-columns:auto 1fr;gap:.15rem .4rem}.prop-chart-link .player-photo{grid-row:span 2}.prop-charts-tag{justify-self:center}}
