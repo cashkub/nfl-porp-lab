@@ -1,6 +1,4 @@
 .prop-list-filters{display:grid;gap:.65rem;grid-template-columns:repeat(3,minmax(0,1fr))}
-.prop-list-filters .prop-search{display:grid;gap:.3rem;color:#e6cafa;font-size:.8rem;font-weight:750;min-width:0}
-.prop-search input{width:100%;min-width:0;background:#281e33;color:#fff3ff;padding:.65rem;border:1px solid #936db0;border-radius:.5rem;font:inherit}
 .prop-list-note{color:#d6c3df;font-size:.8rem;line-height:1.55}
 .prop-research-table{font-size:.83rem;font-variant-numeric:tabular-nums;background:#1b1522}
 .prop-table-scroll .prop-research-table :is(th,td){text-align:center;padding:.28rem .48rem;border-right:1px solid #b78cc52b}
@@ -20,3 +18,15 @@
   .prop-list-filters{grid-template-columns:1fr 1fr}
   .prop-chart-link b{white-space:normal;min-width:4.2rem;max-width:6rem}
 }
+.prop-list .prop-picker{position:relative;overflow:visible}
+.prop-picker-input{display:flex;align-items:center;min-width:0}
+.prop-picker-input input{width:100%;min-width:0;padding:.4rem 0 .4rem .65rem;border:0;background:transparent;color:#fff3ff;font:700 .92rem system-ui}
+.prop-picker-input input::placeholder{color:#e3d2ee;opacity:1}
+.prop-picker-input button{min-height:40px;padding:0 .5rem;background:none;color:#dec0f5;border:0;cursor:pointer}
+.prop-picker-input i{display:block;width:.4rem;height:.4rem;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.prop-picker-menu{position:absolute;z-index:5;left:0;top:100%;margin-top:3px;min-width:100%;width:max-content;max-width:min(20rem,85vw);max-height:15rem;overflow:auto;background:#261d30;border:1px solid #b989dd;border-radius:.45rem;box-shadow:0 6px 20px #140c1ee0}
+.prop-picker-menu [role=option]{padding:.55rem .7rem;font-size:.85rem;cursor:pointer}
+.prop-picker-menu [role=option]:is(:hover,[data-active=true]){background:#4e315f}
+.prop-picker-menu small{color:#d2b7e4;margin:.3rem}
+.prop-charts-tag{padding:.18rem .38rem;border:1px solid #bc8bda;border-radius:.35rem;background:#4b2b61;color:#f9ebff;font-size:.7rem;font-weight:750}
+@media(max-width:680px){.prop-chart-link{display:grid;grid-template-columns:auto 1fr;gap:.15rem .4rem}.prop-chart-link .player-photo{grid-row:span 2}.prop-charts-tag{justify-self:center}}
