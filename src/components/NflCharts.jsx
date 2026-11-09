@@ -5,7 +5,7 @@ import React,{useMemo,useState} from 'react';
 import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate} from '../lib/stats.js';
 import {priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
-import {defenseRankStyle,rateStyle} from './HitRate.jsx';
+import {DefenseRank,rateStyle} from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
 import {ChartSlate} from './ChartSlate.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -19,10 +19,10 @@ function gameDate(g){
   return Number.isFinite(date)?dateFormat.format(date):g.season+' · W'+g.week;
 }
 
-function leagueComparison(value,average) {
+function leagueComparison(value,average,direction) {
   if (!Number.isFinite(value) || !Number.isFinite(average)) return undefined;
   if (value === average) return 'equal';
-  return value > average ? 'above' : 'below';
+  return (direction === 'under' ? value < average : value > average) ? 'favorable' : 'tough';
 }
 
 function TeamLogo({team}) {
@@ -73,10 +73,10 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
       <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
         {line!=null && r===rows.at(-1) && <span className="chart-reference">{direction} {line}</span>}
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
-      <TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@ ':'vs '}{r.game.opponent}</b><span className="chart-rank" style={defenseRankStyle(r.defense?.rank,r.teams)}>DEF {r.defense?'#'+r.defense.rank:'—'}</span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
+      <TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@ ':'vs '}{r.game.opponent}</b><span className="chart-rank">DEF <DefenseRank compact rank={r.defense?.rank} total={r.teams} side={direction}/></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
       <span className="game-volume">{usageFields.map(([key,label])=><span key={key}><b>{r.game.usage?.[key] ?? '—'}</b> {label.toLowerCase()}</span>)}<span>Off. Snaps <b>{formatRate(r.game.usage?.offenseSnapRate)}</b></span></span>
     </button>)}</div></div>
-    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF #{active.defense.rank} of {active.teams}</b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'} Rank 1 allows the most to the position before that week.</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
+    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'}</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
 }
 
 function ControlLabel({children}) {
@@ -172,11 +172,11 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   return <section className="lab-block matchup-lab"><h2>Matchup research</h2>
     <h3><TeamLogo team={game.away}/>{game.away} at {game.home}<TeamLogo team={game.home}/></h3>
     <KickoffConditions game={game}/>
-    <dl><div><dt>{game.opponent} vs. {player.position}s</dt><dd style={defenseRankStyle(defense?.rank,defenses.length)}>{defense?'#'+defense.rank+' of '+defenses.length:'—'}</dd></div>
-      <div><dt>Position group allowed per game</dt><dd data-vs-league={leagueComparison(defense?.average,leagueMean)}>{formatNumber(defense?.average)} {unit}</dd></div>
+    <dl><div><dt>{game.opponent} vs. {player.position}s</dt><dd><DefenseRank rank={defense?.rank} total={defenses.length} side={direction}/></dd></div>
+      <div><dt>Position group allowed per game</dt><dd data-vs-league={leagueComparison(defense?.average,leagueMean,direction)}>{formatNumber(defense?.average)} {unit}</dd></div>
       <div><dt>League average allowed to {player.position}s</dt><dd>{formatNumber(leagueMean)} {unit}</dd></div>
       <div><dt>Player vs. {game.opponent} in selected history</dt><dd>{against.length?<>{line!=null && <span style={rateStyle(headToHead.rate)}>{headToHead.hits}/{against.length} Hits · </span>}{formatNumber(headToHead.average)} {unit} Avg</>:'No Meetings'}</dd></div></dl>
-    <p className="method">Green = More Allowed · Red = Less Allowed. Position Totals Use The League Average Above. {game.season} defense ranks · Rank 1 allows the most {chartMarkets[metric].label.toLowerCase()} to the entire position group.{defense?' Based on '+defense.games+' opponent games.':''}</p>
+    <p className="method">{game.season} · Position Totals Compared With The League Average.{defense?' Based on '+defense.games+' opponent games.':''}</p>
     <h3>{game.opponent} Red Zone Defense</h3>
     <dl><div><dt>Touchdown Rate Allowed</dt><dd>{redZone?.trips ? (100*redZone.touchdowns/redZone.trips).toFixed(1)+'%' : '—'}</dd></div>
     </dl>
@@ -187,7 +187,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
     <p className="method">{redZone ? redZone.touchdowns+' TDs Allowed On '+redZone.trips+' Red Zone Trips · '+redZone.games+' Games With Play Data Before Week '+game.week : 'No Earlier Red Zone Play Data Available.'}</p>
     <h3>Last Three Games Against {player.position}s</h3>
     {prior.length?<div className="history-scroll"><table><thead><tr><th>Game</th><th>Offense</th><th>Group Total</th><th>Leading Player</th></tr></thead><tbody>
-      {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td><span className="log-table-team"><TeamLogo team={g.team}/>{g.team}</span></td><td data-vs-league={leagueComparison(total,leagueMean)}>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}
+      {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td><span className="log-table-team"><TeamLogo team={g.team}/>{g.team}</span></td><td data-vs-league={leagueComparison(total,leagueMean,direction)}>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}
     </tbody></table></div>:<p>No Earlier Games Recorded This Season.</p>}
   </section>;
 }

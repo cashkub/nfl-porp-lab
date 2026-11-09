@@ -42,3 +42,10 @@
 .prop-advanced[open]>summary::after{transform:translateY(2px) rotate(225deg)}
 .prop-advanced>.prop-list-filters{background:#1b1e22;border:1px solid #796688;border-top:0;border-radius:0 0 .65rem .65rem;padding:.7rem}
 @media(max-width:680px){.prop-primary{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}.prop-primary .prop-picker{grid-column:1/-1}}
+
+.last-five{display:inline-flex;gap:3px;align-items:center}
+.last-five>span{display:grid;justify-items:center;min-width:2.1em;padding:.15em .22em;border:1px solid currentColor;border-radius:.3em;font-weight:750;line-height:1.15;background:color-mix(in srgb,currentColor 7%,#18191d)}
+.last-five small{font-size:.6rem}
+.last-five [data-result=Hit]{color:var(--rate-high)}
+.last-five [data-result=Miss]{color:var(--rate-low)}
+.last-five [data-result=Push]{color:var(--rate-mid)}

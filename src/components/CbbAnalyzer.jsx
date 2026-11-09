@@ -11,7 +11,7 @@ import {availableStats} from '../lib/availableStats.js';
 import {UsageTrends} from './Research.jsx';
 import ConferenceFilter from './ConferenceFilter.jsx';
 import React, {useEffect, useMemo, useState} from 'react';
-import HitRate, {rateStyle} from './HitRate.jsx';
+import HitRate, {DefenseRank} from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
 import {filteredWindow, summarize} from '../lib/stats.js';
 
@@ -101,11 +101,11 @@ export default function CbbAnalyzer({initial = {}}) {
         const outcome=val===line?'Push':(direction==='over'?val>line:val<line)?'Hit':'Miss';
         return <tr key={g.id}><td>{g.date}</td><td>{source.data.teams[g.opponent] || g.abbr}</td><td>{g.venue}</td>
           <td><div className="cbb-bar"><b>{val}</b><div aria-hidden="true"><i className={'cbb-'+outcome} style={{width:100*val/highest+'%'}}/><em style={{left:100*line/highest+'%'}}/></div></div></td>
-          {!football && <td>{g.minutes}</td>}<td style={rankCount>1 && rank ? rateStyle((rankCount-rank)/(rankCount-1)):undefined}>{rank ? '#'+rank : '—'}</td>
+          {!football && <td>{g.minutes}</td>}<td><DefenseRank rank={rank} total={rankCount} side={direction}/></td>
           <td><span className={'result-pill '+outcome.toLowerCase()}>{outcome}</span></td></tr>;
       }}/></div>:<p>No Recorded Games Match These Filters.</p>}
 
-      <p className="board-foot">Bar markers show your line. Defense #1 allows the most of the selected stat per game to all opposing players combined. Rankings use the selected season’s available box scores.</p></section></>}
+      <p className="board-foot">Bar markers show your line. Rankings use the selected season’s available box scores.</p></section></>}
     <p className="board-foot">Box Scores and Schedules · <a href={'https://github.com/sportsdataverse/'+(football?'cfbfastR-cfb-data':sport==='nba'?'hoopR-nba-data':'hoopR-mbb-data')}>SportsDataverse</a> · Stats through {index.data?.through?.[season] || '—'}</p>
   </div></div></div>;
 }

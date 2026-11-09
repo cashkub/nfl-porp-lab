@@ -3,16 +3,27 @@ import React,{useMemo,useState} from 'react';
 import {availableStats} from '../lib/availableStats.js';
 import {bookLine,priceText} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
-import {getPlayerGames,formatRate,summarize} from '../lib/stats.js';
+import {getPlayerGames,formatRate,isHit,summarize} from '../lib/stats.js';
 import {teamColor} from '../lib/teamColors.js';
 import {nextGame} from '../lib/schedule.js';
 import {WeekAndMatchup,TeamFilter,useChartSlate} from './ChartSlate.jsx';
-import {rateStyle,defenseRankStyle} from './HitRate.jsx';
+import {rateStyle,DefenseRank} from './HitRate.jsx';
 import SortableTable from './SortableTable.jsx';
 import PropPlayerFilter from './PropPlayerFilter.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import './NflPropList.css';
+
+function LastFive({row,side}) {
+  return <span className="last-five">{row.lastFive.map(game=>{
+    const value=game.stats[row.metric] ?? 0;
+    const result=value===row.point?'Push':isHit(value,row.point,side)?'Hit':'Miss';
+    const detail=`Week ${game.week} vs. ${game.opponent} · ${value} · ${result} (${side} ${row.point})`;
+    return <span key={game.gameId} data-result={result} title={detail} aria-label={detail}>
+      <small>{result[0]}</small>{value}
+    </span>;
+  })}</span>;
+}
 
 export default function NflPropList({players,roster,schedule,season,books,markets,now,loading,error,onOpen}) {
   const future=useMemo(()=>schedule.filter(g=>Date.parse(g.kickoff)>now),[schedule,now]);
@@ -49,7 +60,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
         const table=ranks.get(key);
         const opponent=({LAR:'LA',WAS:'WSH',JAX:'JAC'})[game.opponent];
         const defense=table.find(d=>d.team===game.opponent)??table.find(d=>d.team===opponent);
-        result.push({player,game,metric,point,quote,summary:summarize(recent,metric,point,side),rank:defense?.rank,teams:table.length});
+        result.push({player,game,metric,point,quote,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),rank:defense?.rank,teams:table.length});
       }
     }
     return result.sort((a,b)=>Number(!!b.quote)-Number(!!a.quote) || b.summary.rate-a.summary.rate || b.summary.total-a.summary.total || a.player.name.localeCompare(b.player.name));
@@ -65,12 +76,13 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Market',value:r=>markets[r.metric].label},
     {label:'Line',value:r=>r.point,render:r=><strong className="prop-point">{side} {r.point}</strong>},
     {label:'Hit Rate',value:r=>r.summary.rate,highFirst:true,render:r=><b style={rateStyle(r.summary.rate)}>{formatRate(r.summary.rate)}</b>},
+    {label:'Last 5',value:r=>summarize(r.lastFive,r.metric,r.point,side).rate,highFirst:true,render:r=><LastFive row={r} side={side}/>},
     {label:'Hits',value:r=>r.summary.hits,highFirst:true,render:r=>r.summary.hits+'/'+r.summary.total},
     {label:'Odds',value:r=>r.quote?.[side]??null,highFirst:true,render:r=>priceText(r.quote?.[side])},
     {label:'Source',value:r=>r.quote?'DraftKings':'Player Average'},
     {label:'Team',value:r=>r.player.team},
     {label:'Opponent',value:r=>r.game.opponent,render:r=>(r.game.venue==='Away'?'@ ':'vs. ')+r.game.opponent},
-    {label:'DEF Rank',value:r=>r.rank,render:r=><b style={defenseRankStyle(r.rank,r.teams)}>{r.rank?'#'+r.rank:'—'}</b>},
+    {label:'DEF Rank',value:r=>r.rank,highFirst:side==='under',render:r=><DefenseRank rank={r.rank} total={r.teams} side={side}/>},
     {label:'Pos',value:r=>r.player.position},
   ];
   return <main className="chart-lab prop-list">
@@ -103,7 +115,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
             {columns.map(c=><td key={c.label}>{c.render?c.render(r):c.value(r)}</td>)}
           </tr>}/>
       </div>}
-      {filtered.length>0 && <p className="prop-list-note">Player Averages And Hit Rates Use Up To 10 Prior {venue==='H'?'Home Games':venue==='A'?'Away Games':'Games'} This Season. DEF #1 Allows The Most To The Position.</p>}
+      {filtered.length>0 && <p className="prop-list-note">Player Averages And Hit Rates Use Up To 10 Prior {venue==='H'?'Home Games':venue==='A'?'Away Games':'Games'} This Season. Last 5 Runs Oldest To Newest. H = Hit · M = Miss · P = Push.</p>}
       {!filtered.length && <p>No Upcoming Props Match These Filters.</p>}
       {filtered.length>limit && <button className="prop-list-more" onClick={()=>setLimit(limit+24)}>Show More Props</button>}
     </>}

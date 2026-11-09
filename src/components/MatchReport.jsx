@@ -4,7 +4,7 @@ import React from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import {projection} from '../lib/projection.js';
 import {priceText} from '../lib/bookLine.js';
-import HitRate,{defenseRankStyle} from './HitRate.jsx';
+import HitRate,{DefenseRank,defenseRankStyle} from './HitRate.jsx';
 
 const signed=n=>(n>0?'+':'')+n.toFixed(1);
 const priorities=['out','doubtful','questionable','limited participation in practice','did not participate in practice','full participation in practice'];
@@ -101,7 +101,7 @@ function NflConditions({game,model}){
 export function PickReport({number,name,playerId,photo,onOpen,side,line,metric,price,hits,total,average,rank,rankCount=32,results,reason,role,context}){
   return <><div className="pick-player"><span style={defenseRankStyle(number,9)}>#{number}</span><button className="board-player" onClick={onOpen}><PlayerPhoto id={playerId} name={name} url={photo}/>{name}</button></div>
     <p className="pick-line"><strong>{side==='over'?'Over':'Under'} {line} {metric}</strong><small>{price}</small></p>
-    <dl className="pick-metrics"><div><dt>Hit Rate</dt><dd><HitRate rate={hits/total}/></dd></div><div><dt>Game Avg</dt><dd>{average.toFixed(1)}</dd></div><div><dt title="#1 allows the most">Defense Rank</dt><dd style={defenseRankStyle(rank,rankCount)}>{rank?'#'+rank:'—'}</dd></div></dl>
+    <dl className="pick-metrics"><div><dt>Hit Rate</dt><dd><HitRate rate={hits/total}/></dd></div><div><dt>Game Avg</dt><dd>{average.toFixed(1)}</dd></div><div><dt>Defense Rank</dt><dd><DefenseRank rank={rank} total={rankCount} side={side}/></dd></div></dl>
     <div className="pick-reason"><h4 className="report-heading">Why It Ranks</h4><p>{reason}</p></div>
     <details className="report-fold pick-evidence"><summary>Game History{role || context?' & Player Context':''}</summary>
     <small>{hits} of {total} Hit · Oldest First</small>

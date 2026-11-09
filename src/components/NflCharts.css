@@ -224,8 +224,8 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
   background:radial-gradient(at 50% 20%,var(--club-edge),var(--club) 58%,#201823);
   box-shadow:0 0 10px color-mix(in srgb,var(--club) 60%,transparent)
 }
-.chart-lab [data-vs-league=above]{color:var(--rate-high)}
-.chart-lab [data-vs-league=below]{color:var(--rate-low)}
+.chart-lab [data-vs-league=favorable]{color:var(--rate-high)}
+.chart-lab [data-vs-league=tough]{color:var(--rate-low)}
 .chart-lab [data-vs-league=equal]{color:var(--rate-mid)}
 .chart-lab .lab-block{background:linear-gradient(135deg,#24282d 0,#1b1e22 15rem,#17191d 75%)}
 .chart-lab :is(.chart-filter,.kickoff-conditions>div){background:linear-gradient(110deg,#292c31,#1c1e23)}

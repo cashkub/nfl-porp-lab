@@ -1,4 +1,4 @@
-import {rateStyle} from './HitRate.jsx';
+import {DefenseRank} from './HitRate.jsx';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { isHit, METRICS } from '../lib/stats.js';
 
@@ -55,7 +55,7 @@ export default function PropChart({ multi, defenses, games, metric, line, direct
                     >
                       <span className="chart-bar-value">{value}</span>
                     </button>
-                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {matchup}</span><small>{college?game.date.slice(5):(multi?String(game.season).slice(-2)+' · ':'')+'W'+game.week}</small>{!football && <small className="usage-label" title={college?'Minutes':usage.label}>{college?game.minutes:game.usage?.[usage.key] ?? '—'} {college?'min':usage.key === 'opportunities' ? 'opp' : usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small>}<b className="chart-defense" style={rank && rankCount>1?rateStyle((rankCount-rank)/(rankCount-1)):undefined} title={rankLabel}>DEF {rank ? `#${rank}` : '—'}</b></div>
+                    <div className="chart-game-label"><span>{game.venue === 'H' ? 'vs' : game.venue === 'A' ? '@' : '—'} {matchup}</span><small>{college?game.date.slice(5):(multi?String(game.season).slice(-2)+' · ':'')+'W'+game.week}</small>{!football && <small className="usage-label" title={college?'Minutes':usage.label}>{college?game.minutes:game.usage?.[usage.key] ?? '—'} {college?'min':usage.key === 'opportunities' ? 'opp' : usage.key === 'attempts' ? 'att' : usage.key === 'carries' ? 'car' : 'tgt'}</small>}<b className="chart-defense">DEF <DefenseRank compact rank={rank} total={rankCount} side={direction}/></b></div>
                   </div>
                 );
               })}
