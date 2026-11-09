@@ -18,10 +18,17 @@ export function useChartSlate(schedule,now) {
     changeMatch:value=>{setMatch(value);setTeam('')},changeTeam:setTeam};
 }
 
-export function ChartSlate({slate}) {
-  return <div className="chart-slate">
+export function WeekAndMatchup({slate}) {
+  return <>
     <ChartSelect label="Game week" value={slate.week} onChange={slate.changeWeek}>{slate.weeks.map(w=><option key={w} value={w}>{w}</option>)}</ChartSelect>
     <ChartSelect label="Matchup" value={slate.game?.id || ''} onChange={slate.changeMatch}><option value="">All matchups</option>{slate.games.map(g=><option key={g.id} value={g.id}>{g.away} at {g.home}</option>)}</ChartSelect>
-    <ChartSelect label="Team" value={slate.team} onChange={slate.changeTeam}><option value="">All teams</option>{slate.teams.map(t=><option key={t}>{t}</option>)}</ChartSelect>
-  </div>;
+  </>;
+}
+
+export function TeamFilter({slate}) {
+  return <ChartSelect label="Team" value={slate.team} onChange={slate.changeTeam}><option value="">All teams</option>{slate.teams.map(t=><option key={t}>{t}</option>)}</ChartSelect>;
+}
+
+export function ChartSlate({slate}) {
+  return <div className="chart-slate"><WeekAndMatchup slate={slate}/><TeamFilter slate={slate}/></div>;
 }

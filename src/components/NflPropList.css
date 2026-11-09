@@ -30,3 +30,11 @@
 .prop-picker-menu small{color:#d2b7e4;margin:.3rem}
 .prop-charts-tag{padding:.18rem .38rem;border:1px solid #bc8bda;border-radius:.35rem;background:#29262f;color:#f9ebff;font-size:.7rem;font-weight:750}
 @media(max-width:680px){.prop-chart-link{display:grid;grid-template-columns:auto 1fr;gap:.15rem .4rem}.prop-chart-link .player-photo{grid-row:span 2}.prop-charts-tag{justify-self:center}}
+
+.prop-primary{grid-template-columns:minmax(0,.65fr) minmax(0,1.1fr) minmax(0,1.45fr);margin-bottom:.55rem}
+.prop-advanced>summary{list-style:none;margin:0}
+.prop-advanced>summary::-webkit-details-marker{display:none}
+.prop-advanced[open]>summary{border-radius:.65rem .65rem 0 0}
+.prop-advanced[open]>summary::after{transform:translateY(2px) rotate(225deg)}
+.prop-advanced>.prop-list-filters{background:#1b1e22;border:1px solid #796688;border-top:0;border-radius:0 0 .65rem .65rem;padding:.7rem}
+@media(max-width:680px){.prop-primary{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}.prop-primary .prop-picker{grid-column:1/-1}}

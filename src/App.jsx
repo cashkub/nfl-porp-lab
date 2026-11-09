@@ -320,10 +320,10 @@ export default function App() {
   if(previewTools){
     if(page==='prop-lists')return <ManualLeague.Provider value="nfl"><NflPropList players={players} roster={seasonPlayers}
       schedule={nflSchedule} season={scheduleSeason} books={bookGames} markets={chartMarkets} now={now} loading={loading} error={error}
-      onOpen={({player:p,game,metric:key,quote:saved,point},side)=>{
+      onOpen={({player:p,game,metric:key,quote:saved,point},side,historyVenue)=>{
         chartSlate.changeWeek(String(game.week));chartSlate.changeMatch(game.id);
         boardSelection.current=p.id!==player?.id?p.id:null;
-        setTeam('ALL');setVenue('ALL');setOpponent('ALL');setWindowSize('10');
+        setTeam('ALL');setVenue(historyVenue);setOpponent('ALL');setWindowSize('10');
         setSelectedId(p.id);setMetric(key);setDirection(side);
         setCustom(saved?null:{context:[p.id,key,game.kickoff].join('|'),value:point,source:'Player Average'});
         window.location.hash='analyzer';

@@ -244,3 +244,10 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
 .player-log>.chart-filter{display:inline-grid;width:9rem;vertical-align:middle;margin:.15rem 0 .35rem}
 
 .player-prop .prop-matchup{flex-basis:100%;color:#eedcff;font-weight:700}
+
+@media(prefers-reduced-motion:no-preference){
+  @keyframes chart-panel-in{from{opacity:0;translate:0 -.35rem}to{opacity:1;translate:0 0}}
+  .chart-lab :is(.extra-filters[data-open=true],.line-control[open]>.chart-line-panel,.bar-report,.prop-advanced[open]>.prop-list-filters,.prop-picker-menu){animation:chart-panel-in .2s cubic-bezier(.2,.7,.2,1)}
+  .chart-disclosure::after{transition:transform .2s ease}
+  .chart-disclosure,.prop-chart-link,.line-compare button{transition:background-color .16s,box-shadow .16s,border-color .16s}
+}
