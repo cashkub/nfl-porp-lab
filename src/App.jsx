@@ -327,7 +327,7 @@ export default function App() {
     const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(game.kickoff));
     setTeam('ALL');setSeason(latest);setVenue('ALL');setOpponent('ALL');setWindowSize('10');
     setSelectedId(p.id);setMetric(market.metric);setDirection(side);
-    setCustom({context:[p.id,market.metric,game.kickoff].join('|'),value:market.point,source:'DraftKings'});
+    setCustom({context:[p.id,market.metric,game.kickoff].join('|'),value:market.point,source:market.source||'Player Average'});
     if(previewTools){chartSlate.changeWeek(String(game.week));chartSlate.changeMatch(game.id);}
     else gameFilter.select(day,[day,game.away,game.home].join('|'));
     setPage('analyzer');window.location.hash='analyzer';window.scrollTo(0,0);
