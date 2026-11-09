@@ -2,6 +2,7 @@ import NflToolHeader from './NflToolHeader.jsx';
 import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
+import {ChevronDown} from 'lucide-react';
 import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate} from '../lib/stats.js';
 import {priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
@@ -39,19 +40,39 @@ function PlayerBoxScore({game,position,metric}) {
   })}<div><dt>Offensive Snap %</dt><dd>{formatRate(game.usage?.offenseSnapRate)}</dd></div></dl>;
 }
 
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 function lineResult(value,line,direction) {
   if (line==null) return {margin:null,outcome:'Unrated'};
   const margin=direction==='under' ? line-value : value-line;
   return {margin,outcome:margin>0?'Hit':margin<0?'Miss':'Push'};
 }
 
+function gameLogStatStyle(value,line,direction){
+  if(line==null)return undefined;
+  const margin=direction==='under'?line-value:value-line;
+  const scale=Math.max(1,Math.abs(line)*.12);
+  return rateStyle(clamp(.5+margin/(2*scale),0,1));
+}
+
 const marginNumber=new Intl.NumberFormat('en-US',{maximumFractionDigits:12,signDisplay:'exceptZero'});
 
 function GameChart({games,windowSize,players,playerPosition,playerName,metric,line,direction}) {
   const [selected,setSelected]=useState('');
+  const [showDetails,setShowDetails]=useState(false);
   const info=chartMarkets[metric];
   const volume=usageFor(metric);
   const usageFields=metric==='scrimmageYards' || metric==='scoredTDs'?[['carries','Carries'],['targets','Targets']]:[[volume.key,volume.label]];
+  const teamVolumes=useMemo(()=>{
+    const totals=new Map();
+    for(const person of players)for(const game of person.games||[]){
+      const team=game.team||person.team,key=game.gameId+'|'+team;
+      if(!game.gameId||!team)continue;
+      if(!totals.has(key))totals.set(key,{attempts:0,carries:0,targets:0});
+      const row=totals.get(key),usage=game.usage||{};
+      row.attempts+=Number(usage.attempts)||0;row.carries+=Number(usage.carries)||0;row.targets+=Number(usage.targets)||0;
+    }
+    return totals;
+  },[players]);
   const ranks=useMemo(()=>new Map(games.map(g=>{
     const table=defenseTable(players,g.season,playerPosition,metric,g.week);
     return [g.gameId,{defense:table.find(row=>row.team===g.opponent),teams:table.length}];
@@ -69,14 +90,13 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
     <div className="margin-scroll"><div className="margin-bars" style={{'--count':rows.length,'--target':position(line)+'%'}}>
     {rows.map(r=><button key={r.game.gameId} type="button" data-result={r.outcome} aria-pressed={r===active}
       aria-label={'Week '+r.game.week+' against '+r.game.opponent+', '+r.value+' '+info.unit+', '+r.outcome+', offensive snaps '+formatRate(r.game.usage?.offenseSnapRate)}
-      onClick={()=>setSelected(previous=>previous===r.game.gameId?'':r.game.gameId)}>
+      onClick={()=>{setSelected(previous=>previous===r.game.gameId?'':r.game.gameId);setShowDetails(false)}}>
       <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
         {line!=null && r===rows.at(-1) && <span className="chart-reference">{direction} {line}</span>}
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
-      <TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@ ':'vs '}{r.game.opponent}</b><span className="chart-rank">DEF <DefenseRank compact rank={r.defense?.rank} total={r.teams} label={info.label} position={playerPosition+'s'}/></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
-      <span className="game-volume">{usageFields.map(([key,label])=><span key={key}><b>{r.game.usage?.[key] ?? '—'}</b> {label.toLowerCase()}</span>)}<span>Off. Snaps <b>{formatRate(r.game.usage?.offenseSnapRate)}</b></span></span>
+      <span className="chart-opponent"><TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@':'vs'} {r.game.opponent}</b></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
     </button>)}</div></div>
-    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'}</p></section>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
+    {active?<><button className="game-details-toggle" type="button" aria-expanded={showDetails} onClick={()=>setShowDetails(open=>!open)}>{showDetails?'Hide Game Details':'Show Game Details'} <ChevronDown size={15}/></button>{showDetails?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/><div className="game-usage-details">{usageFields.map(([key,label])=>{const own=Number(active.game.usage?.[key]),team=teamVolumes.get(active.game.gameId+'|'+active.game.team)?.[key],share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';return <span key={key}><b>{label}</b> {Number.isFinite(own)?own:'—'} · {share} Team Share</span>})}<span><b>Offensive Snap Share</b> {formatRate(active.game.usage?.offenseSnapRate)}</span></div>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'}</p></section>:null}</>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
 }
 
 function ControlLabel({children}) {
@@ -172,7 +192,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   return <section className="lab-block matchup-lab"><h2>Matchup research</h2>
     <h3><TeamLogo team={game.away}/>{game.away} at {game.home}<TeamLogo team={game.home}/></h3>
     <KickoffConditions game={game}/>
-    <dl><div><dt>{game.opponent} DEF Rank</dt><dd><DefenseRank rank={defense?.rank} total={defenses.length} label={chartMarkets[metric].label} position={player.position+'s'}/></dd></div>
+    <dl><div><dt>{game.opponent} DEF Rank</dt><dd><DefenseRank rank={defense?.rank} total={defenses.length} label={chartMarkets[metric].label} position={player.position+'s'} side={direction}/></dd></div>
       <div><dt>Position group allowed per game</dt><dd data-vs-league={leagueComparison(defense?.average,leagueMean,direction)}>{formatNumber(defense?.average)} {unit}</dd></div>
       <div><dt>League average allowed to {player.position}s</dt><dd>{formatNumber(leagueMean)} {unit}</dd></div>
       <div><dt>Player vs. {game.opponent} in selected history</dt><dd>{against.length?<>{line!=null && <span style={rateStyle(headToHead.rate)}>{headToHead.hits}/{against.length} Hits · </span>}{formatNumber(headToHead.average)} {unit} Avg</>:'No Meetings'}</dd></div></dl>
@@ -245,7 +265,7 @@ function GameLog({player,currentSeason,line,direction,metric}) {
       const v=g.stats[metric] ?? 0;
       const {margin,outcome}=lineResult(v,line,direction);
       return <tr key={g.gameId}><th scope="row">{g.week}</th><td><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></td>
-        {columns.map(key=><td key={key}>{key===metric?<b>{v}</b>:logFields[key][1](g) ?? '—'}</td>)}
+        {columns.map(key=><td key={key}>{key===metric?<b style={gameLogStatStyle(v,line,direction)} data-result={outcome} title={line==null?'No prop line selected':outcome+' by '+Math.abs(margin).toFixed(1)}>{v}</b>:logFields[key][1](g) ?? '—'}</td>)}
         <td><span className="log-outcome" data-result={outcome}>{outcome}{margin!=null && ' '+marginNumber.format(margin)}</span></td>
         <td>{gameDate(g)}</td></tr>;
     })}</tbody></table></div>}
