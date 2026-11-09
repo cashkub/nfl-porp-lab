@@ -1,6 +1,7 @@
 import {useChartSlate} from './components/ChartSlate.jsx';
 import NflCharts,{chartMarkets} from './components/NflCharts.jsx';
 import NflPropList from './components/NflPropList.jsx';
+import TopLooks from './components/TopLooks.jsx';
 import NflGames from './components/NflGames.jsx';
 import FilterMenu from './components/FilterMenu.jsx';
 import PlayerStepper from './components/PlayerStepper.jsx';
@@ -142,7 +143,7 @@ export default function App() {
   const nflTool = !launch && !manualLeague;
   const previewTools=new URLSearchParams(window.location.search).get('view')==='nfl';
   useEffect(()=>{
-    if(previewTools && page!=='analyzer' && page!=='prop-lists')window.location.replace('/preview/nfl/');
+    if(previewTools && !['analyzer','prop-lists','nfl-top'].includes(page))window.location.replace('/preview/nfl/');
   },[previewTools,page]);
   const [initialCbb,setInitialCbb] = useState({});
   const [dark,setDark] = useState(() => {
@@ -328,6 +329,7 @@ export default function App() {
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   if(previewTools){
+    if(page==='nfl-top')return <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openFromBoard}/>;
     if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl">
       {(page==='prop-lists' || propListReturn.current) && <div hidden={page!=='prop-lists'}>
@@ -362,11 +364,7 @@ export default function App() {
       {launch ? <SportHome sport={page==='home'?null:sport}/> :
        manualLeague && page===sport ? <CbbAnalyzer key={sport} initial={initialCbb.sport===sport?initialCbb:{}}/> :
        (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
-       page==='nfl-top' ? <TrackedPicks sport="nfl" onOpen={r=>{
-         const p=players.find(p=>p.id===r.playerId);
-         if(!p)return;
-         openFromBoard(p,{metric:r.metric,point:r.line},r.side,{...r,lines:[]});
-       }}/> :
+       page==='nfl-top' ? <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openFromBoard}/> :
        page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        manualLeague && page===sport+'-games' ? <CbbGames key={sport}/> :

@@ -5,7 +5,7 @@ const destinations=[
   {name:'NFL Menu',icon:LayoutGrid,href:'/preview/nfl/'},
   {name:'Player Charts',icon:Activity,href:'#analyzer',key:'charts'},
   {name:'Prop Lists',icon:ListFilter,href:'#prop-lists',key:'props'},
-  {name:'Top Looks',icon:Crosshair},
+  {name:'Top Looks',icon:Crosshair,href:'#top-eight',key:'top'},
   {name:'Games',icon:CalendarDays},
   {name:'Model Record',icon:BarChart3},
 ];
