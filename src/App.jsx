@@ -156,6 +156,7 @@ export default function App() {
   useEffect(() => {
     const changePage = () => {
       const next=activePage();
+      if(next!=='analyzer')setChartFixture(null);
       if(next!=='prop-lists' || !propListReturn.current)window.scrollTo(0,0);
       setPage(next);
     };
@@ -167,6 +168,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const [chartFixture,setChartFixture]=useState(null);
   const [season, setSeason] = useState(2026);
   const [team, setTeam] = useState('ALL');
   const [requestedMetric, setMetric] = useState('receivingYards');
@@ -260,7 +262,9 @@ export default function App() {
   const normalizeTeam = team => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[team] || team);
   const chartSlate=useChartSlate(previewTools?nflSchedule:[],Date.now());
   const scope=previewTools?chartSlate:gameFilter;
-  const scopedPlayers=seasonPlayers.filter(p=>scope.allows(normalizeTeam(p.team)));
+  const scopedPlayers=seasonPlayers.filter(p=>chartFixture&&page==='analyzer'
+    ? [chartFixture.home,chartFixture.away].includes(normalizeTeam(p.team))
+    : scope.allows(normalizeTeam(p.team)));
   const teams = useMemo(() => [...new Set(scopedPlayers.map(p => p.team).filter(Boolean))].sort(), [scopedPlayers]);
   const activeTeam = teams.includes(team) ? team : 'ALL';
   const roster = useMemo(() => activeTeam === 'ALL' ? scopedPlayers :
@@ -294,8 +298,8 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
   const scheduleSeason = multi ? Math.max(...seasons) : season;
-  const contextSchedule=previewTools ? (chartSlate.game?[chartSlate.game]:chartSlate.games) : gameFilter.game?[gameFilter.game]:nflSchedule;
-  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(contextSchedule, player?.team, scheduleSeason, previewTools || gameFilter.game ? -Infinity : now);
+  const contextSchedule=previewTools ? (chartSlate.game?[chartSlate.game]:chartSlate.games) : chartFixture&&page==='analyzer'?[chartFixture]:gameFilter.game?[gameFilter.game]:nflSchedule;
+  const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(contextSchedule, player?.team, scheduleSeason, previewTools || chartFixture&&page==='analyzer' || gameFilter.game ? -Infinity : now);
   const quote = bookLine(bookGames, upcoming, player?.name, metric);
   const lineContext = [player?.id, metric, upcoming?.kickoff].join('|');
   const manual = custom?.context === lineContext;
@@ -313,19 +317,24 @@ export default function App() {
   function openFromBoard(p, market, side, game) {
     const latest = Math.max(...seasons);
     const history = getPlayerGames(p,latest);
-    if (!gameFilter.allows(normalizeTeam(history.at(-1)?.team || p.team))) gameFilter.select('');
-    const next = gameFilter.game && gameFilter.allows(normalizeTeam(history.at(-1)?.team || p.team)) ? gameFilter.game : nextGame(data.schedule ?? initialSchedule,history.at(-1)?.team || p.team,latest,now);
+    const next = game || (gameFilter.game && gameFilter.allows(normalizeTeam(history.at(-1)?.team || p.team)) ? gameFilter.game : nextGame(data.schedule ?? initialSchedule,history.at(-1)?.team || p.team,latest,now));
     boardSelection.current = p.id !== player?.id ? p.id : null;
+    setChartFixture(next || null);
     setTeam('ALL'); setSeason(latest); setVenue('ALL'); setOpponent('ALL');
     setSelectedId(p.id); setMetric(market.metric); setDirection(side); setWindowSize('10');
-    const saved = bookLine([game],next,p.name,market.metric);
-    setCustom(saved?.point === market.point ? null : {context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point});
+    if(next){
+      const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(next.kickoff));
+      gameFilter.select(day,[day,next.away,next.home].join('|'));
+    }
+    setCustom({context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point,source:'Selected Prop Line'});
     setPage('analyzer'); window.location.hash='analyzer'; window.scrollTo(0,0);
   }
   function openTopLookChart(p, market, side, game) {
     const latest=Math.max(...seasons);
     const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(game.kickoff));
     setTeam('ALL');setSeason(latest);setVenue('ALL');setOpponent('ALL');setWindowSize('10');
+    boardSelection.current=p.id!==player?.id?p.id:null;
+    setChartFixture(game);
     setSelectedId(p.id);setMetric(market.metric);setDirection(side);
     setCustom({context:[p.id,market.metric,game.kickoff].join('|'),value:market.point,source:market.source||'Player Average'});
     if(previewTools){chartSlate.changeWeek(String(game.week));chartSlate.changeMatch(game.id);}

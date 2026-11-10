@@ -2,10 +2,11 @@ import FilterMenu from './FilterMenu.jsx';
 import SortableTable from './SortableTable.jsx';
 import HitRate from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
-import TrackedPicks,{useArchive} from './TrackedPicks.jsx';
+import {useArchive} from './TrackedPicks.jsx';
 import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
 import React,{useState} from 'react';
 import {overallScore} from '../lib/projection.js';
+import ModelRecordPicks from './ModelRecordPicks.jsx';
 
 const margin=pair=>pair[1]-pair[0];
 function outcome(row){
@@ -45,7 +46,7 @@ function PerformanceSummary({games,picks,period,sport}){
       values={([label,g])=>[label,winRate(g.overall),winRate(g.selected)]} renderRow={([label,group])=><tr key={label}><th scope="row">{label}</th><td>{recordCell(group.overall)}</td><td>{recordCell(group.selected)}</td></tr>}/></div>
     <small>Win rates use decided picks. Overall includes the full published archive.</small></section>;
 }
-export default function ModelRecord({validation,sport='nfl',initialTab='games'}){
+export default function ModelRecord({validation,sport='nfl',initialTab='props'}){
   const [tab,setTab]=useState(initialTab);
   const periodName=(sport==='nba'||sport==='cbb')?'Date':'Week';
   const [period,setPeriod]=useState('all');
@@ -62,8 +63,8 @@ export default function ModelRecord({validation,sport='nfl',initialTab='games'})
     .sort((a,b)=>Math.abs(Date.parse(a.kickoff)-Date.now())-Math.abs(Date.parse(b.kickoff)-Date.now()))[0];
   const summaryPeriod=period==='all'?(nearest?recordPeriod(nearest,sport):periods[0]):period;
   const summary=games && picks.rows?<PerformanceSummary games={games} picks={picks.rows} period={summaryPeriod} sport={sport}/>:null;
-  const tabs=<div className="board-sort">{[['games','Game Winners'],['props','Top Props'],...(sport==='nfl'?[['touchdowns','Touchdown Scorers']]:[])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}</div>;
-  if(tab!=='games')return <TrackedPicks sport={sport} touchdownRecord={tab==='touchdowns'} record archive={{...picks,rows:picks.rows?.filter(inPeriod)}}>{tabs}{selector}{summary}</TrackedPicks>;
+  const tabs=<div className="board-sort model-record-tabs">{[['props','Player Props'],...(sport==='nfl'?[['touchdowns','Anytime Touchdowns']]:[]),['games','Game Winners']].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}{sport==='nfl'&&<button type="button" className="outline-button future-record-tab" disabled title="Added when the Games tab has a locked moneyline model">Moneyline Record · Coming Soon</button>}</div>;
+  if(tab!=='games')return <section className="panel props-board model-record-shell">{tabs}{picks.error?<p>Pick archive unavailable.</p>:!picks.rows?<p>Loading Locked Picks…</p>:<ModelRecordPicks rows={picks.rows.filter(inPeriod)} kind={tab==='touchdowns'?'touchdowns':'props'}/>}</section>;
   return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':sport==='cfb'?'First published prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}{summary}
     <div className="usage-trend"><h3>{period==='all'?'Overall Game Record':'Selected Game Record'}</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>
       <small>{decided.length?<><HitRate rate={right/decided.length}/> accuracy · </>:''}{graded.length} graded · Average margin error {graded.length?(graded.reduce((sum,r)=>sum+Math.abs(margin(r.final)-margin(r.overall)),0)/graded.length).toFixed(1)+' pts':'—'}</small></div>

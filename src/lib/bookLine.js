@@ -11,6 +11,13 @@ export function bookLine(games, upcoming, name, metric) {
   return matches?.length === 1 ? matches[0] : null;
 }
 
+export function fairSideProbability(quote,side,line){
+  if(!quote||!Number.isFinite(line)||Number(quote.point)!==Number(line)||!Number.isFinite(quote.over)||!Number.isFinite(quote.under))return null;
+  const implied=price=>price>=0?100/(price+100):Math.abs(price)/(Math.abs(price)+100);
+  const over=implied(quote.over),under=implied(quote.under),sum=over+under;
+  return sum>0?(side==='under'?under:over)/sum:null;
+}
+
 export const priceText = price => Number.isFinite(price) ? (price > 0 ? '+' + price : String(price)) : '—';
 
 export function usageFor(metric) {

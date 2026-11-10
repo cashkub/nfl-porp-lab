@@ -3,8 +3,8 @@ import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
 import {ChevronDown} from 'lucide-react';
-import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate} from '../lib/stats.js';
-import {priceText,usageFor} from '../lib/bookLine.js';
+import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate,estimateModelHitRate} from '../lib/stats.js';
+import {fairSideProbability,priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
 import {DefenseRank,rateStyle} from './HitRate.jsx';
 import {teamColor} from '../lib/teamColors.js';
@@ -86,17 +86,22 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
   const position=v=>8+75*(v-low)/(high-low);
   const active=rows.find(r=>r.game.gameId===selected);
   if(!rows.length)return <p>No recorded games match this venue and window.</p>;
-  return <><div className="plot-heading"><span>{info.label}</span><small>{rows.length} {rows.length===1?'Game':'Games'} Shown{windowSize!=='season' && rows.length<Number(windowSize) && ' · Last '+windowSize+' Requested'}</small></div>
-    <div className="margin-scroll"><div className="margin-bars" style={{'--count':rows.length,'--target':position(line)+'%'}}>
+  return <><div className="plot-heading"><span>{info.label}</span><small>{rows.length} {rows.length===1?'Game':'Games'} Shown{windowSize!=='season' && rows.length<Number(windowSize) && ' · Last '+windowSize+' Requested'}</small><button className="plot-details-toggle" type="button" aria-expanded={showDetails} aria-controls="game-by-game-bars" onClick={()=>setShowDetails(open=>!open)}>{showDetails?'Hide Game Details':'Show Game Details'} <ChevronDown size={15}/></button></div>
+    <div className="margin-scroll"><div id="game-by-game-bars" className={'margin-bars'+(showDetails?' details-open':'')} style={{'--count':rows.length,'--target':position(line)+'%'}}>
     {rows.map(r=><button key={r.game.gameId} type="button" data-result={r.outcome} aria-pressed={r===active}
       aria-label={'Week '+r.game.week+' against '+r.game.opponent+', '+r.value+' '+info.unit+', '+r.outcome+', offensive snaps '+formatRate(r.game.usage?.offenseSnapRate)}
-      onClick={()=>{setSelected(previous=>previous===r.game.gameId?'':r.game.gameId);setShowDetails(false)}}>
+      onClick={()=>setSelected(previous=>previous===r.game.gameId?'':r.game.gameId)}>
       <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
         {line!=null && r===rows.at(-1) && <span className="chart-reference">{direction} {line}</span>}
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
       <span className="chart-opponent"><TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@':'vs'} {r.game.opponent}</b></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
+      {showDetails&&<span className="bar-details"><span className="bar-detail-item"><b>{r.margin==null?'—':r.margin===0?'Push':marginNumber.format(r.margin)+' '+info.unit}</b><small>Margin To Line</small></span>{usageFields.map(([key,label])=>{
+        const own=Number(r.game.usage?.[key]),team=teamVolumes.get(r.game.gameId+'|'+r.game.team)?.[key];
+        const share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';
+        return <span className="bar-detail-item" key={key}><b>{Number.isFinite(own)?own:'—'}</b><small>{label}</small><small>{share} share</small></span>;
+      })}<span className="bar-detail-item"><b>{formatRate(r.game.usage?.offenseSnapRate)}</b><small>Snap Share</small></span></span>}
     </button>)}</div></div>
-    {active?<><button className="game-details-toggle" type="button" aria-expanded={showDetails} onClick={()=>setShowDetails(open=>!open)}>{showDetails?'Hide Game Details':'Show Game Details'} <ChevronDown size={15}/></button>{showDetails?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/><div className="game-usage-details">{usageFields.map(([key,label])=>{const own=Number(active.game.usage?.[key]),team=teamVolumes.get(active.game.gameId+'|'+active.game.team)?.[key],share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';return <span key={key}><b>{label}</b> {Number.isFinite(own)?own:'—'} · {share} Team Share</span>})}<span><b>Offensive Snap Share</b> {formatRate(active.game.usage?.offenseSnapRate)}</span></div>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'}</p></section>:null}</>:<p className="bar-hint">Select A Game Bar For Player Stats.</p>}</>;
+    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/><div className="game-usage-details">{usageFields.map(([key,label])=>{const own=Number(active.game.usage?.[key]),team=teamVolumes.get(active.game.gameId+'|'+active.game.team)?.[key],share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';return <span key={key}><b>{label}</b> {Number.isFinite(own)?own:'—'} · {share} Team Share</span>})}<span><b>Offensive Snap Share</b> {formatRate(active.game.usage?.offenseSnapRate)}</span></div>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'}</p></section>:<p className="bar-hint">{showDetails?'Tap A Game Bar For The Full Player Box Score And Matchup Details.':'Select A Game Bar For Player Stats.'}</p>}</>;
 }
 
 function ControlLabel({children}) {
@@ -281,6 +286,8 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const allGames=useMemo(()=>venue==='ALL'?splitGames:splitGames.filter(g=>g.venue===venue),[venue,splitGames]);
   const displayed=useMemo(()=>filteredWindow(allGames,windowSize),[allGames,windowSize]);
   const current=summarize(displayed,metric,line,direction);
+  const marketProbability=fairSideProbability(quote,direction,line);
+  const modelRate=estimateModelHitRate(displayed,metric,line,direction,{marketProbability});
   const pushes=displayed.filter(g=>g.stats[metric]===line).length;
   const usage=metric==='scrimmageYards'?{key:'opportunities',label:'Carries + targets'}:usageFor(metric);
   const observedUsage=displayed.map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
@@ -323,8 +330,10 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div className="player-numbers">
         <div><small>Median</small><b>{formatNumber(current.median)} <small>{chartMarkets[metric].unit}</small></b></div>
         <div><small>Hit Rate</small>{line==null?<button type="button" onClick={()=>{const input=document.getElementById('chart-line');input.closest('details').open=true;input.focus()}}>Set Custom Line</button>:<><b style={rateStyle(current.rate)}>{formatRate(current.rate)}</b><small>{current.hits} Hits · {current.total-current.hits-pushes} Misses · {pushes} Pushes</small></>}</div>
+        <div><small>Model Projected Hit Rate</small>{line==null?<b>Set A Line</b>:<><b style={rateStyle(modelRate.rate)}>{formatRate(modelRate.rate)}</b><small>Estimate · {modelRate.sample} prior games</small></>}</div>
         <div><small>Games Shown</small><b>{displayed.length}</b></div>
       </div>
+      <details className="model-rate-info"><summary>How The Model Estimate Works</summary><p>It recalculates for the selected line using the same base estimate as Top Looks: smoothed prior results and a weighted season/recent projection. No-vig sportsbook odds are included only when the selected line exactly matches the quote; for alternate or average lines without matching odds, that input stays neutral. Matchup-specific weather, injury, and red-zone signals appear in Top Looks when relevant. The separate Hit Rate is what the player actually did in the selected history.</p></details>
 
     </section>
     <section className="lab-block"><h2>Game By Game</h2>

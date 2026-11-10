@@ -17,7 +17,7 @@ const code=t=>({LA:'LAR',JAC:'JAX',WSH:'WAS'}[t]||t);
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const candidates=[];
 const nflGamesPerDate=new Map();
-function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season,role,context,minimum,label,volumeChange=0,risk=0}){
+function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season,role,context,minimum,label,volumeChange=0,risk=0,injuries=[]}){
   if(values.length<minimum || !values.every(Number.isFinite))return;
   const hits=values.filter(v=>side==='over'?v>line:v<line).length;
   const sign=side==='over'?1:-1;
@@ -29,8 +29,9 @@ function candidate({g,p,team,metric,line,side,price,values,rank,rankCount,season
   const score=.8*adjusted+.2*trend+.06*matchup+.025*sign*volumeChange-risk-breakEven;
   if(score<=0)return;
   candidates.push({gameId:g.id,kickoff:g.kickoff,away:g.away,home:g.home,awayName:g.awayName,homeName:g.homeName,
-    week:g.week,postseason:g.postseason,colors:g.colors,date:day(g.kickoff),season,player:p.name,playerId:p.id,photo:p.photo,team,metric,label,line,side,price,score,hits,total:values.length,
-    adjusted,trend,breakEven,volumeChange,risk,average:mean(values),values,defenseRank:rank,rankCount,role,context,model:'2026.11.v1',saved});
+    week:g.week,postseason:g.postseason,colors:g.colors,date:day(g.kickoff),season,player:p.name,playerId:p.id,position:p.position,photo:p.photo,team,metric,label,line,side,price,score,hits,total:values.length,
+    adjusted,trend,breakEven,volumeChange,risk,average:mean(values),values,defenseRank:rank,rankCount,role,context,injuries,
+    lineSource:'sportsbook',snapshotVersion:1,model:'2026.11.v1',saved});
 }
 function settle(row,value,completed){
   if(!completed)return;
@@ -57,6 +58,37 @@ if(sport==='nfl'){
   for(const r of archive)if(!r.photo && photos.has(r.playerId))r.photo=photos.get(r.playerId);
   for(const r of archive)settle(r,logs.get(r.gameId+'|'+r.playerId)?.stats[r.metric],played.has(r.gameId));
   const books=read('lines.json').games;
+  function keyInjuries(g,p,metric,team,side){
+    const passing=['passingYards','passingTDs','receivingYards','receptions'].includes(metric);
+    const targetPosition=['WR','TE'].includes(p.position),runPosition=['RB','FB'].includes(p.position);
+    const workload=(entry,pos)=>{
+      const key=pos==='QB'?'attempts':pos==='RB'||pos==='FB'?'opportunities':'targets';
+      const logs=entry.hist.filter(x=>code(x.team)===team).slice(-5);
+      const vals=logs.map(x=>key==='opportunities'?(Number(x.usage?.carries)||0)+(Number(x.usage?.targets)||0):Number(x.usage?.[key])).filter(Number.isFinite);
+      return vals.length?mean(vals):0;
+    };
+    const positions=passing?['QB',...(targetPosition?['WR','TE']:[])]:runPosition?['RB','FB']:targetPosition?['WR','TE']:[];
+    const ownGroup=[...byName.values()].filter(entry=>entry&&code(entry.hist.at(-1)?.team)===team);
+    const ranks=new Map();
+    for(const pos of positions){
+      const ranked=ownGroup.filter(entry=>entry.p.position===pos).map(entry=>({entry,volume:workload(entry,pos)})).sort((a,b)=>b.volume-a.volume);
+      ranked.forEach((row,index)=>ranks.set(row.entry.p.id,{rank:index+1,volume:row.volume,position:pos}));
+    }
+    const ownRank=ranks.get(p.id)?.rank;
+    return (g.injuries?.[team]||[]).flatMap(report=>{
+      const status=String(report.gameStatus||report.status||'').toLowerCase();
+      if(!['out','doubtful','questionable'].includes(status))return [];
+      const role=ranks.get(report.id)||ranks.get(ownGroup.find(x=>x.p.name?.toLowerCase()===report.name?.toLowerCase())?.p.id);
+      if(!role)return [];
+      const selected=report.id===p.id||report.name?.toLowerCase()===p.name?.toLowerCase();
+      const isQb1=role.position==='QB'&&role.rank===1;
+      const keyTeammate=role.position!=='QB'&&role.rank<=2&&ownRank&&role.rank<ownRank;
+      if(!selected&&!isQb1&&!keyTeammate)return [];
+      const label=role.position+role.rank;
+      let impact=selected?'Availability risk for this player':isQb1?(side==='under'?'Supports the Under':'Passing production risk'):side==='over'?'May open workload for this player':'Could redirect workload toward this player';
+      return [{team,role:selected?label:label,name:report.name||'Player',status:status.toUpperCase(),injury:report.injury||'',volume:role.volume,selected,impact}];
+    });
+  }
   function touchdownQuote(row){
     if(Date.parse(row.kickoff)<=now)return null;
     const book=books.find(g=>g.home===row.home && g.away===row.away && Math.abs(Date.parse(g.kickoff)-Date.parse(row.kickoff))<12*3600000);
@@ -112,11 +144,12 @@ if(sport==='nfl'){
       const matchup=defenseRank?(16.5-defenseRank)/31:0;
       const score=.7*adjusted+.2*(lastThree+1)/7+.1*Math.min(1,workload/20)+.08*matchup-(status==='questionable'?.05:0);
       const quote=touchdownQuote({...g,player:p.name});
-      candidates.push({kind:'touchdown',gameId:g.id,kickoff:g.kickoff,date:day(g.kickoff),season,
+      candidates.push({kind:'touchdown',gameId:g.id,kickoff:g.kickoff,date:day(g.kickoff),season,position:p.position,
         away:g.away,home:g.home,team,player:p.name,playerId:p.id,photo:p.photo,metric:'scoredTDs',label:'Touchdowns',
         line:.5,side:'over',price:quote?.price ?? null,priceUpdated:quote?.updated,score,hits,total:values.length,average:mean(values),values,defenseRank,
         role:workload.toFixed(1)+' carries + targets per game over the last three',context:injury?.status || '',
-        chances:recentChances(hist,team,Number(g.week)),model:'td-scorers.v1',saved});
+        chances:recentChances(hist,team,Number(g.week)),injuries:keyInjuries(g,p,'scoredTDs',team,'over'),
+        lineSource:quote?'sportsbook':'estimate',snapshotVersion:1,model:'td-scorers.v1',saved});
     }
   }
   for(const book of books.filter(upcoming)){
@@ -141,7 +174,8 @@ if(sport==='nfl'){
         candidate({g,p,team,metric:line.metric,label:METRICS[line.metric].label,line:line.point,side,price:line[side],
           values:recent.map(x=>x.stats[line.metric]),rank,rankCount:32,season,minimum:5,volumeChange:change,risk:injury?.gameStatus?.toLowerCase()==='questionable'?.025:0,
           role:volume.length?volume.length+'-game avg: '+mean(volume).toFixed(1)+' '+usage.label.toLowerCase():null,
-          context:[injury?.status,w&&'Kickoff wind '+w.wind+' mph ('+g.context.roof+')'].filter(Boolean).join(' · ')});
+          context:[injury?.status,w&&'Kickoff wind '+w.wind+' mph ('+g.context.roof+')'].filter(Boolean).join(' · '),
+          injuries:keyInjuries(g,p,line.metric,team,side)});
       }
     }
   }

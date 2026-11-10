@@ -13,6 +13,7 @@
 .prop-research-table .sort-chevron{display:inline-block;width:.42rem;height:.42rem;margin-left:.35rem;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);vertical-align:.15em}
 .prop-research-table [aria-sort=ascending] .sort-chevron{transform:rotate(225deg);vertical-align:baseline}
 .prop-point{text-transform:capitalize;color:#ebe9ef}
+.model-rate-cell{display:grid;justify-items:center;gap:.12rem;line-height:1.1}.model-rate-cell>small{font-size:.52rem;letter-spacing:.08em;color:#b9a9c7;white-space:nowrap}
 .prop-list-more{display:block;margin:1rem auto;border:1px solid #b787d6;border-radius:.4rem;color:#f6e8ff;background:#28282f;min-height:40px;padding:.35rem .75rem;cursor:pointer}
 @media(max-width:680px){
   .prop-list-filters{grid-template-columns:1fr 1fr}
