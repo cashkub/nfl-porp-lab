@@ -93,6 +93,7 @@ jobs:
               lines.append(f"| {key} | {metrics['games']} | {metrics['mae']} | {metrics['rmse']} |")
           lines.extend(['', 'These are historical benchmark baselines, not production projections or betting probabilities. The report artifact includes results by season.'])
           Path('/tmp/nfl-model-summary.md').write_text('\n'.join(lines)+'\n')
+          print('\n'.join(lines))
           with open(__import__('os').environ['GITHUB_STEP_SUMMARY'],'a') as f:
               f.write(Path('/tmp/nfl-model-summary.md').read_text())
           PY
