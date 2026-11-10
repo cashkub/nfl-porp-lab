@@ -126,6 +126,60 @@ def prediction_metrics(pred, rows, win_scale=None):
     return result
 
 
+def fit_feature_model(rows, keys):
+    features=[[r[1][key] for key in keys] for r in rows]
+    residuals=[r[4]-r[2] for r in rows]
+    centers,coefficients,intercept=ridge_regression(features,residuals)
+    for key in ('Wind','Cold','Rest'):
+        index=keys.index(key)
+        intercept-=centers[index]*coefficients[index]
+        centers[index]=0
+    return {'centers':centers,'weights':coefficients,'intercept':intercept}
+
+
+def project_records(rows, keys, model):
+    base=[r[2] for r in rows]
+    recent=[r[3] for r in rows]
+    actual=[r[4] for r in rows]
+    market=[r[5] for r in rows]
+    stats=[base[i]+model['intercept']+
+           sum((r[1][key]-model['centers'][j])*model['weights'][j] for j,key in enumerate(keys))
+           for i,r in enumerate(rows)]
+    return base,recent,actual,market,stats
+
+
+def evaluate_fold(records, keys, train_through, calibration_season, holdout_season):
+    train=[r for r in records if r[0]<=train_through]
+    calibration=[r for r in records if r[0]==calibration_season]
+    holdout=[r for r in records if r[0]==holdout_season]
+    if not train or not calibration or not holdout:
+        raise ValueError(f'Walk-forward fold needs training through {train_through}, calibration {calibration_season}, and holdout {holdout_season}.')
+    model=fit_feature_model(train,keys)
+    calibration_base,calibration_recent,actual,market,calibration_stats=project_records(calibration,keys,model)
+    denominator=sum((m-s)**2 for m,s in zip(market,calibration_stats))
+    market_weight=max(0.0,min(1.0,
+        sum((m-s)*(a-s) for m,s,a in zip(market,calibration_stats,actual))/denominator)) if denominator else 0.0
+    calibration_blend=[s*(1-market_weight)+m*market_weight for s,m in zip(calibration_stats,market)]
+    scales={'Base':calibrate_win_scale(calibration_base,calibration),
+            'Recency Weighted':calibrate_win_scale(calibration_recent,calibration),
+            'Stats':calibrate_win_scale(calibration_stats,calibration),
+            'Closing Market Benchmark':calibrate_win_scale(market,calibration),
+            'Market Blend':calibrate_win_scale(calibration_blend,calibration)}
+
+    def evaluate(rows):
+        base,recent,actual,market,stats=project_records(rows,keys,model)
+        blend=[s*(1-market_weight)+m*market_weight for s,m in zip(stats,market)]
+        return {'Base':prediction_metrics(base,rows,scales['Base']),
+                'Recency Weighted':prediction_metrics(recent,rows,scales['Recency Weighted']),
+                'Stats':prediction_metrics(stats,rows,scales['Stats']),
+                'Closing Market Benchmark':prediction_metrics(market,rows,scales['Closing Market Benchmark']),
+                'Market Blend':prediction_metrics(blend,rows,scales['Market Blend'])}
+    return {'trainThrough':train_through,'calibrationSeason':calibration_season,
+            'holdoutSeason':holdout_season,'marketWeight':market_weight,
+            'model':model,'winProbabilityScales':scales,
+            'calibration':evaluate(calibration),'holdout':evaluate(holdout)}
+
+
 def fit(directory):
     schedule=defaultdict(list)
     with (directory/'games.csv').open() as source:
@@ -179,61 +233,39 @@ def fit(directory):
     record_seasons=sorted({r[0] for r in records})
     if len(record_seasons)<3:
         raise ValueError('Walk-forward validation requires at least three eligible seasons: train, calibration, and holdout.')
-    holdout_season=record_seasons[-1]
-    calibration_season=record_seasons[-2]
-    train_through=calibration_season-1
-    train=[r for r in records if r[0]<=train_through]
-    if not train:
-        raise ValueError(f'No training records through {train_through} were found.')
-    x=[[r[1][k] for k in keys] for r in train]
-    y=[r[4]-r[2] for r in train]
-    center,coef,intercept=ridge_regression(x,y)
-    for k in ('Wind','Cold','Rest'):
-        i=keys.index(k);intercept-=center[i]*coef[i];center[i]=0
-    def scores(rows):
-        base=[r[2] for r in rows]; recent=[r[3] for r in rows]; actual=[r[4] for r in rows]; market=[r[5] for r in rows]
-        stats=[base[i]+intercept+sum((r[1][k]-center[j])*coef[j] for j,k in enumerate(keys)) for i,r in enumerate(rows)]
-        return base,recent,actual,market,stats
-    calibration=[r for r in records if r[0]==calibration_season]
-    holdout=[r for r in records if r[0]==holdout_season]
-    if not calibration or not holdout:
-        raise ValueError(f'Walk-forward evaluation requires eligible games in calibration season {calibration_season} and holdout season {holdout_season}.')
-    calibration_base,calibration_recent,actual,market,calibration_stats=scores(calibration)
-    denominator=sum((m-s)**2 for m,s in zip(market,calibration_stats))
-    weight=max(0.0,min(1.0,sum((m-s)*(a-s) for m,s,a in zip(market,calibration_stats,actual))/denominator)) if denominator else 0.0
-    calibration_blend=[s*(1-weight)+m*weight for s,m in zip(calibration_stats,market)]
-
-    probability_scales={'Base':calibrate_win_scale(calibration_base,calibration),
-                        'Recency Weighted':calibrate_win_scale(calibration_recent,calibration),
-                        'Stats':calibrate_win_scale(calibration_stats,calibration),
-                        'Closing Market Benchmark':calibrate_win_scale(market,calibration),
-                        'Market Blend':calibrate_win_scale(calibration_blend,calibration)}
-
-    def evaluate(rows):
-        base,recent,actual,market,stats=scores(rows)
-        blend=[s*(1-weight)+m*weight for s,m in zip(stats,market)]
-        return {'Base':prediction_metrics(base,rows,probability_scales['Base']),
-                'Recency Weighted':prediction_metrics(recent,rows,probability_scales['Recency Weighted']),
-                'Stats':prediction_metrics(stats,rows,probability_scales['Stats']),
-                'Closing Market Benchmark':prediction_metrics(market,rows,probability_scales['Closing Market Benchmark']),
-                'Market Blend':prediction_metrics(blend,rows,probability_scales['Market Blend'])}
-
+    folds=[]
+    for index in range(2,len(record_seasons)):
+        holdout_season=record_seasons[index]
+        calibration_season=record_seasons[index-1]
+        fold=evaluate_fold(records,keys,calibration_season-1,calibration_season,holdout_season)
+        folds.append(fold)
+    if not folds:
+        raise ValueError('No complete rolling walk-forward folds were produced.')
+    latest=folds[-1]
+    holdout_season=latest['holdoutSeason']
+    calibration_season=latest['calibrationSeason']
+    train_through=latest['trainThrough']
+    model=latest['model']
+    weight=latest['marketWeight']
+    probability_scales=latest['winProbabilityScales']
+    holdout_scores=latest['holdout']
+    rolling=[{key:fold[key] for key in ('trainThrough','calibrationSeason','holdoutSeason','marketWeight','calibration','holdout')}
+             for fold in folds]
     # Keep this compact shape for the existing data consumer; detailed diagnostics stay below.
-    holdout_scores=evaluate(holdout)
     validation={k:{'scoreMAE':v['scoreMAE'],'marginMAE':v['marginMAE']} for k,v in holdout_scores.items()}
     validation['Market']=validation.pop('Closing Market Benchmark')
     validation['Blend']=validation.pop('Market Blend')
     return dict(modelVersion=f'candidate-train-{train_through}-cal-{calibration_season}-holdout-{holdout_season}',
-                trainedThrough=train_through,weights=dict(zip(keys,coef)),centers=dict(zip(keys,center)),intercept=intercept,marketWeight=weight,
+                trainedThrough=train_through,weights=dict(zip(keys,model['weights'])),centers=dict(zip(keys,model['centers'])),intercept=model['intercept'],marketWeight=weight,
                 winProbabilityScales=probability_scales,
                 validation=validation,
-                backtest={'protocol':f'Train feature weights through {train_through}; tune market blend on {calibration_season}; report {holdout_season} as the untouched holdout.',
+                backtest={'protocol':'Expanding chronological folds: fit features on earlier seasons, calibrate market blending and win probability on the next season, then score a later untouched season.',
                           'marketNote':'The historical spread and total columns are closing-line benchmarks, not timestamped odds available at the forecast time.',
                           'weatherNote':'Historical observed weather is excluded because archived pregame forecasts are not available.',
                           'quarterbackNote':'Quarterback strength uses only player workload recorded before each game; the retrospectively listed starter is excluded.',
                           'calibrationSeason':calibration_season,'holdoutSeason':holdout_season,
-                          'calibration':evaluate(calibration),'holdout':holdout_scores},
-                games=len(holdout)//2)
+                          'calibration':latest['calibration'],'holdout':holdout_scores,'rollingHoldouts':rolling},
+                games=holdout_scores['Base']['games'])
 
 
 if __name__=='__main__':
