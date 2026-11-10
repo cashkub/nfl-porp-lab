@@ -1,7 +1,7 @@
 @font-face { font-family: Barlow; src: url('./assets/display.ttf') format('truetype'); font-style: italic; font-weight: 800; font-display: swap }
 :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; color: #f3f3f2; background: #110f16; --display: Barlow, Impact, sans-serif; --fire: #d9b3ff; --violet:#c49bff; --frame:#ca91ff; --glow:inset 0 0 0 1px #c993ff22,0 0 12px #a550fb1e }
 * { box-sizing: border-box }
-body { min-height:100vh; margin:0; background-color:#0e192c }
+body { min-height:100vh; margin:0; background-color:#100e13 }
 main { max-width: 76rem; margin: auto; padding: 0 clamp(1rem,5vw,4rem) 4rem }
 header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0; border-bottom: 1px solid #e6d2cc30 }
 a { color: inherit; text-decoration: none }
@@ -16,8 +16,10 @@ small { text-transform: uppercase; font: 650 .66rem/1.4 system-ui; letter-spacin
 .action { display: inline-flex; gap: 1.4rem; align-items: center; background: var(--fire); color: #241418; padding: .8rem 1.15rem; font-weight: 750; border-radius: 2px }
 .action b { font-size: 1.25em }
 .hero-copy p { max-width: 19rem; text-shadow: 0 1px 4px #000 }
-body { background-image:url('./assets/playbook.svg'),radial-gradient(ellipse at 0% 8%,#252a30,transparent 58%),radial-gradient(ellipse at 100% 75%,#181c20,transparent 65%); background-color:#101215; background-blend-mode:luminosity,normal,normal; background-size:100% auto,cover,cover; background-position:center top; background-repeat:repeat-y,no-repeat,no-repeat }
+body { background-image:url('./assets/playbook.svg'),radial-gradient(ellipse at 0% 8%,#29202f,transparent 58%),radial-gradient(ellipse at 100% 75%,#211922,transparent 65%); background-color:#100e13; background-blend-mode:luminosity,normal,normal; background-size:100% auto,cover,cover; background-position:center top; background-repeat:repeat-y,no-repeat,no-repeat }
 h1 em { color:var(--violet); -webkit-text-stroke:1px #e2c6ff; paint-order:stroke fill; text-shadow:2px 3px #49265e,0 0 12px #ae63e780,0 0 24px #a550fb40 }
+.build-note { max-width:45rem; margin:-.35rem 0 1.4rem; padding:.8rem 1rem; border:1px solid #76588d; border-radius:.55rem; background:linear-gradient(100deg,#241b2cdd,#17161bdd); color:#d9cfdf; font-size:.9rem; line-height:1.5; box-shadow:0 0 15px #a550fb12 }
+.build-note strong { color:#f0ddff; font-family:inherit; font-style:normal; letter-spacing:.025em }
 .leagues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(.55rem,1.5vw,1rem) }
 .frame { --accent:var(--frame); position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid var(--accent); border-radius:.65rem; background:#16191d; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 16%,transparent) }
 .frame::before { content:''; position:absolute; inset:0; z-index:-2; background:#242628 var(--scene) center 42% / cover no-repeat; background-blend-mode:normal;filter:saturate(.58) brightness(.81) }
@@ -33,6 +35,7 @@ a.frame,.frame summary { display:flex; flex-direction:column; justify-content:fl
 .sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap }
 .glyph { display:inline-block; font:inherit; color:#faf0ff; -webkit-text-stroke:1px var(--accent); text-shadow:1px 1px #311b40,2px 2px #311b40,3px 3px var(--accent),4px 4px var(--accent),0 0 6px var(--accent),0 0 14px var(--accent); }
 .cue { position:absolute; top:.8rem; right:.9rem; color:var(--accent); font:600 1rem/1 system-ui; display:grid; place-items:center; width:1.65rem; height:1.65rem; border-radius:50%; border:1px solid currentColor; background:#15171cec }
+.coming-soon { position:absolute; top:.9rem; left:clamp(.9rem,2.2vw,1.8rem); padding:.42rem .65rem; border:1px solid color-mix(in srgb,var(--accent) 70%,white); border-radius:999px; background:#151219dc; color:#f1dfff; font:850 .62rem/1 system-ui; letter-spacing:.12em; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 35%,transparent) }
 .shortcut { font:700 .77rem/1.2 system-ui; padding:.5rem .65rem; border-radius:2px; position:absolute; left:clamp(.9rem,2.2vw,1.8rem); bottom:clamp(.9rem,2.2vw,1.8rem); background:var(--accent); color:#19141c }
 details[open] strong { transform:translateY(-2rem) }
 details[open] .cue { transform:rotate(45deg) }
