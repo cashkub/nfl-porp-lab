@@ -98,14 +98,14 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
   },[players,selected,bookGame,market]);
   const breakdown=selected?projection(selected,selected.awayRating,selected.homeRating):null;
 
-  return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> LIVE DATA VIEW</span></header>
-    {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><p>Schedule snapshot updated {updated} · game-market figures are historical closing references unless a current timestamp is shown.</p></div>
+  return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> SCHEDULE SNAPSHOT</span></header>
+    {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><p>Schedule data refreshed {updated} · game price fields have no per-matchup timestamp in this feed.</p></div>
       <div className="nfl-games-list" aria-label="Upcoming NFL matchups">{games.map(g=>{
         const id=g.id||g.kickoff+g.home,active=(selected?.id||selected?.kickoff+selected?.home)===id;
         return <button type="button" className="nfl-game nfl-match-button" key={id} aria-pressed={active} onClick={()=>setSelected(id)}>
           <span className="nfl-game-date">{g.timeKnown===false?g.date+' · TIME TBD':kickoff.format(new Date(g.kickoff))}</span>
           <span className="nfl-game-pair"><Team code={g.away} price={g.awayPrice}/><small>AT</small><Team code={g.home} price={g.homePrice}/></span>
-          <span className="nfl-game-market">{Number.isFinite(g.totalLine)?'CLOSING TOTAL '+g.totalLine+' · O '+priceText(g.overPrice)+' / U '+priceText(g.underPrice):'GAME TOTAL NOT AVAILABLE'}</span>
+          <span className="nfl-game-market">{Number.isFinite(g.totalLine)?'TOTAL '+g.totalLine+' · O '+priceText(g.overPrice)+' / U '+priceText(g.underPrice):'GAME TOTAL NOT AVAILABLE'}</span>
           <span className="nfl-game-action">{active?'SELECTED MATCHUP':'ANALYZE MATCHUP'} ↓</span>
         </button>;
       })}</div>
@@ -133,8 +133,8 @@ function GamePredictions({game,model}){
     <div className="nfl-projection-banner"><div><small>INDEPENDENT TEAM DATA PROJECTION</small><strong>{margin==null?'Projection Pending':Math.abs(margin)<.05?'Near Pick’em':(margin>0?game.home:game.away)+' BY '+Math.abs(margin).toFixed(1)}</strong><p>Built from the current opponent-adjusted scoring ratings and available matchup context.</p></div><span className="nfl-confidence-state">PROBABILITIES IN VALIDATION</span></div>
     <div className="nfl-score-grid">{[away,home].filter(Boolean).map((side,i)=><article key={side.team} style={{'--club':teamColor(side.team)}}><small>{i===0?'AWAY':'HOME'} · {side.team}</small><b>{side.score.toFixed(1)}</b><span>Projected Points</span><i/></article>)}</div>
     <div className="nfl-market-grid"><MarketTile label="MONEYLINE" value={`${game.away} ${priceText(game.awayPrice)} · ${game.home} ${priceText(game.homePrice)}`}/><MarketTile label="SPREAD" value={Number.isFinite(game.homeSpread)?`${game.home} ${game.homeSpread>0?'+':''}${game.homeSpread}`:'Unavailable'}/><MarketTile label="TOTAL" value={Number.isFinite(game.totalLine)?`${game.totalLine} · O ${priceText(game.overPrice)} / U ${priceText(game.underPrice)}`:'Unavailable'} /></div>
-    <div className="nfl-probability-honesty"><Info size={17}/><span>Win, cover, Over/Under, fair odds, expected value, and confidence intervals are withheld until the underlying probabilities pass out-of-sample calibration. Closing sportsbook figures above are reference benchmarks, not live prices or model inputs.</span></div>
-    <p className="nfl-market-footnote">A predicted score difference is not itself a win or bet probability. The market snapshot and independent team-data estimate are shown separately.</p>
+    <div className="nfl-probability-honesty"><Info size={17}/><span>Win, cover, Over/Under, fair odds, expected value, and confidence intervals are withheld until the underlying probabilities pass out-of-sample calibration. Any game prices shown come from the schedule data and are not verified live odds because this feed does not attach per-matchup timestamps.</span></div>
+    <p className="nfl-market-footnote">A predicted score difference is not itself a win or bet probability. The schedule snapshot and independent team-data estimate are shown separately.</p>
   </div>;
 }
 
