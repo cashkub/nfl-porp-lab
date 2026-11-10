@@ -9,3 +9,4 @@ __pycache__/
 .pytest_cache/
 data/nfl-model/
 scripts/nfl_weights.candidate.json
+scripts/elo.candidate.json
