@@ -139,8 +139,15 @@ nfl-prop-lab/
 ## Sources and credits
 
 - Stats: [nflverse-data](https://github.com/nflverse/nflverse-data) and [nflreadr docs](https://nflreadr.nflverse.com/reference/load_player_stats.html).
+- NFL schedules and play-by-play used for model research: [nflverse-data](https://github.com/nflverse/nflverse-data), licensed CC BY 4.0. Credit nflverse when redistributing derived data or presenting these model results.
 - Automatic scheduling: [GitHub Actions](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 - Hosting: [Cloudflare Pages Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/).
 - React, Vite, Lucide icons.
+
+### NFL model validation
+
+Run `python scripts/download_nfl_model_data.py --output-dir data/nfl-model` to download the public schedule and play-by-play inputs, then run `python scripts/train_nfl.py data/nfl-model` to fit a candidate. The candidate is written to `scripts/nfl_weights.candidate.json`; it never overwrites production weights. The GitHub Actions workflow also runs the offline tests and creates a short-lived candidate artifact for review.
+
+Evaluation is chronological: features are trained on prior seasons, the market blend is calibrated on the next season, and metrics are reported on a later holdout. Historical closing lines are labeled as reference benchmarks because the data does not include a pregame timestamp for those prices. Historical observed weather and retrospectively listed starting quarterbacks are excluded from training until timestamped pregame snapshots are available. The candidate report is research output; production weights require a separate reviewed promotion.
 
 **Disclaimer:** Use for historical research, not guaranteed gambling outcomes or financial decisions.

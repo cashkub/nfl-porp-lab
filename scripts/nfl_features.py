@@ -101,12 +101,12 @@ class Form:
                     success=off['success']/max(1,off['pass']+off['rush']),games=len(recent),
                     roster=[k for k,_ in roster.most_common()])
 
-    def matchup(self,row,side,weather=None,depth=None):
+    def matchup(self,row,side,weather=None,depth=None,use_listed_qb=True):
         opp='away' if side=='home' else 'home'
         a=self.profile(row[side+'_team']); d=self.profile(row[opp+'_team'])
         if not a or not d:
             return None
-        qid=row.get(side+'_qb_id')
+        qid=row.get(side+'_qb_id') if use_listed_qb else None
         listed=bool(qid and qid!='NA')
         chart=depth or []
         qid=qid if listed else (chart[0]['id'] if chart else next(iter(a['roster']),None))

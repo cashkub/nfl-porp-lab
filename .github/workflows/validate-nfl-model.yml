@@ -1,0 +1,69 @@
+name: Validate NFL Model Candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/validate-nfl-model.yml'
+      - 'scripts/nfl_features.py'
+      - 'scripts/train_nfl.py'
+      - 'scripts/download_nfl_model_data.py'
+      - 'tests/test_nfl_backtest.py'
+      - 'tests/test_nfl_data_downloader.py'
+      - 'tests/test_nfl_features.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nfl-model-candidate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run offline model and data tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Download public nflverse history
+        run: python scripts/download_nfl_model_data.py --output-dir data/nfl-model --refresh
+
+      - name: Fit and evaluate a candidate without changing production weights
+        run: python scripts/train_nfl.py data/nfl-model scripts/nfl_weights.candidate.json
+
+      - name: Publish evaluation summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path('scripts/nfl_weights.candidate.json').read_text())
+          backtest=report['backtest']
+          lines=['## NFL Model Candidate Evaluation', '', f"{backtest['protocol']}", '',
+                 f"**Samples:** {report['games']} eligible games in the untouched holdout.", '',
+                 '**Holdout metrics**', '',
+                 '| Model | Score MAE | Margin MAE | Total MAE | Winner Accuracy |',
+                 '| --- | ---: | ---: | ---: | ---: |']
+          for name,metrics in backtest['holdout'].items():
+              lines.append(f"| {name} | {metrics['scoreMAE']} | {metrics['marginMAE']} | {metrics['totalMAE']} | {metrics['winnerAccuracy'] if metrics['winnerAccuracy'] is not None else '—'} |")
+          lines.extend(['', backtest['marketNote'], '', backtest['weatherNote'], '', backtest['quarterbackNote'], '',
+                        'Candidate weights remain an artifact for review; this workflow never updates production `nfl_weights.json`.'])
+          Path('/tmp/nfl-model-summary.md').write_text('\n'.join(lines)+'\n')
+          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write(Path('/tmp/nfl-model-summary.md').read_text())
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nfl-model-candidate-${{ github.run_id }}
+          path: scripts/nfl_weights.candidate.json
+          if-no-files-found: error
+          retention-days: 14

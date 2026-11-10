@@ -86,23 +86,38 @@ def prediction_metrics(pred, rows):
 
 def fit(directory):
     schedule=defaultdict(list)
-    for r in csv.DictReader((directory/'games.csv').open()):
-        if r['game_type']=='REG':
-            schedule[int(r['season']),int(r['week'])].append(r)
+    with (directory/'games.csv').open() as source:
+        for r in csv.DictReader(source):
+            if r['game_type']=='REG':
+                schedule[int(r['season']),int(r['week'])].append(r)
     records=[]
-    for season in range(2019,2026):
-        gameplays=plays((directory/f'{season}.gz').read_bytes())
+    schedule_seasons=sorted({year for year,_ in schedule if year>=2019})
+    completed_seasons={year for (year,_),games in schedule.items() if year>=2019 and any(number(game.get('result')) is not None for game in games)}
+    missing=[year for year in sorted(completed_seasons) if not (directory/f'{year}.gz').exists()]
+    if missing:
+        raise FileNotFoundError(f'Missing play-by-play data for completed seasons: {missing}')
+    seasons=[year for year in schedule_seasons if (directory/f'{year}.gz').exists()]
+    for season in seasons:
+        pbp_path=directory/f'{season}.gz'
+        if not pbp_path.exists():
+            raise FileNotFoundError(f'Missing play-by-play data for {season}: {pbp_path}')
+        gameplays=plays(pbp_path.read_bytes())
         results=[]; form=Form()
         for week in range(1,19):
             ratings=team_ratings(results)
             batch=schedule[season,week]
             for r in batch:
+                # Current-season schedule files also contain upcoming games. Never grade them as outcomes.
+                if number(r.get('result')) is None:
+                    continue
                 h,a=r['home_team'],r['away_team']
                 if min(ratings.get(h,{}).get('games',0),ratings.get(a,{}).get('games',0))<3:continue
-                weather={'wind':number(r['wind']),'temp':number(r['temp'])} if r['roof'] in ('outdoors','open') else {}
                 pair=[]
                 for side,team,opp,sign in [('away',a,h,-1),('home',h,a,1)]:
-                    profile=form.matchup(r,side,weather)
+                    # Historical schedule weather is observed at kickoff, not a timestamped pregame forecast.
+                    # Keep it out until forecast snapshots can be reconstructed without leakage.
+                    # Likewise infer the QB from prior workload instead of the retrospectively listed starter.
+                    profile=form.matchup(r,side,use_listed_qb=False)
                     if not profile:break
                     base=evaluation(ratings[team],ratings[opp],sign*.75 if r['location']!='Neutral' else 0)
                     total=number(r['total_line']);spread=number(r['spread_line'])
@@ -110,14 +125,22 @@ def fit(directory):
                     pair.append((season,profile['inputs'],base,float(r[side+'_score']),(total+sign*spread)/2))
                 if len(pair)==2:records.extend(pair)
             for r in batch:
+                if number(r.get('result')) is None:
+                    continue
                 results.append((r['home_team'],r['away_team'],int(r['home_score']),int(r['away_score']),r['location']=='Neutral'))
                 form.add(gameplays.get(r['game_id'],{}))
     if not records:
         raise ValueError('No eligible pregame team records were built from the supplied data.')
     keys=list(records[0][1])
-    train=[r for r in records if r[0]<=2023]
+    record_seasons=sorted({r[0] for r in records})
+    if len(record_seasons)<3:
+        raise ValueError('Walk-forward validation requires at least three eligible seasons: train, calibration, and holdout.')
+    holdout_season=record_seasons[-1]
+    calibration_season=record_seasons[-2]
+    train_through=calibration_season-1
+    train=[r for r in records if r[0]<=train_through]
     if not train:
-        raise ValueError('No training records through 2023 were found.')
+        raise ValueError(f'No training records through {train_through} were found.')
     x=[[r[1][k] for k in keys] for r in train]
     y=[r[3]-r[2] for r in train]
     center,coef,intercept=ridge_regression(x,y)
@@ -127,10 +150,10 @@ def fit(directory):
         base=[r[2] for r in rows]; actual=[r[3] for r in rows]; market=[r[4] for r in rows]
         stats=[base[i]+intercept+sum((r[1][k]-center[j])*coef[j] for j,k in enumerate(keys)) for i,r in enumerate(rows)]
         return base,actual,market,stats
-    calibration=[r for r in records if r[0]==2024]
-    holdout=[r for r in records if r[0]==2025]
+    calibration=[r for r in records if r[0]==calibration_season]
+    holdout=[r for r in records if r[0]==holdout_season]
     if not calibration or not holdout:
-        raise ValueError('Walk-forward evaluation requires eligible games in both calibration season 2024 and holdout season 2025.')
+        raise ValueError(f'Walk-forward evaluation requires eligible games in calibration season {calibration_season} and holdout season {holdout_season}.')
     _,actual,market,stats=scores(calibration)
     denominator=sum((m-s)**2 for m,s in zip(market,stats))
     weight=max(0.0,min(1.0,sum((m-s)*(a-s) for m,s,a in zip(market,stats,actual))/denominator)) if denominator else 0.0
@@ -147,14 +170,23 @@ def fit(directory):
     validation={k:{'scoreMAE':v['scoreMAE'],'marginMAE':v['marginMAE']} for k,v in holdout_scores.items()}
     validation['Market']=validation.pop('Closing Market Benchmark')
     validation['Blend']=validation.pop('Market Blend')
-    return dict(weights=dict(zip(keys,coef)),centers=dict(zip(keys,center)),intercept=intercept,marketWeight=weight,
+    return dict(modelVersion=f'candidate-train-{train_through}-cal-{calibration_season}-holdout-{holdout_season}',
+                trainedThrough=train_through,weights=dict(zip(keys,coef)),centers=dict(zip(keys,center)),intercept=intercept,marketWeight=weight,
                 validation=validation,
-                backtest={'protocol':'Train feature weights through 2023; tune market blend on 2024; report 2025 as the untouched holdout.',
+                backtest={'protocol':f'Train feature weights through {train_through}; tune market blend on {calibration_season}; report {holdout_season} as the untouched holdout.',
                           'marketNote':'The historical spread and total columns are closing-line benchmarks, not timestamped odds available at the forecast time.',
-                          'calibration2024':evaluate(calibration),'holdout2025':holdout_scores},
+                          'weatherNote':'Historical observed weather is excluded because archived pregame forecasts are not available.',
+                          'quarterbackNote':'Quarterback strength uses only player workload recorded before each game; the retrospectively listed starter is excluded.',
+                          'calibrationSeason':calibration_season,'holdoutSeason':holdout_season,
+                          'calibration':evaluate(calibration),'holdout':holdout_scores},
                 games=len(holdout)//2)
 
 
 if __name__=='__main__':
+    if len(sys.argv)<2:
+        raise SystemExit('Usage: python scripts/train_nfl.py DATA_DIRECTORY [OUTPUT_JSON]')
     config=fit(Path(sys.argv[1]))
-    Path(__file__).with_name('nfl_weights.json').write_text(json.dumps(config,indent=2)+'\n')
+    output=Path(sys.argv[2]) if len(sys.argv)>2 else Path(__file__).with_name('nfl_weights.candidate.json')
+    output.write_text(json.dumps(config,indent=2)+'\n')
+    print(json.dumps(config['backtest'],indent=2))
+    print(f'Candidate weights saved to {output}; production nfl_weights.json was left unchanged.')
