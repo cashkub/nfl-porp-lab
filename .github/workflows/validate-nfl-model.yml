@@ -52,10 +52,10 @@ jobs:
           lines=['## NFL Model Candidate Evaluation', '', f"{backtest['protocol']}", '',
                  f"**Samples:** {report['games']} eligible games in the untouched holdout.", '',
                  '**Holdout metrics**', '',
-                 '| Model | Score MAE | Margin MAE | Total MAE | Winner Accuracy |',
-                 '| --- | ---: | ---: | ---: | ---: |']
+                 '| Model | Score MAE | Margin MAE | Total MAE | Winner Accuracy | Win Brier | Win Log Loss |',
+                 '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
           for name,metrics in backtest['holdout'].items():
-              lines.append(f"| {name} | {metrics['scoreMAE']} | {metrics['marginMAE']} | {metrics['totalMAE']} | {metrics['winnerAccuracy'] if metrics['winnerAccuracy'] is not None else '—'} |")
+              lines.append(f"| {name} | {metrics['scoreMAE']} | {metrics['marginMAE']} | {metrics['totalMAE']} | {metrics['winnerAccuracy'] if metrics['winnerAccuracy'] is not None else '—'} | {metrics.get('winBrier','—')} | {metrics.get('winLogLoss','—')} |")
           lines.extend(['', backtest['marketNote'], '', backtest['weatherNote'], '', backtest['quarterbackNote'], '',
                         'Candidate weights remain an artifact for review; this workflow never updates production `nfl_weights.json`.'])
           Path('/tmp/nfl-model-summary.md').write_text('\n'.join(lines)+'\n')

@@ -61,7 +61,39 @@ def ridge_regression(features, outcomes, ridge=200):
     return centers,coefficients,target_mean
 
 
-def prediction_metrics(pred, rows):
+def _sigmoid(value):
+    value=max(-30.0,min(30.0,float(value)))
+    return 1/(1+math.exp(-value))
+
+
+def calibrate_win_scale(pred, rows):
+    """Calibrate a one-parameter logistic win model from prior-season margins."""
+    actual=[float(r[4]) for r in rows]
+    if len(pred)!=len(actual) or len(pred)%2:
+        raise ValueError('Predictions must contain paired away/home scores for every game.')
+    samples=[]
+    for i in range(0,len(actual),2):
+        margin=actual[i+1]-actual[i]
+        if margin==0:
+            continue
+        predicted_margin=float(pred[i+1])-float(pred[i])
+        samples.append((predicted_margin,1.0 if margin>0 else 0.0))
+    if not samples:
+        return 0.0
+    best_scale=0.0
+    best_loss=float('inf')
+    for step in range(301):
+        scale=step/1000
+        loss=0.0
+        for margin,outcome in samples:
+            probability=max(1e-9,min(1-1e-9,_sigmoid(scale*margin)))
+            loss-=outcome*math.log(probability)+(1-outcome)*math.log(1-probability)
+        if loss<best_loss:
+            best_scale,best_loss=scale,loss
+    return best_scale
+
+
+def prediction_metrics(pred, rows, win_scale=None):
     """Score paired [away, home] forecasts without hiding ties or sample size."""
     actual_scores=[float(r[4]) for r in rows]
     predicted=[float(x) for x in pred]
@@ -78,11 +110,20 @@ def prediction_metrics(pred, rows):
     total_errors=[abs(p-a) for p,a in zip(predicted_totals,actual_totals)]
     decided=[i for i,margin in enumerate(actual_margins) if margin!=0]
     winner_accuracy=(sum(predicted_margins[i]!=0 and (predicted_margins[i]>0)==(actual_margins[i]>0) for i in decided)/len(decided)) if decided else None
-    return {'games':len(actual_margins),
+    result={'games':len(actual_margins),
             'scoreMAE':round(sum(point_errors)/len(point_errors),2),
             'marginMAE':round(sum(margin_errors)/len(margin_errors),2),
             'totalMAE':round(sum(total_errors)/len(total_errors),2),
             'winnerAccuracy':round(winner_accuracy,3) if winner_accuracy is not None else None}
+    if win_scale is not None and decided:
+        probabilities=[_sigmoid(win_scale*predicted_margins[i]) for i in decided]
+        outcomes=[1.0 if actual_margins[i]>0 else 0.0 for i in decided]
+        result['winProbabilityGames']=len(decided)
+        result['winBrier']=round(sum((p-y)**2 for p,y in zip(probabilities,outcomes))/len(decided),4)
+        result['winLogLoss']=round(-sum(y*math.log(max(1e-9,min(1-1e-9,p)))+
+                                         (1-y)*math.log(max(1e-9,min(1-1e-9,1-p)))
+                                         for p,y in zip(probabilities,outcomes))/len(decided),4)
+    return result
 
 
 def fit(directory):
@@ -157,17 +198,25 @@ def fit(directory):
     holdout=[r for r in records if r[0]==holdout_season]
     if not calibration or not holdout:
         raise ValueError(f'Walk-forward evaluation requires eligible games in calibration season {calibration_season} and holdout season {holdout_season}.')
-    _,_,actual,market,stats=scores(calibration)
-    denominator=sum((m-s)**2 for m,s in zip(market,stats))
-    weight=max(0.0,min(1.0,sum((m-s)*(a-s) for m,s,a in zip(market,stats,actual))/denominator)) if denominator else 0.0
+    calibration_base,calibration_recent,actual,market,calibration_stats=scores(calibration)
+    denominator=sum((m-s)**2 for m,s in zip(market,calibration_stats))
+    weight=max(0.0,min(1.0,sum((m-s)*(a-s) for m,s,a in zip(market,calibration_stats,actual))/denominator)) if denominator else 0.0
+    calibration_blend=[s*(1-weight)+m*weight for s,m in zip(calibration_stats,market)]
+
+    probability_scales={'Base':calibrate_win_scale(calibration_base,calibration),
+                        'Recency Weighted':calibrate_win_scale(calibration_recent,calibration),
+                        'Stats':calibrate_win_scale(calibration_stats,calibration),
+                        'Closing Market Benchmark':calibrate_win_scale(market,calibration),
+                        'Market Blend':calibrate_win_scale(calibration_blend,calibration)}
 
     def evaluate(rows):
         base,recent,actual,market,stats=scores(rows)
         blend=[s*(1-weight)+m*weight for s,m in zip(stats,market)]
-        return {'Base':prediction_metrics(base,rows),'Recency Weighted':prediction_metrics(recent,rows),
-                'Stats':prediction_metrics(stats,rows),
-                'Closing Market Benchmark':prediction_metrics(market,rows),
-                'Market Blend':prediction_metrics(blend,rows)}
+        return {'Base':prediction_metrics(base,rows,probability_scales['Base']),
+                'Recency Weighted':prediction_metrics(recent,rows,probability_scales['Recency Weighted']),
+                'Stats':prediction_metrics(stats,rows,probability_scales['Stats']),
+                'Closing Market Benchmark':prediction_metrics(market,rows,probability_scales['Closing Market Benchmark']),
+                'Market Blend':prediction_metrics(blend,rows,probability_scales['Market Blend'])}
 
     # Keep this compact shape for the existing data consumer; detailed diagnostics stay below.
     holdout_scores=evaluate(holdout)
@@ -176,6 +225,7 @@ def fit(directory):
     validation['Blend']=validation.pop('Market Blend')
     return dict(modelVersion=f'candidate-train-{train_through}-cal-{calibration_season}-holdout-{holdout_season}',
                 trainedThrough=train_through,weights=dict(zip(keys,coef)),centers=dict(zip(keys,center)),intercept=intercept,marketWeight=weight,
+                winProbabilityScales=probability_scales,
                 validation=validation,
                 backtest={'protocol':f'Train feature weights through {train_through}; tune market blend on {calibration_season}; report {holdout_season} as the untouched holdout.',
                           'marketNote':'The historical spread and total columns are closing-line benchmarks, not timestamped odds available at the forecast time.',

@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from train_nfl import fit, prediction_metrics, ridge_regression
+from train_nfl import calibrate_win_scale, fit, prediction_metrics, ridge_regression
 
 
 class BacktestMetricsTests(unittest.TestCase):
@@ -91,6 +91,24 @@ class BacktestMetricsTests(unittest.TestCase):
     def test_metrics_do_not_score_an_empty_sample(self):
         with self.assertRaisesRegex(ValueError, "empty forecast sample"):
             prediction_metrics([], [])
+
+    def test_win_probabilities_are_calibrated_on_prior_games_and_scored_on_holdout(self):
+        calibration = [(2025, {}, 0, 0, 10, 20), (2025, {}, 0, 0, 20, 20),
+                       (2025, {}, 0, 0, 20, 10), (2025, {}, 0, 0, 10, 10)]
+        predictions = [10, 20, 20, 10]
+        scale = calibrate_win_scale(predictions, calibration)
+        self.assertGreater(scale, 0)
+        scores = prediction_metrics(predictions, calibration, scale)
+        self.assertEqual(scores["winProbabilityGames"], 2)
+        self.assertLess(scores["winBrier"], 0.1)
+        self.assertLess(scores["winLogLoss"], 0.4)
+
+    def test_win_probability_metrics_exclude_tied_final_scores(self):
+        rows = [(2025, {}, 0, 0, 10, 30), (2025, {}, 0, 0, 20, 30),
+                (2025, {}, 0, 0, 14, 20), (2025, {}, 0, 0, 14, 20)]
+        scores = prediction_metrics([10, 20, 14, 14], rows, 0.1)
+        self.assertEqual(scores["games"], 2)
+        self.assertEqual(scores["winProbabilityGames"], 1)
 
 
 if __name__ == "__main__":
