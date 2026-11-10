@@ -20,7 +20,7 @@ function settlePick(pick){
   const player=settleStats.players.find(row=>String(row.id)===String(pick.player.id));
   const game=player?.games?.find(row=>row.gameId===pick.game.id)||player?.games?.find(row=>Number(row.week)===WEEK&&(row.team||player.team)===pick.player.team&&row.opponent===pick.game.opponent);
   if(!game){
-    const finished=finalGameIds.has(pick.game.id);
+    const finished=finalGameIds.has(pick.game.id)||Date.parse(pick.game.kickoff)<Date.now()-4*60*60*1000;
     return {actual:null,result:finished?'No Stat':'Pending'};
   }
   const value=Number(game.stats?.[pick.metric]);
