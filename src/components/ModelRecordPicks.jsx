@@ -85,8 +85,9 @@ function RecordPick({row}){
       <section className="mr-detail-block"><h3><Target size={15}/> Role & Matchup Evidence</h3><dl>
         <div><dt>Workload</dt><dd>{row.role||'No workload snapshot'}</dd></div>
         <div><dt>Defense Rank</dt><dd>{row.defenseRank?`#${row.defenseRank} of ${row.rankCount||32}`:'Unavailable'}</dd></div>
-        <div><dt>Red-Zone Opportunities</dt><dd>{row.kind==='touchdown'&&row.chances?`${row.chances.totals?.[0]??0} carries · ${row.chances.totals?.[1]??0} targets over ${row.chances.games} tracked games`:row.kind==='touchdown'?'Unavailable in saved snapshot':'Not used for this prop type'}</dd></div>
-        <div><dt>Injury / Weather Note</dt><dd>{row.context||'No general context note saved'}</dd></div>
+        <div><dt>Red-Zone Opportunities</dt><dd>{row.kind==='touchdown'&&row.chances?`${row.chances.totals?.[0]??0} carries · ${row.chances.totals?.[1]??0} targets over ${row.chances.games} tracked games${row.scoring?.targetShare!=null?` · ${rateText(row.scoring.targetShare)} target share`:''}${row.scoring?.carryShare!=null?` · ${rateText(row.scoring.carryShare)} carry share`:''}`:row.kind==='touchdown'?'Unavailable in saved snapshot':'Not used for this prop type'}</dd></div>
+        <div><dt>Top Reason</dt><dd>{row.favoriteReason?.detail?`${row.favoriteReason.label}: ${row.favoriteReason.detail}`:row.context||'No top reason saved'}</dd></div>
+        <div><dt>Weather</dt><dd>{row.weather?.details&&row.weather.signal?`${row.weather.details} · ${row.weather.interpretation}`:'No meaningful weather signal saved'}</dd></div>
         <div><dt>Relevant Injuries</dt><dd>{injuryEvidence===null?'Not captured for this archive entry':injuryEvidence.length?injuryEvidence.map(item=>`${item.role} · ${item.name} · ${item.status}${item.injury?' · '+item.injury:''}${item.impact?' · '+item.impact:''}`).join(' / '):'No major role-related injuries identified'}</dd></div>
         <div><dt>Last {history.length||0} Results</dt><dd>{history.length?history.join(' · '):'Unavailable'}</dd></div>
         <div><dt>Published</dt><dd>{Number.isFinite(published)?new Date(published).toLocaleString():'—'}</dd></div>
@@ -117,7 +118,7 @@ export default function ModelRecordPicks({rows=[],kind='props'}){
   const groups=breakdown(filtered);
   const winRate=rate(filtered);
   return <div className="model-record-picks">
-    <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Every pick keeps its locked line, odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
+    <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Each pick keeps its locked line, available odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
     <div className="mr-kpis">
       <SummaryTile icon={Activity} label="Settled Record" value={`${hits}–${misses}`} detail={`${push} pushes · ${noStat} no stat`} tone="purple"/>
       <SummaryTile icon={TrendingUp} label="Hit Rate" value={winRate==null?'—':rateText(winRate)} detail={`${hits+misses} graded picks · pending excluded`} tone={winRate==null?'':winRate>=.55?'green':'red'}/>
