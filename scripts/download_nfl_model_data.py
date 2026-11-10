@@ -12,6 +12,7 @@ from pathlib import Path
 
 GAMES_URL='https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv'
 PBP_URL='https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_{season}.csv.gz'
+PLAYER_URL='https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_{season}.csv'
 USER_AGENT='NFL-Prop-Lab-Model-Validation/1.0 (https://github.com/cashkub/nfl-prop-lab)'
 
 
@@ -71,6 +72,18 @@ def validate_pbp(path):
         raise ValueError(f'nflverse play-by-play schema changed; missing columns: {sorted(missing)}')
 
 
+def validate_player_stats(path):
+    with Path(path).open(encoding='utf-8-sig') as source:
+        header=set(source.readline().strip().split(','))
+    required={'player_id','position','season','week','season_type','game_id','opponent_team','attempts','carries','targets','passing_yards',
+              'passing_tds','rushing_yards','receiving_yards','receptions','rushing_tds','receiving_tds'}
+    missing=required-header
+    if not ({'player_display_name','player_name'}&header):missing.add('player_display_name or player_name')
+    if not ({'team','recent_team'}&header):missing.add('team or recent_team')
+    if missing:
+        raise ValueError(f'nflverse player-stat schema changed; missing columns: {sorted(missing)}')
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir',type=Path,default=Path('data/nfl-model'))
@@ -88,6 +101,9 @@ def main():
         path=args.output_dir/f'{year}.gz'
         download(PBP_URL.format(season=year),path,args.refresh)
         validate_pbp(path)
+        stats=args.output_dir/'player-stats'/f'{year}.csv'
+        download(PLAYER_URL.format(season=year),stats,args.refresh)
+        validate_player_stats(stats)
     print(f'Validated nflverse model inputs in {args.output_dir}')
 
 

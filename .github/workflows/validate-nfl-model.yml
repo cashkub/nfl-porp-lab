@@ -10,11 +10,13 @@ on:
       - 'scripts/train_nfl.py'
       - 'scripts/nfl_ratings.py'
       - 'scripts/elo_backtest.py'
+      - 'scripts/backtest_player_baselines.py'
       - 'scripts/download_nfl_model_data.py'
       - 'tests/test_nfl_backtest.py'
       - 'tests/test_nfl_data_downloader.py'
       - 'tests/test_nfl_features.py'
       - 'tests/test_elo_backtest.py'
+      - 'tests/test_player_backtest.py'
       - 'tests/test_team_ratings.py'
       - 'src/**'
       - 'package.json'
@@ -56,6 +58,9 @@ jobs:
       - name: Evaluate an independent Elo win probability benchmark
         run: python scripts/elo_backtest.py data/nfl-model/games.csv > scripts/elo.candidate.json
 
+      - name: Benchmark player baselines without creating production picks
+        run: python scripts/backtest_player_baselines.py data/nfl-model > scripts/player-projections.candidate.json
+
       - name: Publish evaluation summary
         run: |
           python - <<'PY'
@@ -63,6 +68,7 @@ jobs:
           from pathlib import Path
           report=json.loads(Path('scripts/nfl_weights.candidate.json').read_text())
           elo=json.loads(Path('scripts/elo.candidate.json').read_text())
+          player=json.loads(Path('scripts/player-projections.candidate.json').read_text())
           backtest=report['backtest']
           lines=['## NFL Model Candidate Evaluation', '', f"{backtest['protocol']}", '',
                  f"**Samples:** {report['games']} eligible games in the untouched holdout.", '',
@@ -79,6 +85,13 @@ jobs:
           for fold in elo['folds']:
               e,m=fold['elo'],fold['closingMoneyline']
               lines.append(f"| {fold['calibrationSeason']} | {fold['holdoutSeason']} | {e['games']} | {e['brier']} | {e['logLoss']} | {e['winnerAccuracy']} | {m['brier']} | {m['logLoss']} | {m['winnerAccuracy']} |")
+          lines.extend(['', '## Player Projection Baseline Benchmark', '', player['protocol'], '',
+                        f"**Player-game rows:** {player['eligiblePlayerGames']}; **completed games:** {player['completedGames']}", '',
+                        '| Position / market / baseline | Player-game forecasts | MAE | RMSE |',
+                        '| --- | ---: | ---: | ---: |'])
+          for key,metrics in player['aggregate'].items():
+              lines.append(f"| {key} | {metrics['games']} | {metrics['mae']} | {metrics['rmse']} |")
+          lines.extend(['', 'These are historical benchmark baselines, not production projections or betting probabilities. The report artifact includes results by season.'])
           Path('/tmp/nfl-model-summary.md').write_text('\n'.join(lines)+'\n')
           with open(__import__('os').environ['GITHUB_STEP_SUMMARY'],'a') as f:
               f.write(Path('/tmp/nfl-model-summary.md').read_text())
@@ -90,5 +103,6 @@ jobs:
           path: |
             scripts/nfl_weights.candidate.json
             scripts/elo.candidate.json
+            scripts/player-projections.candidate.json
           if-no-files-found: error
           retention-days: 14

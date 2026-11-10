@@ -10,3 +10,4 @@ __pycache__/
 data/nfl-model/
 scripts/nfl_weights.candidate.json
 scripts/elo.candidate.json
+scripts/player-projections.candidate.json
