@@ -115,7 +115,7 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
       <header className="nfl-analysis-head"><div><small>SELECTED MATCHUP · {week}</small><h2 id="nfl-analysis-title">{teamLabel(selected.away)} <i>@</i> {teamLabel(selected.home)}</h2><p>{kickoff.format(new Date(selected.kickoff))}</p></div>
         <div className="nfl-analysis-badges"><span style={{'--club':teamColor(selected.away)}}>{selected.away}</span><b>VS</b><span style={{'--club':teamColor(selected.home)}}>{selected.home}</span></div></header>
       <nav className="nfl-analysis-tabs" role="tablist" aria-label="Game Analysis">
-        {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} id={'nfl-tab-'+key} type="button" role="tab" aria-controls={'nfl-view-'+key} aria-selected={tab===key} tabIndex={tab===key?0:-1} onClick={()=>setTab(key)}><Icon size={17}/>{label}</button>)}
+        {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} id={'nfl-tab-'+key} type="button" role="tab" aria-controls={'nfl-view-'+key} aria-selected={tab===key} tabIndex={tab===key?0:-1} onClick={()=>{setTab(key);try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab:key,position,market}))}catch{}}}><Icon size={17}/>{label}</button>)}
       </nav>
       <div id={'nfl-view-'+tab} role="tabpanel" aria-labelledby={'nfl-tab-'+tab} tabIndex={0} className="nfl-tab-panel">
         {tab==='game'&&<GamePredictions game={selected} model={breakdown}/>}
