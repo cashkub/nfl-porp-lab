@@ -14,6 +14,21 @@ function readAt(ref,path){
 }
 
 const days=[];
+const settleStats=readAt('HEAD','public/data/stats.json');
+const finalGameIds=new Set((settleStats.schedule||[]).filter(game=>game.final).map(game=>game.id));
+function settlePick(pick){
+  const player=settleStats.players.find(row=>String(row.id)===String(pick.player.id));
+  const game=player?.games?.find(row=>row.gameId===pick.game.id)||player?.games?.find(row=>Number(row.week)===WEEK&&(row.team||player.team)===pick.player.team&&row.opponent===pick.game.opponent);
+  if(!game){
+    const finished=finalGameIds.has(pick.game.id);
+    return {actual:null,result:finished?'No Stat':'Pending'};
+  }
+  const value=Number(game.stats?.[pick.metric]);
+  if(!Number.isFinite(value))return {actual:null,result:finalGameIds.has(pick.game.id)?'No Stat':'Pending'};
+  if(pick.metric==='scoredTDs')return {actual:value,result:value>0?'Hit':'Miss'};
+  if(Math.abs(value-Number(pick.line))<1e-9)return {actual:value,result:'Push'};
+  return {actual:value,result:pick.side==='under'?(value<pick.line?'Hit':'Miss'):(value>pick.line?'Hit':'Miss')};
+}
 for(const snapshot of SNAPSHOTS){
   const stats=readAt(snapshot.ref,'public/data/stats.json');
   const lines=readAt(snapshot.ref,'public/data/lines.json');
@@ -26,7 +41,7 @@ for(const snapshot of SNAPSHOTS){
   const picks={};
   for(const type of ['props','anytime']){
     picks[type]=buildTopLooks({players:stats.players,slate,books:lines.games||[],season,type})
-      .map((pick,index)=>({...pick,replayRank:index+1,replayCount:0,replayDate:snapshot.date,replaySnapshot:snapshot.ref}));
+      .map((pick,index)=>({...pick,replayRank:index+1,replayCount:0,replayDate:snapshot.date,replaySnapshot:snapshot.ref,settlement:settlePick(pick)}));
     picks[type].forEach(pick=>{pick.replayCount=picks[type].length;});
   }
   days.push({date:snapshot.date,label:dayLabel(snapshot.date),gameCount:slate.length,asOf:snapshot.capturedAt,snapshotRef:snapshot.ref,picks});

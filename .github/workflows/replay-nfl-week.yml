@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/replay_nfl_week.mjs'
       - 'src/lib/topLooksModel.js'
+      - 'public/data/stats.json'
       - '.github/workflows/replay-nfl-week.yml'
   workflow_dispatch:
 
