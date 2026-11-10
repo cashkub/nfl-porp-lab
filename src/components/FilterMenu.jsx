@@ -12,7 +12,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
   const [open,setOpen] = useState(false), [query,setQuery] = useState('');
   const [active,setActive] = useState(0);
   const [position,setPosition] = useState(null);
-  const button = useRef(null), menu = useRef(null), searchInput = useRef(null), search = useRef({text:'',time:0});
+  const button = useRef(null), popup = useRef(null), menu = useRef(null), searchInput = useRef(null), search = useRef({text:'',time:0});
   const id = useId();
   const searchable=options.length>8;
   const visibleOptions=useMemo(()=>options.map((option,index)=>({...option,index})).filter(option=>!query||option.label.toLowerCase().includes(query.toLowerCase().trim())),[options,query]);
@@ -40,7 +40,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
     }
     place();
     function outside(e) {
-      if(!button.current?.contains(e.target) && !menu.current?.contains(e.target))setOpen(false);
+      if(!button.current?.contains(e.target) && !popup.current?.contains(e.target))setOpen(false);
     }
     window.addEventListener('resize',place);
     window.addEventListener('scroll',place,true);
@@ -69,6 +69,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
     if(['ArrowUp','ArrowDown','Home','End'].includes(e.key)){
       e.preventDefault();
       if(!open){show();return;}
+      if(!visibleOptions.length)return;
       setActive(i=>e.key==='Home'?0:e.key==='End'?visibleOptions.length-1:Math.max(0,Math.min(visibleOptions.length-1,i+(e.key==='ArrowUp'?-1:1))));
       return;
     }
@@ -88,7 +89,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
       onClick={()=>open?setOpen(false):show()} onKeyDown={keyDown}>
       <span>{options[selected]?.label || options[0]?.label || '—'}</span><ChevronDown size={15} aria-hidden="true"/>
     </button>
-    {expanded && position && createPortal(<div className="filter-popup" style={position}>
+    {expanded && position && createPortal(<div ref={popup} className="filter-popup" style={position}>
       <div className="filter-popup-heading"><b>{menuTitle}</b><small>{visibleOptions.length} of {options.length} options</small></div>
       {searchable&&<label className="filter-popup-search"><Search size={16} aria-hidden="true"/><input ref={searchInput} type="search" role="searchbox" aria-label={'Search '+menuTitle} placeholder={'Search '+menuTitle.toLowerCase()+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0)}} onKeyDown={keyDown}/></label>}
       <div ref={menu} className="filter-popup-options" role="listbox" id={id} aria-label={menuTitle}>
