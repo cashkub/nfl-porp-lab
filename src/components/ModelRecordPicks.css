@@ -24,3 +24,10 @@
 .mr-hero-mark svg{width:23px;height:23px}
 .mr-hero-mark span{font-size:.5rem;line-height:1.15;white-space:nowrap}
 .record-v2-empty{margin:14px 0 0;padding:14px 16px;border:1px solid #56465f;border-left:3px solid #bd8cff;border-radius:9px;background:#1c1a20;color:#d7cbdc;font-size:.8rem;line-height:1.5}
+.mr-period-select{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 10px;padding:9px 12px;border:1px solid #544361;border-radius:11px;background:linear-gradient(110deg,#211c26,#19181e)}
+.mr-period-select>label{display:flex;align-items:center;gap:8px;min-width:0;color:#d5b7ed;font-size:.66rem;font-weight:900;letter-spacing:.08em}
+.mr-period-select>label>svg{flex:none;color:#ca9af0}
+.mr-period-select .filter-menu{min-width:185px}
+.mr-period-select .filter-trigger{min-height:34px}
+.mr-period-select>small{color:#b2a7b9;font-size:.65rem;text-align:right}
+@media(max-width:620px){.mr-period-select{align-items:flex-start;flex-direction:column;gap:5px;padding:8px}.mr-period-select>label{width:100%;font-size:.55rem}.mr-period-select .filter-menu{margin-left:auto;min-width:150px}.mr-period-select>small{font-size:.55rem;text-align:left}}

@@ -98,7 +98,7 @@ function RecordPick({row}){
 }
 
 export default function ModelRecordPicks({rows=[],kind='props'}){
-  const [period,setPeriod]=useState('all');
+  const [period,setPeriod]=useState('');
   const [market,setMarket]=useState('all');
   const [status,setStatus]=useState('all');
   const [source,setSource]=useState('all');
@@ -106,24 +106,36 @@ export default function ModelRecordPicks({rows=[],kind='props'}){
   const [query,setQuery]=useState('');
   const picks=useMemo(()=>rows.filter(row=>kind==='touchdowns'?row.kind==='touchdown':row.kind!=='touchdown'),[rows,kind]);
   const periods=useMemo(()=>[...new Set(picks.map(r=>recordPeriod(r,'nfl')).filter(Boolean))].sort().reverse(),[picks]);
+  const selectedPeriod=periods.includes(period)?period:periods[0]||'all';
   const markets=useMemo(()=>[...new Set(picks.map(r=>r.kind==='touchdown'?'Anytime Touchdown':r.label||r.metric).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[picks]);
   const models=useMemo(()=>[...new Set(picks.map(r=>r.model).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[picks]);
   const filtered=useMemo(()=>picks.filter(r=>{
     const label=r.kind==='touchdown'?'Anytime Touchdown':r.label||r.metric;
     const text=`${r.player} ${r.team} ${r.home} ${r.away} ${label}`.toLowerCase();
-    return (period==='all'||recordPeriod(r,'nfl')===period)&&(market==='all'||label===market)&&(status==='all'||(r.result||'Pending')===status)&&(source==='all'||sourceType(r)===source)&&(model==='all'||r.model===model)&&(!query||text.includes(query.toLowerCase().trim()));
-  }).sort((a,b)=>Date.parse(b.kickoff)-Date.parse(a.kickoff)||(a.rank||99)-(b.rank||99)),[picks,period,market,status,source,model,query]);
+    return (selectedPeriod==='all'||recordPeriod(r,'nfl')===selectedPeriod)&&(market==='all'||label===market)&&(status==='all'||(r.result||'Pending')===status)&&(source==='all'||sourceType(r)===source)&&(model==='all'||r.model===model)&&(!query||text.includes(query.toLowerCase().trim()));
+  }).sort((a,b)=>Date.parse(b.kickoff)-Date.parse(a.kickoff)||(a.rank||99)-(b.rank||99)),[picks,selectedPeriod,market,status,source,model,query]);
   const hits=filtered.filter(r=>r.result==='Hit').length,misses=filtered.filter(r=>r.result==='Miss').length;
   const pending=filtered.filter(r=>(r.result||'Pending')==='Pending').length,push=filtered.filter(r=>r.result==='Push').length,noStat=filtered.filter(r=>r.result==='No Stat').length;
   const groups=breakdown(filtered);
   const winRate=rate(filtered);
+  const allTimeHits=picks.filter(r=>r.result==='Hit').length,allTimeMisses=picks.filter(r=>r.result==='Miss').length;
+  const allTimePending=picks.filter(r=>(r.result||'Pending')==='Pending').length;
+  const allTimePush=picks.filter(r=>r.result==='Push').length;
+  const allTimeNoStat=picks.filter(r=>r.result==='No Stat').length;
+  const weekRows=selectedPeriod==='all'?picks:picks.filter(r=>recordPeriod(r,'nfl')===selectedPeriod);
+  const weekHits=weekRows.filter(r=>r.result==='Hit').length,weekMisses=weekRows.filter(r=>r.result==='Miss').length;
+  const weekPending=weekRows.filter(r=>(r.result||'Pending')==='Pending').length;
+  const weekPush=weekRows.filter(r=>r.result==='Push').length;
+  const weekNoStat=weekRows.filter(r=>r.result==='No Stat').length;
+  const periodTitle=selectedPeriod==='all'?'All Weeks':periodLabel(selectedPeriod,'nfl');
   return <div className="model-record-picks">
     <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Each pick keeps its locked line, available odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
+    <div className="mr-period-select"><label><CalendarDays size={16}/> WEEKLY RECORD VIEW <FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Historical replay picks are excluded from this official record.</small></div>
     <div className="mr-kpis">
-      <SummaryTile icon={Activity} label="Settled Record" value={`${hits}–${misses}`} detail={`${push} pushes · ${noStat} no stat`} tone="purple"/>
-      <SummaryTile icon={TrendingUp} label="Hit Rate" value={winRate==null?'—':rateText(winRate)} detail={`${hits+misses} graded picks · pending excluded`} tone={winRate==null?'':winRate>=.55?'green':'red'}/>
-      <SummaryTile icon={Target} label="Still Pending" value={pending} detail={`${filtered.length} picks in this view`}/>
-      <SummaryTile icon={Shield} label="Markets Tracked" value={groups.length} detail="Separated by prop and direction"/>
+      <SummaryTile icon={Activity} label="ALL-TIME SETTLED RECORD" value={`${allTimeHits}–${allTimeMisses}`} detail={`${allTimeHits+allTimeMisses} graded · ${allTimePush} push · ${allTimeNoStat} no stat · ${allTimePending} pending`} tone="purple"/>
+      <SummaryTile icon={TrendingUp} label="ALL-TIME HIT RATE" value={rate(picks)==null?'—':rateText(rate(picks))} detail="Official V2 locks · pending excluded" tone={rate(picks)==null?'':rate(picks)>=.55?'green':'red'}/>
+      <SummaryTile icon={Target} label={`${periodTitle.toUpperCase()} RECORD`} value={`${weekHits}–${weekMisses}`} detail={`${weekHits+weekMisses} graded · ${weekPush} push · ${weekNoStat} no stat · ${weekPending} pending`} tone="purple"/>
+      <SummaryTile icon={Shield} label={`${periodTitle.toUpperCase()} HIT RATE`} value={rate(weekRows)==null?'—':rateText(rate(weekRows))} detail="Selected week · pending excluded" tone={rate(weekRows)==null?'':rate(weekRows)>=.55?'green':'red'}/>
     </div>
     <section className="mr-market-summary"><div className="mr-section-title"><div><span className="mr-eyebrow">PERFORMANCE BREAKDOWN</span><h2>RECORD BY MARKET</h2></div><small>Small samples stay visible so rates are never shown without their count.</small></div>
       {groups.length?<div className="mr-market-grid">{groups.map(([label,group])=>{const graded=group.filter(decided),wins=graded.filter(won).length;return <article className="mr-market-card" key={label}><div><strong>{label}</strong><span>{group.length} PICKS</span></div><b style={rateStyle(rate(group))}>{graded.length?rateText(wins/graded.length):'—'}</b><small>{wins}W – {graded.length-wins}L <i>· {group.filter(r=>(r.result||'Pending')==='Pending').length} pending</i></small><div className="mr-rate-rail"><i style={{width:`${graded.length?100*wins/graded.length:0}%`}}/></div></article>})}</div>:<div className="mr-empty">No market results match these filters yet.</div>}
@@ -131,7 +143,6 @@ export default function ModelRecordPicks({rows=[],kind='props'}){
     <section className="mr-archive">
       <div className="mr-section-title"><div><span className="mr-eyebrow">PICK ARCHIVE</span><h2>EVERY LOCKED PICK</h2></div><span className="mr-count">{filtered.length} RECORDS</span></div>
       <div className="mr-filters">
-        <label><CalendarDays size={15}/> WEEK <FilterMenu aria-label="Filter by week" value={period} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label>
         <label><Target size={15}/> MARKET <FilterMenu aria-label="Filter by market" value={market} onChange={e=>setMarket(e.target.value)}><option value="all">All Markets</option>{markets.map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>
         <label><Filter size={15}/> RESULT <FilterMenu aria-label="Filter by result" value={status} onChange={e=>setStatus(e.target.value)}>{['all','Hit','Miss','Pending','Push','No Stat'].map(value=><option key={value} value={value}>{value==='all'?'All Results':value}</option>)}</FilterMenu></label>
         <label><TrendingUp size={15}/> LINE TYPE <FilterMenu aria-label="Filter by line source" value={source} onChange={e=>setSource(e.target.value)}><option value="all">All Lines</option><option value="book">Sportsbook Lines</option><option value="average">Average Lines</option><option value="unavailable">Odds Unavailable</option></FilterMenu></label>

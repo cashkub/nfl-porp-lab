@@ -18,9 +18,15 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
   const [mode,setMode]=useState(()=>initialParams.get('topMode')==='week'?'week':'day');
   const [selected,setSelected]=useState(()=>initialParams.get('topSelection')||'');
   const [openWhy,setOpenWhy]=useState('');
-  const options=mode==='day'?days:weeks;
+  const [replayData,setReplayData]=useState(null);
+  useEffect(()=>{let active=true;fetch((import.meta.env.BASE_URL||'/')+'data/nfl-v2-replay.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(data=>{if(active&&data?.schemaVersion===1)setReplayData(data);}).catch(()=>{});return()=>{active=false;};},[]);
+  const replayWeeks=replayData?.week?[String(replayData.week)]:[];
+  const options=mode==='day'?days:[...new Set([...weeks,...replayWeeks])].sort((a,b)=>Number(a)-Number(b));
   const value=options.includes(selected)?selected:options[0]||'';
+  const isReplay=mode==='week'&&String(value)==='9'&&replayData?.week===9;
+  const replayDays=isReplay?replayData.days||[]:[];
   const slate=future.filter(game=>mode==='day'?dayKey(game.kickoff)===value:String(game.week)===value);
+  const replayPicks=isReplay?replayDays.flatMap(day=>(day.picks?.[type]||[]).map(pick=>({...pick,replayDayDate:day.date,replayDayLabel:day.label,replayGameCount:day.gameCount,replayAsOf:day.asOf}))):[];
   useEffect(()=>{
     const url=new URL(window.location.href);
     url.searchParams.set('topMode',mode);
@@ -28,9 +34,11 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
     if(value)url.searchParams.set('topSelection',value);else url.searchParams.delete('topSelection');
     window.history.replaceState(window.history.state,'',url);
   },[mode,value,type]);
-  const picks=useMemo(()=>buildTopLooks({players,slate,books,season,type}),[slate,players,season,books,type]);
+  const livePicks=useMemo(()=>buildTopLooks({players,slate,books,season,type}),[slate,players,season,books,type]);
+  const picks=isReplay?replayPicks:livePicks;
   const markets=Object.fromEntries(Object.entries(METRICS).map(([key,market])=>[key,market.label]));
   const kickDate=value&&mode==='day'?dayLabel(value):value?'Week '+value:'Upcoming';
+  const displayedGameCount=isReplay?replayDays.reduce((sum,day)=>sum+Number(day.gameCount||0),0):slate.length;
   return <main className="top-looks chart-lab"><NflToolHeader active="top"/>
     <div className="top-looks-heading">
       <div><span className="top-kicker">MODEL RANKED PLAYER PROPS</span><h1>Top <em>Looks</em></h1>
@@ -45,19 +53,23 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
         {options.map(option=><option key={option} value={option}>{mode==='day'?dayLabel(option):'Week '+option}</option>)}
       </FilterMenu></label>
       <div className="pick-type" role="group" aria-label="Pick Type"><span>PICK TYPE</span><div><button type="button" aria-pressed={type==='anytime'} onClick={()=>setType('anytime')}>Anytime Touchdowns</button><button type="button" aria-pressed={type==='props'} onClick={()=>setType('props')}>Player Props</button></div></div>
-      <span>{kickDate} · {slate.length} {slate.length===1?'game':'games'}</span>
+      <span>{isReplay?`Week 9 Replay · ${displayedGameCount} archived games`:`${kickDate} · ${slate.length} ${slate.length===1?'game':'games'}`}</span>
       <details className="model-guide"><summary aria-label="What The Model Considers" title="What The Model Considers"><Info size={17}/></summary><div className="model-guide-panel"><b>WHAT TOP LOOKS CONSIDERS</b><p>Picks with real sportsbook lines come first. Within the real-line and average-line groups, picks sort by comparative model score; averages fill the remaining places after the sportsbook picks.</p><div className="model-guide-grid"><section><strong>38% · MARKET EDGE</strong><span>Estimated chance compared with available sportsbook odds after removing two-way vig. Anytime touchdown Yes prices are shown as listed, before removing margin.</span></section><section><strong>22% · PROJECTION</strong><span>Weighted season and recent averages compared with the selected prop line.</span></section><section><strong>12% · DEFENSE MATCHUP</strong><span>Whether the defense allows more or fewer of that position’s selected stat. Color reflects the bet direction.</span></section><section><strong>{type==='anytime'?'12%':'18%'} · WORKLOAD</strong><span>{type==='anytime'?'Attempts, carries, targets, touches, and team share, alongside red-zone scoring opportunities.':'Volume and team share are matched to the selected prop: pass attempts for passing props, carries for rushing props, and targets for receiving props.'}</span></section><section><strong>6% · WEATHER</strong><span>Wind, rain, and cold are used only when the forecast is available and relevant to the market.</span></section>{type==='anytime'&&<section><strong>6% · RED-ZONE USAGE</strong><span>Red-zone target share for receivers, carry share for runners and quarterbacks; running backs can benefit from either. Scoring-area volume is included when play-by-play data exists.</span></section>}<section className="guide-injuries"><strong>4% · INJURY EFFECTS FOR {type==='anytime'?'ANYTIME TOUCHDOWNS':'PLAYER PROPS'}</strong><span>{type==='anytime'?'Checks the selected player’s availability and meaningful absences among players who share scoring work, such as a lead running back or primary red-zone target. Red-zone opportunity data helps identify whether the injured player’s role overlaps.':'Checks the selected player’s availability and high-impact teammates whose absence could change this prop’s workload: QB1 for passing and receiving markets, or a leading same-position player for targets or carries. Only an estimated top role and a relevant injury status qualify.'} The effect is signed to the pick: an absence that supports this side can help it; one that creates risk can lower it. If no relevant injury is reported, or the player’s role cannot be estimated, the injury factor is neutral and the pick is unchanged.</span></section></div><small>The score is for comparing picks, not a win probability. Missing lines and odds are labeled. A date appears only when at least one future game is scheduled.</small></div></details>
     </section>
-    {loading||error?<p>{error||'Loading Top Looks…'}</p>:picks.length?
-      <section className="top-pick-list">{picks.map((pick,index)=>{
+    {isReplay&&<aside className="top-replay-notice" role="note"><strong>HISTORICAL V2 REPLAY · WEEK 9</strong><p>{replayData.disclaimer}</p><small>{replayData.coverageNote} Replay selections and outcomes stay outside the official Model Record.</small></aside>}
+    {loading||error?<p>{error||'Loading Top Looks…'}</p>:isReplay&&!replayData?<p>Loading Week 9 replay…</p>:picks.length?
+      <section className={'top-pick-list'+(isReplay?' is-replay':'')}>{picks.map((pick,index)=>{
         const context=gameContext(pick.game,pick);
         const recentLabel=pick.recent.length?'last '+pick.recent.length:'recent';
         const shareLabel=pick.usageKey==='targets'?'Target Share':pick.usageKey==='carries'?'Carry Share':pick.usageKey==='attempts'?'Attempt Share':'Touch Share';
         const pickKey=pick.game.id+'|'+pick.player.id+'|'+pick.metric+'|'+pick.side;
         const whyId='pick-why-'+index;
+        const displayRank=pick.replayRank||index+1;
+        const displayCount=pick.replayCount||picks.length;
+        const startsReplayDay=isReplay&&(index===0||picks[index-1]?.replayDayDate!==pick.replayDayDate);
         const whyOpen=openWhy===pickKey;
-        return <article className="top-pick panel" key={pick.game.id+pick.player.id+pick.metric+pick.side} style={{'--club':teamColor(pick.player.team)||'#a775cf'}}>
-          <div className="pick-rank"><b>{String(index+1).padStart(2,'0')}</b><small title="Comparative Model Score, Not A Percentage">{pick.rankScore} SCORE</small></div>
+        return <React.Fragment key={(isReplay?'replay-':'')+pick.game.id+pick.player.id+pick.metric+pick.side}>{startsReplayDay&&<div className="replay-day-heading"><strong>{pick.replayDayLabel}</strong><span>{pick.replayGameCount} games · pregame snapshot {new Date(pick.replayAsOf).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} ET</span></div>}<article className="top-pick panel" key={pick.game.id+pick.player.id+pick.metric+pick.side} style={{'--club':teamColor(pick.player.team)||'#a775cf'}}>
+          <div className="pick-rank"><b>{String(displayRank).padStart(2,'0')}</b><small title="Comparative Model Score, Not A Percentage">{pick.rankScore} SCORE</small></div>
           <PlayerPhoto id={pick.player.id} name={pick.player.name} url={pick.player.photo}/>
           <div className="top-pick-main">
             <div className="top-matchup">{pick.player.team} · {pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
@@ -75,7 +87,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
                 <b>WHY THE MODEL LIKES THIS PICK</b>
                 <div className="pick-reason-grid">
                   <section className="favorite-reason"><strong>TOP REASON · {pick.favoriteReason.label.toUpperCase()}</strong><span>{pick.favoriteReason.detail}</span></section>
-                  <section><strong>RANKING SCORE · {pick.rankScore}/100</strong><span>Ranked #{index+1} of {picks.length}. This comparative score shows how strongly the available signals support the pick; it is not a hit probability. Tap the information button beside the filters for the full scoring method.</span></section>
+                  <section><strong>RANKING SCORE · {pick.rankScore}/100</strong><span>Ranked #{displayRank} of {displayCount}. This comparative score shows how strongly the available signals support the pick; it is not a hit probability. Tap the information button beside the filters for the full scoring method.</span></section>
                   <section><strong>HISTORICAL RESULTS</strong><span>{pick.side.toUpperCase()} hit {pick.hits} of {pick.history.length} prior games (<b style={rateStyle(pick.hits/pick.history.length)}>{formatRate(pick.hits/pick.history.length)} prior hit rate</b>); {pick.recentHits} of {pick.recent.length} in the {recentLabel}.</span></section>
                   <section><strong>PROJECTION</strong><span>{projectionReason(pick)}</span></section>
                   {pick.volumeSignal>.1&&<section><strong>{shareLabel.toUpperCase()}</strong><span>{fmtShare(pick.share.average)} of team {pick.usageKey} across {pick.share.count} recent games{pick.share.trend!=null?'; recent share '+(pick.share.trend>0?'+':'')+(pick.share.trend*100).toFixed(1)+' percentage points':''}.</span></section>}
@@ -88,9 +100,9 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
                 </div>
               </div>
           </div>
-        </article>;
+        </article></React.Fragment>;
       })}</section>:
-      <section className="no-top-picks panel"><h2>No qualified picks for {kickDate}</h2>
+      <section className="no-top-picks panel"><h2>No qualified picks for {isReplay?'Week 9 replay':kickDate}</h2>
         <p>Top Looks ranks real DraftKings lines first and uses a player-average line only when no sportsbook line is available. A short slate may have fewer than three picks.</p>
       </section>}
   </main>;
