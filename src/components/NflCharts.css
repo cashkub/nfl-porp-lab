@@ -148,7 +148,7 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
 
 .chart-lab :is(h1,.lab-block h2){-webkit-text-stroke:.35px currentColor}
 .chart-lab .chart-filter label{font-size:.85rem;font-weight:800}
-.chart-slate .chart-filter:first-child select{font-weight:800;text-align:center;color:#eadcff;border-color:#9273b5}
+.chart-slate .chart-filter:first-child .filter-trigger{font-weight:800;text-align:center;color:#eadcff;border-color:#9273b5}
 .margin-bars .bar-space strong{width:max-content;max-width:100%;margin-inline:auto;padding:.05rem .32rem;border:1px solid color-mix(in srgb,var(--outcome) 65%,transparent);border-radius:.3rem;background:#211a2b;font-weight:800;font-variant-numeric:tabular-nums}
 
 .chart-lab .line-control{border:0;background:transparent}
@@ -182,17 +182,13 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
 .chart-lab .chart-filter:focus-within{border-color:#cda6ef;box-shadow:0 0 0 1px #ab78d64d}
 .chart-lab .chart-filter label{padding:.4rem .65rem 0;color:#d8b9ef;font-size:.73rem;letter-spacing:.035em}
 .chart-select-row{gap:0;align-items:stretch;grid-template-columns:minmax(0,1fr) 26px}
-.chart-lab .chart-filter .chart-select-row select{
-  appearance:none;border:0;border-radius:0;cursor:pointer;color:#fff6ff;text-align:left;font-weight:700;
-  padding:.3rem 1.35rem .45rem .65rem;background:linear-gradient(45deg,transparent 50%,#dcb5fa 50%) right .69rem center/4px 4px no-repeat,
-    linear-gradient(135deg,#dcb5fa 50%,transparent 50%) right .44rem center/4px 4px no-repeat;
-}
-.chart-filter option{background:#202226;color:#fff6ff}
+.chart-lab .chart-filter .chart-select-row .filter-trigger{min-height:40px;border:0;border-radius:0;background:transparent;color:#fff6ff;text-align:left;font-weight:700;padding:.3rem 1.7rem .45rem .65rem;box-shadow:none}
+.chart-lab .chart-filter .chart-select-row .filter-trigger:hover,.chart-lab .chart-filter .chart-select-row .filter-trigger[aria-expanded=true]{border:0;box-shadow:inset 0 0 0 1px #ab78d64d}
 .chart-lab .chart-step-buttons{gap:0;border-left:1px solid #634b71}
 .chart-lab .chart-step-buttons button{border:0;border-radius:0;background:#2c2e34;color:#f2d9ff}
 .chart-step-buttons button+button{box-shadow:inset 0 1px #634b71}
 .primary-controls .chart-filter{border-color:#88649c}
-.chart-lab :is(.chart-filter select,.chart-step-buttons button):focus-visible{outline-offset:-2px}
+.chart-lab :is(.chart-filter .filter-trigger,.chart-step-buttons button):focus-visible{outline-offset:-2px}
 @media(min-width:621px) and (max-width:1100px){.extra-filters{grid-template-columns:1fr}}
 @media(min-width:1101px){.extra-filters{grid-template-columns:1.55fr 1.65fr}.chart-slate{grid-template-columns:.85fr 1.4fr 1.2fr}}
 .chart-disclosure{
