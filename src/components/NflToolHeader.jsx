@@ -6,7 +6,7 @@ const destinations=[
   {name:'Player Charts',icon:Activity,href:'#analyzer',key:'charts'},
   {name:'Prop Lists',icon:ListFilter,href:'#prop-lists',key:'props'},
   {name:'Top Looks',icon:Crosshair,href:'#top-eight',key:'top'},
-  {name:'Games',icon:CalendarDays},
+  {name:'Games',icon:CalendarDays,href:'#nfl-games',key:'games'},
   {name:'Model Record',icon:BarChart3,href:'#model-record',key:'record'},
 ];
 

@@ -144,7 +144,7 @@ export default function App() {
   const nflTool = !launch && !manualLeague;
   const previewTools=new URLSearchParams(window.location.search).get('view')==='nfl';
   useEffect(()=>{
-    if(previewTools && !['analyzer','prop-lists','nfl-top','model-record'].includes(page))window.location.replace('/preview/nfl/');
+    if(previewTools && !['analyzer','prop-lists','nfl-top','nfl-games','model-record'].includes(page))window.location.replace('/preview/nfl/');
   },[previewTools,page]);
   const [initialCbb,setInitialCbb] = useState({});
   const [dark,setDark] = useState(() => {
@@ -325,7 +325,8 @@ export default function App() {
     setSelectedId(p.id); setMetric(market.metric); setDirection(side); setWindowSize('10');
     if(next){
       const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(next.kickoff));
-      gameFilter.select(day,[day,next.away,next.home].join('|'));
+      if(previewTools){chartSlate.changeWeek(String(next.week));chartSlate.changeMatch(next.id);}
+      else gameFilter.select(day,[day,next.away,next.home].join('|'));
     }
     setCustom({context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point,source:'Selected Prop Line'});
     setPage('analyzer'); window.location.hash='analyzer'; window.scrollTo(0,0);
@@ -350,6 +351,7 @@ export default function App() {
 
   if(previewTools){
     if(page==='nfl-top')return <ManualLeague.Provider value="nfl"><TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/></ManualLeague.Provider>;
+    if(page==='nfl-games')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="games"/><NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} season={scheduleSeason} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/></main></ManualLeague.Provider>;
     if(page==='model-record')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="record"/><ModelRecord sport="nfl" validation={data.modelValidation}/></main></ManualLeague.Provider>;
     if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl">
