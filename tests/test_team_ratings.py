@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from update_data import team_ratings, schedule_rows
+from nfl_ratings import team_ratings_recency
 
 
 class ModelTests(unittest.TestCase):
@@ -22,3 +23,14 @@ class ModelTests(unittest.TestCase):
         game = schedule_rows(text,[2026])[0]
         self.assertEqual(game['homeSpread'],3)
         self.assertIsNone(game['homeRating'])
+
+    def test_recency_candidate_responds_to_recent_offensive_decline(self):
+        results=[('A','X',30,10,True)]*6+[('A','Y',10,30,True)]*2
+        all_games=team_ratings(results)
+        recent=team_ratings_recency(results)
+        self.assertLess(recent['A']['offense'],all_games['A']['offense'])
+        self.assertLess(recent['A']['effectiveGames'],recent['A']['games'])
+
+    def test_recency_rating_validates_half_life(self):
+        with self.assertRaisesRegex(ValueError,'half_life must be positive'):
+            team_ratings_recency([('A','B',21,14,True)],half_life=0)

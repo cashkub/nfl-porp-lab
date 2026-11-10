@@ -74,7 +74,7 @@ class BacktestMetricsTests(unittest.TestCase):
         self.assertAlmostEqual(coefficients[1], 0.0)
 
     def test_metrics_cover_team_scores_margin_total_and_winner(self):
-        rows = [(2025, {}, 0, 17, 17), (2025, {}, 0, 24, 24)]
+        rows = [(2025, {}, 0, 0, 17, 17), (2025, {}, 0, 0, 24, 24)]
         metrics = prediction_metrics([14, 20], rows)
         self.assertEqual(metrics, {
             "games": 1,

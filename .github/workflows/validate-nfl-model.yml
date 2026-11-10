@@ -8,10 +8,12 @@ on:
       - '.github/workflows/validate-nfl-model.yml'
       - 'scripts/nfl_features.py'
       - 'scripts/train_nfl.py'
+      - 'scripts/nfl_ratings.py'
       - 'scripts/download_nfl_model_data.py'
       - 'tests/test_nfl_backtest.py'
       - 'tests/test_nfl_data_downloader.py'
       - 'tests/test_nfl_features.py'
+      - 'tests/test_team_ratings.py'
 
 permissions:
   contents: read

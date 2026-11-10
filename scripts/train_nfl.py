@@ -8,6 +8,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from nfl_features import Form, plays, evaluation, number
+from nfl_ratings import team_ratings_recency
 from update_data import team_ratings
 
 
@@ -62,7 +63,7 @@ def ridge_regression(features, outcomes, ridge=200):
 
 def prediction_metrics(pred, rows):
     """Score paired [away, home] forecasts without hiding ties or sample size."""
-    actual_scores=[float(r[3]) for r in rows]
+    actual_scores=[float(r[4]) for r in rows]
     predicted=[float(x) for x in pred]
     if len(predicted)!=len(actual_scores) or len(predicted)%2:
         raise ValueError('Predictions must contain paired away/home scores for every game.')
@@ -105,6 +106,7 @@ def fit(directory):
         results=[]; form=Form()
         for week in range(1,19):
             ratings=team_ratings(results)
+            recency_ratings=team_ratings_recency(results)
             batch=schedule[season,week]
             for r in batch:
                 # Current-season schedule files also contain upcoming games. Never grade them as outcomes.
@@ -120,9 +122,10 @@ def fit(directory):
                     profile=form.matchup(r,side,use_listed_qb=False)
                     if not profile:break
                     base=evaluation(ratings[team],ratings[opp],sign*.75 if r['location']!='Neutral' else 0)
+                    recent=evaluation(recency_ratings[team],recency_ratings[opp],sign*.75 if r['location']!='Neutral' else 0)
                     total=number(r['total_line']);spread=number(r['spread_line'])
                     if total is None or spread is None:break
-                    pair.append((season,profile['inputs'],base,float(r[side+'_score']),(total+sign*spread)/2))
+                    pair.append((season,profile['inputs'],base,recent,float(r[side+'_score']),(total+sign*spread)/2))
                 if len(pair)==2:records.extend(pair)
             for r in batch:
                 if number(r.get('result')) is None:
@@ -142,30 +145,31 @@ def fit(directory):
     if not train:
         raise ValueError(f'No training records through {train_through} were found.')
     x=[[r[1][k] for k in keys] for r in train]
-    y=[r[3]-r[2] for r in train]
+    y=[r[4]-r[2] for r in train]
     center,coef,intercept=ridge_regression(x,y)
     for k in ('Wind','Cold','Rest'):
         i=keys.index(k);intercept-=center[i]*coef[i];center[i]=0
     def scores(rows):
-        base=[r[2] for r in rows]; actual=[r[3] for r in rows]; market=[r[4] for r in rows]
+        base=[r[2] for r in rows]; recent=[r[3] for r in rows]; actual=[r[4] for r in rows]; market=[r[5] for r in rows]
         stats=[base[i]+intercept+sum((r[1][k]-center[j])*coef[j] for j,k in enumerate(keys)) for i,r in enumerate(rows)]
-        return base,actual,market,stats
+        return base,recent,actual,market,stats
     calibration=[r for r in records if r[0]==calibration_season]
     holdout=[r for r in records if r[0]==holdout_season]
     if not calibration or not holdout:
         raise ValueError(f'Walk-forward evaluation requires eligible games in calibration season {calibration_season} and holdout season {holdout_season}.')
-    _,actual,market,stats=scores(calibration)
+    _,_,actual,market,stats=scores(calibration)
     denominator=sum((m-s)**2 for m,s in zip(market,stats))
     weight=max(0.0,min(1.0,sum((m-s)*(a-s) for m,s,a in zip(market,stats,actual))/denominator)) if denominator else 0.0
 
     def evaluate(rows):
-        base,actual,market,stats=scores(rows)
+        base,recent,actual,market,stats=scores(rows)
         blend=[s*(1-weight)+m*weight for s,m in zip(stats,market)]
-        return {'Base':prediction_metrics(base,rows),'Stats':prediction_metrics(stats,rows),
+        return {'Base':prediction_metrics(base,rows),'Recency Weighted':prediction_metrics(recent,rows),
+                'Stats':prediction_metrics(stats,rows),
                 'Closing Market Benchmark':prediction_metrics(market,rows),
                 'Market Blend':prediction_metrics(blend,rows)}
 
-    # Keep this shape for the existing data consumer; these are the untouched 2025 holdout scores.
+    # Keep this compact shape for the existing data consumer; detailed diagnostics stay below.
     holdout_scores=evaluate(holdout)
     validation={k:{'scoreMAE':v['scoreMAE'],'marginMAE':v['marginMAE']} for k,v in holdout_scores.items()}
     validation['Market']=validation.pop('Closing Market Benchmark')
