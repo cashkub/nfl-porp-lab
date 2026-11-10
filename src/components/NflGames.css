@@ -29,6 +29,7 @@
 .nfl-analysis-tabs button{display:flex;align-items:center;justify-content:center;gap:.5rem;min-width:0;min-height:2.8rem;padding:.55rem .7rem;border:1px solid #44394b;border-radius:.65rem;background:#1d1d22;color:#c1b7c8;font-size:.72rem;font-weight:900;letter-spacing:.06em;cursor:pointer;transition:background .18s,border-color .18s,box-shadow .18s,color .18s}
 .nfl-analysis-tabs button:hover,.nfl-analysis-tabs button[aria-selected=true]{border-color:#a66bd1;color:#f0defe;background:linear-gradient(110deg,#3a2549,#27212f);box-shadow:inset 0 0 0 1px #9152b758,0 0 16px #8b4db52a}
 .nfl-analysis-tabs button svg{flex:none;color:#c590e8}
+.nfl-analysis-tabs button:focus-visible,.nfl-tab-panel:focus-visible{outline:2px solid #c48bef;outline-offset:2px}
 .nfl-view-panel{padding:clamp(.8rem,2vw,1.4rem);min-width:0}
 .nfl-projection-banner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;border:1px solid #76538e;border-radius:.8rem;background:radial-gradient(ellipse at 0% 50%,#713cac40,transparent 55%),linear-gradient(115deg,#211a29,#191a1f)}
 .nfl-projection-banner>div{min-width:0}.nfl-projection-banner strong,.nfl-projection-banner p{display:block}.nfl-projection-banner strong{margin:.25rem 0;font-size:clamp(1.18rem,3vw,1.75rem);font-weight:950;line-height:1.15}.nfl-projection-banner p{margin:.35rem 0 0;color:#c5bfca;font-size:.76rem}

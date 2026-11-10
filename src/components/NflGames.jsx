@@ -23,6 +23,7 @@ const marketsFor={
 const usageMetric={QB:['attempts','PASS ATT'],RB:['carries','CARRIES'],WR:['targets','TARGETS'],TE:['targets','TARGETS']};
 const format=n=>Number.isFinite(n)?(Number.isInteger(n)?String(n):n.toFixed(1)):'—';
 const sameGame=(a,b)=>a&&b&&a.away===b.away&&a.home===b.home&&Math.abs(Date.parse(a.kickoff)-Date.parse(b.kickoff))<12*3600000;
+function savedAnalysis(){try{return JSON.parse(sessionStorage.getItem('nfl-games-analysis')||'{}')}catch{return {}}}
 
 function Team({code,price}){
   const logoCode=({WAS:'wsh',LAR:'lar'})[code]||code.toLowerCase();
@@ -33,17 +34,18 @@ function Team({code,price}){
 }
 
 export default function NflGames({schedule,books,players,season,now,onOpen,updated,loading,error}){
-  const [requestedWeek,setWeek]=useState('');
-  const [selectedId,setSelected]=useState('');
-  const [tab,setTab]=useState('game');
-  const [position,setPosition]=useState('ALL');
-  const [market,setMarket]=useState('ALL');
+  const [requestedWeek,setWeek]=useState(()=>savedAnalysis().week||'');
+  const [selectedId,setSelected]=useState(()=>savedAnalysis().selected||'');
+  const [tab,setTab]=useState(()=>savedAnalysis().tab||'game');
+  const [position,setPosition]=useState(()=>savedAnalysis().position||'ALL');
+  const [market,setMarket]=useState(()=>savedAnalysis().market||'ALL');
   const upcoming=(schedule||[]).filter(g=>Date.parse(g.kickoff)>now).sort((a,b)=>Date.parse(a.kickoff)-Date.parse(b.kickoff));
   const weeks=[...new Set(upcoming.map(weekOf))];
   const week=weeks.includes(requestedWeek)?requestedWeek:weeks[0];
   const games=upcoming.filter(g=>weekOf(g)===week);
   const selected=games.find(g=>(g.id||g.kickoff+g.home)===selectedId)||games[0];
   const bookGame=(books||[]).find(g=>sameGame(g,selected));
+  React.useEffect(()=>{try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab,position,market}))}catch{}},[week,selected,tab,position,market]);
   const rows=useMemo(()=>{
     if(!selected)return [];
     const cutoffWeek=Number(selected.week);
@@ -103,11 +105,13 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
       <header className="nfl-analysis-head"><div><small>SELECTED MATCHUP · {week}</small><h2 id="nfl-analysis-title">{teamLabel(selected.away)} <i>@</i> {teamLabel(selected.home)}</h2><p>{kickoff.format(new Date(selected.kickoff))}</p></div>
         <div className="nfl-analysis-badges"><span style={{'--club':teamColor(selected.away)}}>{selected.away}</span><b>VS</b><span style={{'--club':teamColor(selected.home)}}>{selected.home}</span></div></header>
       <nav className="nfl-analysis-tabs" role="tablist" aria-label="Game Analysis">
-        {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} type="button" role="tab" aria-selected={tab===key} onClick={()=>setTab(key)}><Icon size={17}/>{label}</button>)}
+        {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} id={'nfl-tab-'+key} type="button" role="tab" aria-controls={'nfl-view-'+key} aria-selected={tab===key} tabIndex={tab===key?0:-1} onClick={()=>setTab(key)}><Icon size={17}/>{label}</button>)}
       </nav>
-      {tab==='game'&&<GamePredictions game={selected} model={breakdown}/>}
-      {tab==='players'&&<PlayerResearch game={selected} rows={rows} position={position} setPosition={setPosition} market={market} setMarket={setMarket} onOpen={onOpen} books={books} players={players} season={season} now={now}/>}
-      {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame}/>}
+      <div id={'nfl-view-'+tab} role="tabpanel" aria-labelledby={'nfl-tab-'+tab} tabIndex={0} className="nfl-tab-panel">
+        {tab==='game'&&<GamePredictions game={selected} model={breakdown}/>}
+        {tab==='players'&&<PlayerResearch game={selected} rows={rows} position={position} setPosition={setPosition} market={market} setMarket={setMarket} onOpen={onOpen} books={books} players={players} season={season} now={now}/>}
+        {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame}/>}
+      </div>
     </section>}
   </section>;
 }
