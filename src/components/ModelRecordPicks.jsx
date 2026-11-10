@@ -117,7 +117,7 @@ export default function ModelRecordPicks({rows=[],kind='props'}){
   const groups=breakdown(filtered);
   const winRate=rate(filtered);
   return <div className="model-record-picks">
-    <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Every archived pick stays tied to its published line, price, model version, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
+    <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Every pick keeps its locked line, odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
     <div className="mr-kpis">
       <SummaryTile icon={Activity} label="Settled Record" value={`${hits}–${misses}`} detail={`${push} pushes · ${noStat} no stat`} tone="purple"/>
       <SummaryTile icon={TrendingUp} label="Hit Rate" value={winRate==null?'—':rateText(winRate)} detail={`${hits+misses} graded picks · pending excluded`} tone={winRate==null?'':winRate>=.55?'green':'red'}/>

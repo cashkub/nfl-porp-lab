@@ -307,7 +307,7 @@ body:has(.chart-lab){background-color:#111316;background-blend-mode:luminosity}
 .game-report-defense>strong .chart-logo{width:1.5rem;height:1.5rem}
 .game-report-defense>p{margin:.35rem 0 0;color:#bcb3c2;font-size:.7rem;line-height:1.45}
 .chart-lab .nfl-tool-header nav a[aria-current=page]{border-color:#be91e0;background:linear-gradient(115deg,#372a40,#25242a);color:#fff;box-shadow:inset 0 -2px #c9a3e9,0 0 10px #b86aeb24}
-.model-record-preview{max-width:78rem}
+.model-record-preview{max-width:68rem}
 .model-record-preview>.props-board{margin:.8rem 0 1.2rem;border:1px solid #705c7d;background:linear-gradient(130deg,#24262b,#191b1f 70%);color:#f5f0f8}
 .model-record-preview .outline-button{border-color:#574663;color:#f1e7f6}
 .model-record-preview .outline-button[aria-pressed=true]{border-color:#c394ed;background:linear-gradient(120deg,#3b2a47,#25222a);color:#fff;box-shadow:0 0 11px #a85add32}
