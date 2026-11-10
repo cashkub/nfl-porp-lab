@@ -51,20 +51,22 @@ export default function ModelRecord({validation,sport='nfl',initialTab='props'})
   const periodName=(sport==='nba'||sport==='cbb')?'Date':'Week';
   const [period,setPeriod]=useState('all');
   const picks=useArchive(sport+'-picks.json');
+  const modelPicks=sport==='nfl'?picks.rows?.filter(row=>row.model==='2026.11.v2'):picks.rows;
   const {rows:games,error:failed}=useArchive(sport==='nfl'?'model-record.json':sport+'-games-record.json');
-  const periods=[...new Set([...(games || []),...(picks.rows || [])].map(r=>recordPeriod(r,sport)).filter(Boolean))].sort().reverse();
+  const periodRows=sport==='nfl'?(modelPicks||[]):[...(games||[]),...(modelPicks||[])];
+  const periods=[...new Set(periodRows.map(r=>recordPeriod(r,sport)).filter(Boolean))].sort().reverse();
   const inPeriod=r=>period==='all' || recordPeriod(r,sport)===period;
   const rows=games?.filter(inPeriod).map(row=>({...row,overall:overallScore(row)}));
   const graded=(rows || []).filter(r=>r.final && r.overall);
   const decided=graded.filter(r=>margin(r.final) && margin(r.overall));
   const right=decided.filter(r=>outcome(r)==='Correct').length;
   const selector=<div className="board-controls"><label>Game {periodName}<FilterMenu aria-label={'Game '+periodName} value={period} onChange={e=>setPeriod(e.target.value)}><option value="all">All {periodName}s</option>{periods.map(w=><option value={w} key={w}>{periodLabel(w,sport)}</option>)}</FilterMenu></label></div>;
-  const nearest=[...(games || []),...(picks.rows || [])].filter(r=>Number.isFinite(Date.parse(r.kickoff)))
+  const nearest=[...(games || []),...(modelPicks || [])].filter(r=>Number.isFinite(Date.parse(r.kickoff)))
     .sort((a,b)=>Math.abs(Date.parse(a.kickoff)-Date.now())-Math.abs(Date.parse(b.kickoff)-Date.now()))[0];
   const summaryPeriod=period==='all'?(nearest?recordPeriod(nearest,sport):periods[0]):period;
-  const summary=games && picks.rows?<PerformanceSummary games={games} picks={picks.rows} period={summaryPeriod} sport={sport}/>:null;
-  const tabs=<div className="board-sort model-record-tabs">{[['props','Player Props'],...(sport==='nfl'?[['touchdowns','Anytime Touchdowns']]:[]),['games','Game Winners']].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}{sport==='nfl'&&<button type="button" className="outline-button future-record-tab" disabled title="Added when the Games tab has a locked moneyline model">Moneyline Record · Coming Soon</button>}</div>;
-  if(tab!=='games')return <section className="panel props-board model-record-shell">{tabs}{picks.error?<p>Pick archive unavailable.</p>:!picks.rows?<p>Loading Locked Picks…</p>:<ModelRecordPicks rows={picks.rows.filter(inPeriod)} kind={tab==='touchdowns'?'touchdowns':'props'}/>}</section>;
+  const summary=games && modelPicks?<PerformanceSummary games={games} picks={modelPicks} period={summaryPeriod} sport={sport}/>:null;
+  const tabs=<div className="board-sort model-record-tabs">{[['props','Player Props'],...(sport==='nfl'?[['touchdowns','Anytime Touchdowns']]:[]),...(sport==='nfl'?[]:[['games','Game Winners']])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}{sport==='nfl'&&<button type="button" className="outline-button future-record-tab" disabled title="Available when the NFL Games tab is built">Moneyline Record · Coming Soon</button>}</div>;
+  if(tab!=='games')return <section className="panel props-board model-record-shell">{tabs}{picks.error?<p>Pick archive unavailable.</p>:!picks.rows?<p>Loading Locked Picks…</p>:sport==='nfl'&&!modelPicks.length?<p className="record-v2-empty">No Version 2 picks have been locked yet. Older model picks are kept out of this record.</p>:<ModelRecordPicks rows={modelPicks.filter(inPeriod)} kind={tab==='touchdowns'?'touchdowns':'props'}/>}</section>;
   return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':sport==='cfb'?'First published prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}{summary}
     <div className="usage-trend"><h3>{period==='all'?'Overall Game Record':'Selected Game Record'}</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>
       <small>{decided.length?<><HitRate rate={right/decided.length}/> accuracy · </>:''}{graded.length} graded · Average margin error {graded.length?(graded.reduce((sum,r)=>sum+Math.abs(margin(r.final)-margin(r.overall)),0)/graded.length).toFixed(1)+' pts':'—'}</small></div>

@@ -2,7 +2,7 @@ name: Update sportsbook lines
 on:
   push:
     branches: [main]
-    paths: ['scripts/update_lines.py', '.github/workflows/update-lines.yml']
+    paths: ['scripts/update_lines.py', 'src/lib/topLooksModel.js', '.github/workflows/update-lines.yml']
   workflow_dispatch:
   schedule:
     - cron: '43 */4 * * *'

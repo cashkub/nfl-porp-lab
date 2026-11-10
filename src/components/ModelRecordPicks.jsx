@@ -13,7 +13,7 @@ const won=r=>r.result==='Hit';
 const decided=r=>r.result==='Hit'||r.result==='Miss';
 const rate=rows=>{const graded=rows.filter(decided);return graded.length?graded.filter(won).length/graded.length:null};
 const fmt=n=>Number.isFinite(Number(n))?Number(n).toFixed(1):'—';
-const rateText=n=>Number.isFinite(Number(n))?`${Math.round(Number(n)*100)}%`:'—';
+const rateText=n=>n!=null&&Number.isFinite(Number(n))?`${Math.round(Number(n)*100)}%`:'—';
 const statText=r=>r.kind==='touchdown'?`${r.actual??'—'} TD`:r.actual??'—';
 const sourceLabel=r=>r.kind==='touchdown'?(r.price==null?'Anytime TD · Odds Unavailable':'Sportsbook Anytime TD'):(r.lineSource==='average'||r.isAverageLine?'Average Line':r.price==null?'Line · Odds Unavailable':'Sportsbook Line');
 const sourceType=r=>r.lineSource==='average'||r.isAverageLine?'average':r.price==null?'unavailable':'book';
@@ -68,13 +68,15 @@ function RecordPick({row}){
     <div className="mr-pick-glance">
       <span className="mr-glance-date"><CalendarDays size={13}/>{Number.isFinite(kickoff)?dateLabel.format(new Date(kickoff)):row.date||'—'} · {recordPeriod(row,'nfl') ? periodLabel(recordPeriod(row,'nfl'),'nfl') : 'NFL'}</span>
       <span className="mr-glance-form"><small>PRE-GAME FORM</small><MiniForm row={row}/></span>
-      <span className="mr-glance-prediction"><small>OBSERVED PRIOR HIT RATE</small><b>{observed==null?'—':rateText(observed)} <i>({row.hits??'—'}/{row.total||history.length||'—'} before kickoff)</i></b></span>
+      <span className="mr-glance-prediction"><small>MODEL EST. HIT RATE</small><b>{rateText(row.modelHitRate)} <i>V2 estimate · {observed==null?'prior rate —':`${rateText(observed)} observed · ${row.hits??'—'}/${row.total||history.length||'—'}`}</i></b></span>
     </div>
     {open&&<div className="mr-detail-grid">
       <section className="mr-detail-block"><h3><Activity size={15}/> Locked Performance</h3><dl>
         <div><dt>Line At Publish</dt><dd>{row.kind==='touchdown'?'0.5 TD':`${row.side||'—'} ${row.line??'—'} ${row.label||''}`}</dd></div>
         <div><dt>Sportsbook Price</dt><dd>{row.price==null?'Unavailable':priceText(row.price)}</dd></div>
         <div><dt>Break-Even Rate</dt><dd>{breakeven==null?'—':rateText(breakeven)}</dd></div>
+        <div><dt>Model Estimated Hit Rate</dt><dd>{rateText(row.modelHitRate)} <small>Version 2 estimate saved before kickoff</small></dd></div>
+        <div><dt>Ranking Score</dt><dd>{Number.isFinite(Number(row.rankScore))?`${row.rankScore}/100`:'—'} <small>comparative score, not a probability</small></dd></div>
         <div><dt>Observed Prior Hit Rate</dt><dd>{observed==null?'—':rateText(observed)} <small>({row.hits??'—'}/{row.total??'—'})</small></dd></div>
         {baseline!=null&&<div><dt>Smoothed Prior Rate</dt><dd>{rateText(baseline)} <small>adjusted for small samples</small></dd></div>}
         <div><dt>Prior Average</dt><dd>{fmt(row.average)} {row.label||'TD'}</dd></div>

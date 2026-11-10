@@ -3,7 +3,7 @@ name: Update NFL Data
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/update-stats.yml', 'scripts/update_data.py', 'scripts/nfl_features.py', 'scripts/nfl_context.py', 'scripts/nfl_weights.json', 'scripts/record_nfl.mjs', 'scripts/track_picks.mjs', 'src/lib/projection.js']
+    paths: ['.github/workflows/update-stats.yml', 'scripts/update_data.py', 'scripts/nfl_features.py', 'scripts/nfl_context.py', 'scripts/nfl_weights.json', 'scripts/record_nfl.mjs', 'scripts/track_picks.mjs', 'src/lib/projection.js', 'src/lib/topLooksModel.js']
   schedule:
     - cron: '25 11,17,21 * * *'
   workflow_dispatch:
