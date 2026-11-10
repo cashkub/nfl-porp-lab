@@ -133,6 +133,16 @@ def backtest(directory):
     for season in seasons:
         for key,items in predictions[season].items():aggregate[key].extend(items)
     report['aggregate']={key:score_predictions(items) for key,items in sorted(aggregate.items())}
+    consistency={}
+    for season in seasons:
+        for market,models in report['seasons'][str(season)]['markets'].items():
+            candidate=models.get('opportunity'); average=models.get('season'); recent=models.get('recent')
+            if not candidate or not average or candidate['games']<50:continue
+            row=consistency.setdefault(market,{'eligibleSeasons':0,'beatsSeasonAverage':0,'beatsRecentAverage':0})
+            row['eligibleSeasons']+=1
+            row['beatsSeasonAverage']+=int(candidate['mae']<average['mae'])
+            row['beatsRecentAverage']+=int(candidate['mae']<recent['mae']) if recent else 0
+    report['seasonConsistency']=consistency
     return report
 
 

@@ -53,7 +53,7 @@ jobs:
         run: python scripts/download_nfl_model_data.py --output-dir data/nfl-model --refresh
 
       - name: Fit and evaluate a candidate without changing production weights
-        run: python scripts/train_nfl.py data/nfl-model scripts/nfl_weights.candidate.json
+        run: python scripts/train_nfl.py data/nfl-model scripts/nfl_weights.candidate.json > /tmp/nfl-score-candidate.log
 
       - name: Evaluate an independent Elo win probability benchmark
         run: python scripts/elo_backtest.py data/nfl-model/games.csv > scripts/elo.candidate.json
@@ -91,6 +91,11 @@ jobs:
                         '| --- | ---: | ---: | ---: |'])
           for key,metrics in player['aggregate'].items():
               lines.append(f"| {key} | {metrics['games']} | {metrics['mae']} | {metrics['rmse']} |")
+          lines.extend(['', '**Opportunity baseline by season**', '',
+                        '| Position / market | Eligible seasons (n ≥ 50) | Beats season average | Beats recent average |',
+                        '| --- | ---: | ---: | ---: |'])
+          for key,metrics in player['seasonConsistency'].items():
+              lines.append(f"| {key} | {metrics['eligibleSeasons']} | {metrics['beatsSeasonAverage']} | {metrics['beatsRecentAverage']} |")
           lines.extend(['', 'These are historical benchmark baselines, not production projections or betting probabilities. The report artifact includes results by season.'])
           Path('/tmp/nfl-model-summary.md').write_text('\n'.join(lines)+'\n')
           print('\n'.join(lines))
