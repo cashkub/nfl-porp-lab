@@ -7,7 +7,7 @@ const destinations=[
   {name:'Prop Lists',icon:ListFilter,href:'#prop-lists',key:'props'},
   {name:'Top Looks',icon:Crosshair,href:'#top-eight',key:'top'},
   {name:'Games',icon:CalendarDays},
-  {name:'Model Record',icon:BarChart3},
+  {name:'Model Record',icon:BarChart3,href:'#model-record',key:'record'},
 ];
 
 export default function NflToolHeader({active}){

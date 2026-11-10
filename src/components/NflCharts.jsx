@@ -34,10 +34,10 @@ function TeamLogo({team}) {
 
 function PlayerBoxScore({game,position,metric}) {
   const keys=logColumns(position,[game],metric);
-  return <dl>{keys.map(key=>{
+  return <dl className="game-report-stats">{keys.map(key=>{
     const [label,read]=logFields[key];
     return <div key={key}><dt>{label}</dt><dd>{read(game) ?? '—'}</dd></div>;
-  })}<div><dt>Offensive Snap %</dt><dd>{formatRate(game.usage?.offenseSnapRate)}</dd></div></dl>;
+  })}</dl>;
 }
 
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
@@ -95,13 +95,25 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
         {line!=null && r===rows.at(-1) && <span className="chart-reference">{direction} {line}</span>}
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
       <span className="chart-opponent"><TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@':'vs'} {r.game.opponent}</b></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
-      {showDetails&&<span className="bar-details"><span className="bar-detail-item"><b>{r.margin==null?'—':r.margin===0?'Push':marginNumber.format(r.margin)+' '+info.unit}</b><small>Margin To Line</small></span>{usageFields.map(([key,label])=>{
+      {showDetails&&<span className="bar-details"><span className="bar-detail-item"><b>{r.margin==null?'—':r.margin===0?'Push':marginNumber.format(r.margin)+' '+info.unit}</b><small>{line==null?'No Line':r.outcome==='Hit'?`${Math.abs(r.margin).toFixed(1)} ${info.unit} ${direction==='under'?'Below':'Above'} Line`:`${Math.abs(r.margin).toFixed(1)} ${info.unit} From Line`}</small></span>{usageFields.map(([key,label])=>{
         const own=Number(r.game.usage?.[key]),team=teamVolumes.get(r.game.gameId+'|'+r.game.team)?.[key];
         const share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';
-        return <span className="bar-detail-item" key={key}><b>{Number.isFinite(own)?own:'—'}</b><small>{label}</small><small>{share} share</small></span>;
-      })}<span className="bar-detail-item"><b>{formatRate(r.game.usage?.offenseSnapRate)}</b><small>Snap Share</small></span></span>}
+        return <span className="bar-detail-item" key={key}><b>{Number.isFinite(own)?own:'—'}</b><small>{label}</small><small>{share} Of Team</small></span>;
+      })}<span className="bar-detail-item"><b>{formatRate(r.game.usage?.offenseSnapRate)}</b><small>Offensive Snaps</small></span></span>}
     </button>)}</div></div>
-    {active?<section className="bar-report log-body" aria-label="Selected Game Details"><h3>{playerName} · {active.game.team} {active.game.venue==='A'?'@':'vs.'} {active.game.opponent}</h3><p className="margin-detail"><b data-result={active.outcome}>{active.outcome}</b> · {gameDate(active.game)} · Week {active.game.week} · {active.value} {info.unit} {line!=null && ' · '}{line==null?'':active.margin===0?'Exactly on the line':Math.abs(active.margin).toFixed(1)+' '+(active.value>line?'above':'below')+' the line'}{metric==='scrimmageYards' && <> · {active.game.stats.rushingYards ?? 0} rushing + {active.game.stats.receivingYards ?? 0} receiving</>}</p><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/><div className="game-usage-details">{usageFields.map(([key,label])=>{const own=Number(active.game.usage?.[key]),team=teamVolumes.get(active.game.gameId+'|'+active.game.team)?.[key],share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';return <span key={key}><b>{label}</b> {Number.isFinite(own)?own:'—'} · {share} Team Share</span>})}<span><b>Offensive Snap Share</b> {formatRate(active.game.usage?.offenseSnapRate)}</span></div>{Array.isArray(active.game.scoringChances) && <p>Red-Zone Carries: {active.game.scoringChances[0]} · Red-Zone Targets: {active.game.scoringChances[1]} · Carries From the 5 or Closer: {active.game.scoringChances[2]}</p>}<p className="defense-note">{active.defense?<><b>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></b> · {formatNumber(active.defense.average)} {info.unit} per game allowed to {playerPosition}s across {active.defense.games} prior games.</>:'Pregame defense rank unavailable for this week.'}</p></section>:<p className="bar-hint">{showDetails?'Tap A Game Bar For The Full Player Box Score And Matchup Details.':'Select A Game Bar For Player Stats.'}</p>}</>;
+    {active?<section className="bar-report game-report" aria-label="Selected Game Details">
+      <header className="game-report-header"><div className="game-report-title"><TeamLogo team={active.game.opponent}/><div><small>SELECTED GAME · WEEK {active.game.week}</small><h3>{playerName}</h3><p>{active.game.team} {active.game.venue==='A'?'at':'vs.'} {active.game.opponent} <span>·</span> {gameDate(active.game)}</p></div></div><button type="button" className="game-report-clear" onClick={()=>setSelected('')}>Clear Selection</button></header>
+      <div className="game-report-summary">
+        <div className="game-report-stat primary"><small>{info.label}</small><strong>{active.value} <i>{info.unit}</i></strong><span className="game-report-result" data-result={active.outcome}>{active.outcome}</span></div>
+        <div className="game-report-stat"><small>Selected Line</small><strong>{line==null?'No Line':`${direction} ${line}`}</strong><span>{line==null?'Choose A Line To Grade This Game':active.margin===0?'Exactly On The Line':`${Math.abs(active.margin).toFixed(1)} ${info.unit} ${active.value>line?'Above':'Below'} The Line`}</span></div>
+        <div className="game-report-stat"><small>Offensive Snap Share</small><strong>{formatRate(active.game.usage?.offenseSnapRate)}</strong><span>Of Team Offensive Snaps</span></div>
+      </div>
+      <div className="game-report-grid">
+        <section className="game-report-card"><h4>Player Box Score</h4><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/></section>
+        <section className="game-report-card"><h4>Workload &amp; Role</h4><dl className="game-report-stats">{usageFields.map(([key,label])=>{const own=Number(active.game.usage?.[key]),team=teamVolumes.get(active.game.gameId+'|'+active.game.team)?.[key],share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';return <div key={key}><dt>{label}</dt><dd>{Number.isFinite(own)?own:'—'} <small>{share} Team Share</small></dd></div>})}<div><dt>Offensive Snap Share</dt><dd>{formatRate(active.game.usage?.offenseSnapRate)}</dd></div>{Array.isArray(active.game.scoringChances) && <><div><dt>Red-Zone Carries</dt><dd>{active.game.scoringChances[0]??'—'}</dd></div><div><dt>Red-Zone Targets</dt><dd>{active.game.scoringChances[1]??'—'}</dd></div><div><dt>Carries From The 5 Or Closer</dt><dd>{active.game.scoringChances[2]??'—'}</dd></div></>}</dl></section>
+        <section className="game-report-card game-report-defense"><h4>Defense Against {playerPosition}s</h4>{active.defense?<><strong><TeamLogo team={active.game.opponent}/>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></strong><p>{formatNumber(active.defense.average)} {info.unit} allowed per game across {active.defense.games} earlier games.</p></>:<p>Pregame defense rank unavailable for this week.</p>}</section>
+      </div>
+    </section>:<p className="bar-hint">{showDetails?'Tap A Game Bar To See The Full Box Score, Workload And Matchup.':'Select A Game Bar For Player Stats.'}</p>}</>;
 }
 
 function ControlLabel({children}) {

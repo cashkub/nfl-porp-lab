@@ -14,6 +14,7 @@ import TrackedPicks from './components/TrackedPicks.jsx';
 import StatCard from './components/StatCard.jsx';
 import {availableStats} from './lib/availableStats.js';
 import ModelRecord from './components/ModelRecord.jsx';
+import NflToolHeader from './components/NflToolHeader.jsx';
 import HitRate from './components/HitRate.jsx';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -143,7 +144,7 @@ export default function App() {
   const nflTool = !launch && !manualLeague;
   const previewTools=new URLSearchParams(window.location.search).get('view')==='nfl';
   useEffect(()=>{
-    if(previewTools && !['analyzer','prop-lists','nfl-top'].includes(page))window.location.replace('/preview/nfl/');
+    if(previewTools && !['analyzer','prop-lists','nfl-top','model-record'].includes(page))window.location.replace('/preview/nfl/');
   },[previewTools,page]);
   const [initialCbb,setInitialCbb] = useState({});
   const [dark,setDark] = useState(() => {
@@ -349,6 +350,7 @@ export default function App() {
 
   if(previewTools){
     if(page==='nfl-top')return <ManualLeague.Provider value="nfl"><TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/></ManualLeague.Provider>;
+    if(page==='model-record')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="record"/><ModelRecord sport="nfl" validation={data.modelValidation}/></main></ManualLeague.Provider>;
     if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl">
       {(page==='prop-lists' || propListReturn.current) && <div hidden={page!=='prop-lists'}>
