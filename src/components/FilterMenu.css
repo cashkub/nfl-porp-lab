@@ -1,30 +1,45 @@
 .app .filter-trigger {
-  position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-width:0;
-  min-height:42px;padding:8px 26px;border-radius:10px;border:1px solid var(--sport-outline);
-  background:var(--picker-fill);color:var(--ink);font:inherit;font-size:14px;font-weight:650;line-height:1.25;text-align:center;
+  position:relative;display:flex;align-items:center;justify-content:space-between;width:100%;min-width:0;
+  min-height:42px;padding:8px 34px 8px 12px;border-radius:10px;border:1px solid var(--picker-outline,#76588d);
+  background:linear-gradient(145deg,var(--picker-fill,#211d25),var(--picker-surface,#17171b));color:var(--ink);font:inherit;font-size:14px;font-weight:700;line-height:1.25;text-align:left;
+  box-shadow:inset 0 1px #ffffff08,0 3px 12px #0003;transition:border-color .18s,box-shadow .18s,background .18s;
 }
 .filter-trigger span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app .filter-trigger svg {display:block;position:absolute;right:8px;color:var(--sport-accent);pointer-events:none}
-.app .filter-trigger[aria-expanded=true] {border-color:var(--sport-accent);box-shadow:0 0 0 2px var(--sport-wash)}
+.app .filter-trigger svg {display:block;position:absolute;right:10px;color:var(--picker-accent,#d4a7f4);pointer-events:none;transition:transform .2s}
+.app .filter-trigger:hover,.app .filter-trigger[aria-expanded=true] {border-color:var(--picker-accent,#c993ff);box-shadow:0 0 0 1px #c993ff30,0 0 14px #a550fb24}
 .filter-trigger[aria-expanded=true] svg {transform:rotate(180deg)}
+.filter-trigger:focus-visible {outline:2px solid var(--picker-accent,#d4a7f4);outline-offset:2px}
 .filter-trigger:disabled {cursor:default;opacity:.65}
 .app .filter-popup {
-  position:fixed;z-index:1000;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;
-  border:1px solid var(--sport-outline);border-radius:13px;padding:5px;background:var(--canvas);
-  box-shadow:0 12px 32px rgb(0 0 0 / 25%);color:var(--ink);font-size:14px;font-weight:550;
+  position:fixed;z-index:1000;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;overscroll-behavior:contain;
+  border:1px solid var(--picker-outline,#76588d);border-radius:15px;padding:7px;background:linear-gradient(155deg,var(--picker-fill,#211d25),var(--picker-surface,#151519) 72%);
+  box-shadow:var(--picker-shadow,0 18px 45px #000b,0 0 20px #a550fb22);color:var(--ink);font-size:14px;font-weight:550;animation:filter-pop-in .16s cubic-bezier(.2,.8,.2,1) both;
 }
+.filter-popup-heading {display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px 9px;border-bottom:1px solid #ffffff12;color:#f4e9fb}
+.filter-popup-heading b {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.7rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.filter-popup-heading small {flex:none;color:#a99ab2;font-size:.66rem;font-weight:650}
+.filter-popup-search {display:flex;align-items:center;gap:8px;margin:8px 2px 6px;padding:0 10px;min-height:40px;border:1px solid #624775;border-radius:9px;background:#111115;color:#cda9e8}
+.filter-popup-search:focus-within {border-color:#c993ff;box-shadow:0 0 0 2px #c993ff28}
+.filter-popup-search input {width:100%;min-width:0;border:0;outline:0;background:transparent;color:#f8f2fb;font:600 .85rem system-ui}
+.filter-popup-search input::placeholder {color:#988ba0}
+.filter-popup-options {min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-color:#76588d transparent;scrollbar-width:thin}
 .filter-popup [role=option] {
-  display:grid;place-items:center;position:relative;min-height:40px;padding:8px 25px;text-align:center;
-  border-radius:8px;line-height:1.3;overflow-wrap:anywhere;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;min-height:40px;margin:2px 0;padding:8px 11px;text-align:left;
+  border:1px solid transparent;border-radius:9px;line-height:1.3;overflow-wrap:anywhere;cursor:pointer;color:#e8e0ec;transition:background .14s,border-color .14s,color .14s,transform .14s;
 }
-.filter-popup [aria-selected=true] {background:var(--sport-wash);font-weight:750}
-.filter-popup .active {box-shadow:inset 0 0 0 1px var(--sport-outline);background:var(--picker-fill)}
-.filter-popup svg {position:absolute;right:8px;color:var(--sport-accent)}
+.filter-popup [role=option]:hover,.filter-popup [role=option].active {border-color:#775b8c;background:linear-gradient(100deg,#35263e,#28212e);color:#fff}
+.filter-popup [role=option].active {box-shadow:inset 3px 0 #c993ff}
+.filter-popup [aria-selected=true] {font-weight:800;color:#f2ddff}
+.filter-popup [role=option] svg {flex:none;color:#d9b5f2}
+.filter-empty {padding:14px 10px;text-align:center;color:#b9adbf;font-size:.8rem}
+@keyframes filter-pop-in {from{opacity:0;transform:translateY(-5px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
 .week-control .filter-trigger,.board-sort .filter-trigger {width:auto;flex:1}
 @media(max-width:650px),(pointer:coarse) {
   .app .filter-trigger,.filter-popup [role=option] {min-height:44px;font-size:16px}
+  .app .filter-popup {max-height:min(70vh,420px)!important}
 }
 .filter-trigger span {white-space:normal;overflow-wrap:anywhere}
 .app .select-wrap > .filter-trigger + svg {display:none}
 .app .player-stepper > .filter-trigger {height:100%;padding-inline:20px}
 .app .player-stepper > .filter-trigger svg {right:4px}
+@media(prefers-reduced-motion:reduce){.app .filter-trigger,.filter-popup,.filter-popup [role=option]{animation:none;transition:none}}
