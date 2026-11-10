@@ -97,7 +97,7 @@ function RecordPick({row}){
   </article>;
 }
 
-export default function ModelRecordPicks({rows=[],kind='props'}){
+export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''}){
   const [period,setPeriod]=useState('');
   const [market,setMarket]=useState('all');
   const [status,setStatus]=useState('all');
@@ -130,7 +130,7 @@ export default function ModelRecordPicks({rows=[],kind='props'}){
   const periodTitle=selectedPeriod==='all'?'All Weeks':periodLabel(selectedPeriod,'nfl');
   return <div className="model-record-picks">
     <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Each pick keeps its locked line, available odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
-    <div className="mr-period-select"><label><CalendarDays size={16}/> WEEKLY RECORD VIEW <FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Historical replay picks are excluded from this official record.</small></div>
+    {emptyMessage&&<p className="record-v2-empty mr-empty-record-note">{emptyMessage}</p>}\n    <div className="mr-period-select"><label><CalendarDays size={16}/> WEEKLY RECORD VIEW <FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Historical replay picks are excluded from this official record.</small></div>
     <div className="mr-kpis">
       <SummaryTile icon={Activity} label="ALL-TIME SETTLED RECORD" value={`${allTimeHits}–${allTimeMisses}`} detail={`${allTimeHits+allTimeMisses} graded · ${allTimePush} push · ${allTimeNoStat} no stat · ${allTimePending} pending`} tone="purple"/>
       <SummaryTile icon={TrendingUp} label="ALL-TIME HIT RATE" value={rate(picks)==null?'—':rateText(rate(picks))} detail="Official V2 locks · pending excluded" tone={rate(picks)==null?'':rate(picks)>=.55?'green':'red'}/>
