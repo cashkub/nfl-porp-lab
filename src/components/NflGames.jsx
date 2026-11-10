@@ -3,6 +3,7 @@ import {ArrowUpRight,ChartNoAxesCombined,Cloud,Info,Shield,Target} from 'lucide-
 import {projection} from '../lib/projection.js';
 import {METRICS,getPlayerGames} from '../lib/stats.js';
 import {priceText} from '../lib/bookLine.js';
+import {estimateOpportunityProjection,getUsageMetric} from '../lib/playerProjection.js';
 import {teamColor} from '../lib/teamColors.js';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import FilterMenu from './FilterMenu.jsx';
@@ -20,7 +21,7 @@ const marketsFor={
   WR:[['receptions','Receptions'],['receivingYards','Rec Yards']],
   TE:[['receptions','Receptions'],['receivingYards','Rec Yards']]
 };
-const usageMetric={QB:['attempts','PASS ATT'],RB:['carries','CARRIES'],WR:['targets','TARGETS'],TE:['targets','TARGETS']};
+const usageLabels={attempts:'PASS ATT',carries:'CARRIES',targets:'TARGETS'};
 const format=n=>Number.isFinite(n)?(Number.isInteger(n)?String(n):n.toFixed(1)):'—';
 const sameGame=(a,b)=>a&&b&&a.away===b.away&&a.home===b.home&&Math.abs(Date.parse(a.kickoff)-Date.parse(b.kickoff))<12*3600000;
 function savedAnalysis(){try{return JSON.parse(sessionStorage.getItem('nfl-games-analysis')||'{}')}catch{return {}}}
@@ -49,12 +50,21 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
   const rows=useMemo(()=>{
     if(!selected)return [];
     const cutoffWeek=Number(selected.week);
-    const teamGames={};
+    const teamGames={},leagueUsage={};
+    const isPregame=game=>Number(game.season)<Number(selected.season)||
+      (Number(game.season)===Number(selected.season)&&Number(game.week)<cutoffWeek);
     for(const p of players||[]){
       for(const game of p.games||[]){
-        const beforeSelectedGame=Number(game.season)<Number(selected.season)||
-          (Number(game.season)===Number(selected.season)&&Number(game.week)<cutoffWeek);
-        if(!beforeSelectedGame||![selected.home,selected.away].includes(game.team))continue;
+        if(!isPregame(game))continue;
+        for(const [metric] of marketsFor[p.position]||[]){
+          const usageKey=getUsageMetric(p.position,metric),opportunities=Number(game.usage?.[usageKey]);
+          const value=Number(game.stats?.[metric]);
+          if(!usageKey||!Number.isFinite(opportunities)||opportunities<0||!Number.isFinite(value))continue;
+          const aggregate=leagueUsage[p.position+':'+metric]??={stats:0,opportunities:0};
+          aggregate.stats+=value;
+          aggregate.opportunities+=opportunities;
+        }
+        if(![selected.home,selected.away].includes(game.team))continue;
         const key=game.gameId||game.id;
         if(!key)continue;
         teamGames[game.team]??={};
@@ -67,29 +77,31 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
       if(!['QB','RB','WR','TE'].includes(p.position))continue;
       const team=[selected.home,selected.away].includes(p.team)?p.team:null;
       if(!team)continue;
-      const history=getPlayerGames(p,'ALL').filter(g=>{
-        const prior=Number(g.season)<Number(selected.season)||
-          (Number(g.season)===Number(selected.season)&&Number(g.week)<cutoffWeek);
-        return prior&&g.team===team;
-      });
-      if(!history.length||![selected.home,selected.away].includes(team))continue;
+      const history=getPlayerGames(p,'ALL').filter(isPregame);
+      const teamHistory=history.filter(g=>g.team===team);
+      const currentTeamHistory=teamHistory.filter(g=>Number(g.season)===Number(selected.season));
+      if(!currentTeamHistory.length)continue;
       const currentSeason=history.filter(g=>Number(g.season)===Number(selected.season));
       const observed=currentSeason.length?currentSeason:history;
       const sampleLabel=currentSeason.length?`${selected.season} · ${currentSeason.length} G`:`CAREER · ${history.length} G`;
       for(const [metric,label] of marketsFor[p.position]||[]){
         if(market!=='ALL'&&market!==metric)continue;
-        const usage=usageMetric[p.position];
+        const usageKey=getUsageMetric(p.position,metric);
         const values=observed.map(g=>Number(g.stats?.[metric])).filter(Number.isFinite);
         if(!values.length)continue;
-        const recent=values.slice(-5),shareValues=history.map(g=>{
-          const total=teamGames[g.team]?.[g.gameId||g.id]?.[usage[0]]||0;
-          const own=Number(g.usage?.[usage[0]]||0);
+        const recent=history.slice(-5).map(g=>Number(g.stats?.[metric])).filter(Number.isFinite);
+        const shareValues=teamHistory.map(g=>{
+          const total=teamGames[g.team]?.[g.gameId||g.id]?.[usageKey]||0;
+          const own=Number(g.usage?.[usageKey]||0);
           return total>0?own/total:null;
         }).filter(Number.isFinite);
+        const league=leagueUsage[p.position+':'+metric];
+        const estimated=estimateOpportunityProjection({history,position:p.position,market:metric,season:selected.season,
+          priorEfficiency:league?.opportunities?league.stats/league.opportunities:null});
         const line=bookGame?.lines?.find(l=>l.metric===metric&&l.player?.toLowerCase().replace(/[^a-z]/g,'')===p.name?.toLowerCase().replace(/[^a-z]/g,''));
         output.push({p,team,metric,label,sampleLabel,seasonAvg:values.reduce((a,b)=>a+b,0)/values.length,
-          recentAvg:recent.reduce((a,b)=>a+b,0)/recent.length,history:history.length,
-          usageLabel:usage[1],usageAvg:observed.reduce((sum,g)=>sum+Number(g.usage?.[usage[0]]||0),0)/observed.length,
+          recentAvg:recent.reduce((a,b)=>a+b,0)/recent.length,history:history.length,estimated:estimated?.projection??null,
+          usageLabel:usageLabels[usageKey],usageAvg:observed.reduce((sum,g)=>sum+Number(g.usage?.[usageKey]||0),0)/observed.length,
           share:shareValues.length?shareValues.reduce((a,b)=>a+b,0)/shareValues.length:null,line,
           values:values.slice(-5)});
       }
@@ -142,12 +154,12 @@ function MarketTile({label,value}){return <article className="nfl-market-tile"><
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
   const propMarkets=Object.entries(METRICS).filter(([k])=>['passingYards','passingTDs','rushingAttempts','rushingYards','receivingYards','receptions'].includes(k)).sort((a,b)=>a[1].label.localeCompare(b[1].label));
-  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Completed player history before this matchup, plus available timestamped sportsbook props.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
-    <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON / CAREER AVG</th><th>ROLE / SHARE</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=><tr key={r.p.id+':'+r.metric}>
-      <td><span className="nfl-player-cell" style={{'--club':teamColor(r.team)}}><PlayerPhoto id={r.p.id} name={r.p.name} url={r.p.photo}/><span><b>{r.p.name}</b><small>{r.team} · {r.p.position}</small></span></span></td><td>{r.label}</td><td>{format(r.recentAvg)}</td><td><b>{format(r.seasonAvg)}</b><small>{r.sampleLabel}</small></td><td><b>{format(r.usageAvg)} {r.usageLabel}</b><small>{r.share==null?'SHARE N/A':`${(r.share*100).toFixed(1)}% AVG SHARE`}</small></td><td>{r.line?<><b>{format(r.line.point)}</b><small>O {priceText(r.line.over)} · U {priceText(r.line.under)}</small><small>Updated {new Date(r.line.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></>:'—'}</td><td><button className="nfl-chart-link" type="button" onClick={()=>onOpen?.(r.p,{metric:r.metric,point:r.line?.point},'over',game)} aria-label={'Open charts for '+r.p.name}><ArrowUpRight size={16}/><span>CHARTS</span></button></td>
+  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Pregame player history, an opportunity-based research baseline, and available timestamped sportsbook props.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
+    <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON / CAREER AVG</th><th>OPPORTUNITY EST.†</th><th>ROLE / SHARE</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=><tr key={r.p.id+':'+r.metric}>
+      <td><span className="nfl-player-cell" style={{'--club':teamColor(r.team)}}><PlayerPhoto id={r.p.id} name={r.p.name} url={r.p.photo}/><span><b>{r.p.name}</b><small>{r.team} · {r.p.position}</small></span></span></td><td>{r.label}</td><td>{format(r.recentAvg)}</td><td><b>{format(r.seasonAvg)}</b><small>{r.sampleLabel}</small></td><td><b>{format(r.estimated)}</b><small>RESEARCH BASELINE</small></td><td><b>{format(r.usageAvg)} {r.usageLabel}</b><small>{r.share==null?'SHARE N/A':`${(r.share*100).toFixed(1)}% AVG SHARE`}</small></td><td>{r.line?<><b>{format(r.line.point)}</b><small>O {priceText(r.line.over)} · U {priceText(r.line.under)}</small><small>Updated {new Date(r.line.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></>:'—'}</td><td><button className="nfl-chart-link" type="button" onClick={()=>onOpen?.(r.p,{metric:r.metric,point:r.line?.point},'over',game)} aria-label={'Open charts for '+r.p.name}><ArrowUpRight size={16}/><span>CHARTS</span></button></td>
     </tr>)}</tbody></table></div>
     {!rows.length&&<p className="nfl-empty-state">No player history or sportsbook props are available for this matchup yet.</p>}
-    <div className="nfl-probability-honesty"><Info size={17}/><span>Season and last-five averages are historical context, not model projections. Player probability forecasts are not shown until opportunity-based projections are independently validated. Missing sportsbook lines remain blank.</span></div>
+    <div className="nfl-probability-honesty"><Info size={17}/><span>† This experimental point baseline blends recent and season workload, then applies a shrinkage-adjusted efficiency from the same position and market. Walk-forward tests improved point error in most eligible seasons for standard volume and yardage markets; touchdown results were inconsistent. It has no matchup adjustment and does not produce hit probabilities. Missing sportsbook lines remain blank.</span></div>
     <details className="nfl-full-props"><summary>OPEN FULL MATCHUP PROP BOARD <ArrowUpRight size={15}/></summary><PropsBoard fixedGame={game} title="Matchup Player Prop Board" games={(books||[]).filter(g=>sameGame(g,game))} schedule={[game]} players={players} season={season} now={now} onOpen={onOpen}/></details>
   </div>;
 }
