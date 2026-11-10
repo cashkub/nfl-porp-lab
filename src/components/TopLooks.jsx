@@ -8,7 +8,7 @@ import {defenseTable} from '../lib/matchup.js';
 import {teamColor} from '../lib/teamColors.js';
 import {getPlayerGames,formatRate,isHit} from '../lib/stats.js';
 import {METRICS} from '../lib/stats.js';
-import {rateStyle} from './HitRate.jsx';
+import {rateStyle,defenseRankStyle} from './HitRate.jsx';
 import './TopLooks.css';
 
 const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
@@ -71,6 +71,39 @@ function makeTeamVolumes(players,season){
     row.opportunities+=Number(usage.opportunities)||(Number(usage.carries)||0)+(Number(usage.targets)||0);
   }
   return totals;
+}
+function makeScoringVolumes(players,season){
+  const totals=new Map();
+  for(const player of players)for(const game of player.games||[]){
+    if(season!=='ALL'&&Number(game.season)!==Number(season))continue;
+    if(!game.gameId||game.scoringChances?.length<5)continue;
+    const team=game.team||player.team,key=game.gameId+'|'+team;
+    if(!team)continue;
+    if(!totals.has(key))totals.set(key,{carries:0,targets:0,touches:0,inside5Carries:0,inside5Touches:0});
+    const total=totals.get(key),row=game.scoringChances;
+    total.carries+=Number(row[0])||0;total.targets+=Number(row[1])||0;
+    total.touches+=Number(row[3])||0;total.inside5Carries+=Number(row[2])||0;
+    total.inside5Touches+=Number(row[4])||0;
+  }
+  return totals;
+}
+function scoringUsage(player,history,scoringVolumes){
+  const covered=history.filter(game=>game.scoringChances?.length>=5);
+  const perGame=index=>covered.length?mean(covered.map(game=>Number(game.scoringChances[index])||0)):null;
+  const share=(index,field)=>{
+    const values=covered.map(game=>{
+      const team=game.team||player.team,total=scoringVolumes.get(game.gameId+'|'+team)?.[field]||0;
+      return total>0?(Number(game.scoringChances[index])||0)/total:null;
+    }).filter(Number.isFinite);
+    return mean(values);
+  };
+  return {games:covered.length,redZoneCarries:perGame(0),redZoneTargets:perGame(1),inside5Carries:perGame(2),redZoneTouches:perGame(3),inside5Touches:perGame(4),carryShare:share(0,'carries'),targetShare:share(1,'targets')};
+}
+function defenseTone(rank,side){
+  if(!rank)return 'neutral';
+  const favorable=side==='under'?rank>=25:rank<=8;
+  const tough=side==='under'?rank<=8:rank>=25;
+  return favorable?'favorable':tough?'tough':'neutral';
 }
 function marketShare(player,history,key,teamVolumes){
   const shares=history.slice(-6).map(game=>{
@@ -141,7 +174,7 @@ function injuryAssessment(game,player,metric,side,roleRanks){
   return {signal:clamp(signal,-.8,.8),notes:notes.slice(0,4),ownStatus,ownRole};
 }
 
-function makePick(player,game,metric,market,quote,history,defense,side,teamVolumes,roleRanks) {
+function makePick(player,game,metric,market,quote,history,defense,side,teamVolumes,scoringVolumes,roleRanks) {
   const line=quote.point;
   const values=history.map(g=>Number(g.stats[metric]??0));
   const recent=values.slice(-5),average=mean(values),recentAverage=mean(recent);
@@ -168,11 +201,13 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
   const weather=weatherImpact(game,metric,side);
   const injury=injuryAssessment(game,player,metric,side,roleRanks);
   const injuryPenalty=injury.ownStatus==='questionable'?.045:injury.ownStatus==='doubtful'?.08:0;
-  const redZone=metric==='scoredTDs'?history.map(game=>game.scoringChances).filter(Array.isArray):[];
-  const rz20=redZone.length?mean(redZone.map(row=>Number(row[3])||0)):null;
-  const rz5=redZone.length?mean(redZone.map(row=>Number(row[4])||0)):null;
-  const redZoneExpected=rz20==null||rz5==null?null:Math.max(0,rz20-rz5)*.06+rz5*.16;
-  const redZoneSignal=redZoneExpected==null?0:clamp((side==='over'?redZoneExpected-line:line-redZoneExpected)/Math.max(.2,sd*.2),-1,1);
+  const scoring=metric==='scoredTDs'?scoringUsage(player,history,scoringVolumes):null;
+  const targetSignal=scoring?.targetShare==null?0:clamp((scoring.targetShare-.16)/.24,-1,1);
+  const carrySignal=scoring?.carryShare==null?0:clamp((scoring.carryShare-.2)/.24,-1,1);
+  const receiver=['WR','TE'].includes(player.position);
+  const redZoneSignal=receiver?targetSignal:['RB','FB'].includes(player.position)?Math.max(targetSignal,carrySignal):carrySignal;
+  const favoriteRedZoneTarget=receiver||(['RB','FB'].includes(player.position)&&targetSignal>carrySignal);
+  const primaryShare=favoriteRedZoneTarget?scoring?.targetShare:scoring?.carryShare;
   const chance=clamp(observed*.61+projectionChance*.2+(fairSide??.5)*.15+(weather?.signal||0)*.035+redZoneSignal*.035+injury.signal*.025-injuryPenalty,.05,.95);
   const edge=chance-(fairSide??.5);
   const projectionSignal=clamp((side==='over'?projection-line:line-projection)/(sd||Math.max(1,Math.abs(line)*.2)),-1,1);
@@ -181,11 +216,23 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
   const shareLevel=share.recent==null||usageKey==='attempts'?0:share.recent>=.2?clamp((share.recent-.2)/.2,0,1):share.recent<=.08?-.5:0;
   const volumeSignal=usageSignal*.5+shareSignal*.3+shareLevel*(side==='over'?1:-1)*.2;
   const score=100*(.38*edge+.22*projectionSignal+.12*defensiveEdge+.12*volumeSignal+.06*(weather?.signal||0)+.06*redZoneSignal+.04*injury.signal);
-  const matchup=defenseFit(defense?.rank,32,side,market.label,player.position);
+  const rankScore=Math.round(clamp(50+score/2,0,100));
+  const matchup=defenseFit(defense?.rank,32,side,market.label,player.position)|| (defense?.rank?'Defense Rank #'+defense.rank+' of 32':'');
+  const matchupTone=defenseTone(defense?.rank,side);
   const weatherSupports=(weather?.signal||0)>.08;
   const marketSupports=fairSide!=null&&fairSide>=.52;
   const supportCount=[recentHits/Math.max(1,recent.length)>=.6,volumeSignal>.12,defensiveEdge>.15,weatherSupports,redZoneSignal>.15,injury.signal>.15,marketSupports].filter(Boolean).length;
-  return {player,game,metric,market,line,quote,history,defense,side,projection,values,recent,hits,recentHits,chance,fairSide,edge,score,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,weather,injury,redZoneSignal,redZoneExpected,rz20,rz5,supportCount,projectionSignal,defensiveEdge};
+  const reasons=[
+    {weight:.38,value:edge,label:'Market Edge',detail:fairSide==null?'The estimated edge comes from results and projection because market odds are unavailable.':`Model estimate ${(chance*100).toFixed(0)}% versus ${quote.anytime?'the listed Yes price at '+quote.over:side+' market odds'} (${(fairSide*100).toFixed(0)}% implied).`},
+    {weight:.22,value:projectionSignal,label:'Projection',detail:`The projection is ${projection.toFixed(1)} against the ${line} line.`},
+    {weight:.12,value:defensiveEdge,label:'Matchup',detail:matchup||'Defense rank unavailable.'},
+    {weight:.12,value:volumeSignal,label:'Workload',detail:usageTrend!=null?`Recent ${usageKey} volume changed ${usageTrend>0?'+':''}${usageTrend.toFixed(1)} per game.`:`Recent share of team ${usageKey}: ${fmtShare(share.recent)}.`},
+    {weight:.06,value:redZoneSignal,label:'Red-Zone Usage',detail:primaryShare!=null?`${favoriteRedZoneTarget?'Red-zone target':'Red-zone carry'} share is ${fmtShare(primaryShare)}.`:'Red-zone play-by-play share is unavailable.'},
+    {weight:.06,value:weather?.signal||0,label:'Weather',detail:weather?.interpretation||'Forecast data unavailable.'},
+    {weight:.04,value:injury.signal,label:'Key Injuries',detail:injury.notes.length?injury.notes[0].impact:'No relevant key-injury signal.'}
+  ].filter(reason=>reason.value>0).sort((a,b)=>b.weight*b.value-a.weight*a.value);
+  const favoriteReason=reasons[0]||{label:'Recent Results',detail:`The player hit ${hits} of ${history.length} games at this line.`};
+  return {player,game,metric,market,line,quote,history,defense,side,projection,values,recent,hits,recentHits,chance,fairSide,edge,score,rankScore,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,matchupTone,weather,injury,scoring,redZoneSignal,supportCount,projectionSignal,defensiveEdge,favoriteReason};
 }
 
 function fmtShare(value){return Number.isFinite(value)?(value*100).toFixed(1)+'%':'—';}
@@ -225,6 +272,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
     window.history.replaceState(window.history.state,'',url);
   },[mode,value,type]);
   const teamVolumes=useMemo(()=>makeTeamVolumes(players,season),[players,season]);
+  const scoringVolumes=useMemo(()=>makeScoringVolumes(players,season),[players,season]);
   const picks=useMemo(()=>{
     const candidates=[],cache=new Map();
     for(const game of slate){
@@ -251,7 +299,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
         // Anytime TD is a Yes market. There is no published No price in our
         // automated feed, so never manufacture an Under/No recommendation.
         const sides=type==='anytime'?['over']:['over','under'];
-        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,roleRanks));
+        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks));
       }
       }
     }
@@ -263,7 +311,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
       if(used.has(key)||p.edge<.015||p.projectionSignal<0||p.score<=2||p.supportCount<1)return false;
       used.add(key);return true;
     }).slice(0,cap);
-  },[slate,players,season,books,teamVolumes,type]);
+  },[slate,players,season,books,teamVolumes,scoringVolumes,type]);
   const markets=Object.fromEntries(Object.entries(METRICS).map(([key,market])=>[key,market.label]));
   const kickDate=value&&mode==='day'?dayLabel(value):value?'Week '+value:'Upcoming';
   return <main className="top-looks chart-lab"><NflToolHeader active="top"/>
@@ -281,6 +329,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
       </select><ChevronDown size={15}/></label>
       <div className="pick-type" role="group" aria-label="Pick Type"><span>PICK TYPE</span><div><button type="button" aria-pressed={type==='anytime'} onClick={()=>setType('anytime')}>Anytime Touchdowns</button><button type="button" aria-pressed={type==='props'} onClick={()=>setType('props')}>Player Props</button></div></div>
       <span>{kickDate} · {slate.length} {slate.length===1?'game':'games'}</span>
+      <details className="model-guide"><summary aria-label="What The Model Considers" title="What The Model Considers"><Info size={17}/></summary><div className="model-guide-panel"><b>WHAT TOP LOOKS CONSIDERS</b><p>Picks with real sportsbook lines come first. Within the real-line and average-line groups, picks sort by comparative model score; averages fill the remaining places after the sportsbook picks.</p><div className="model-guide-grid"><section><strong>38% · MARKET EDGE</strong><span>Estimated chance compared with available sportsbook odds after removing two-way vig. Anytime touchdown Yes prices are shown as listed, before removing margin.</span></section><section><strong>22% · PROJECTION</strong><span>Weighted season and recent averages compared with the selected prop line.</span></section><section><strong>12% · DEFENSE MATCHUP</strong><span>Whether the defense allows more or fewer of that position’s selected stat. Color reflects the bet direction.</span></section><section><strong>12% · WORKLOAD</strong><span>Relevant attempts, carries, targets, touches, team share, and recent workload trend.</span></section><section><strong>6% · WEATHER</strong><span>Wind, rain, and cold are used only when the forecast is available and relevant to the market.</span></section><section><strong>6% · RED-ZONE USAGE</strong><span>For anytime touchdowns, relevant red-zone target share for receivers and carry share for runners and quarterbacks; running backs can benefit from either. Scoring-area volume is included when play-by-play data exists.</span></section><section><strong>4% · KEY INJURIES</strong><span>Availability and workload context for the player or a key teammate when an automated report and role estimate are available.</span></section></div><small>The score is for comparing picks, not a win probability. Missing lines and odds are labeled. A date appears only when at least one future game is scheduled.</small></div></details>
     </section>
     {loading||error?<p>{error||'Loading Top Looks…'}</p>:picks.length?
       <section className="top-pick-list">{picks.map((pick,index)=>{
@@ -291,7 +340,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
         const whyId='pick-why-'+index;
         const whyOpen=openWhy===pickKey;
         return <article className="top-pick panel" key={pick.game.id+pick.player.id+pick.metric+pick.side} style={{'--club':teamColor(pick.player.team)||'#a775cf'}}>
-          <div className="pick-rank">{String(index+1).padStart(2,'0')}</div>
+          <div className="pick-rank"><b>{String(index+1).padStart(2,'0')}</b><small title="Comparative Model Score, Not A Percentage">{pick.rankScore} SCORE</small></div>
           <PlayerPhoto id={pick.player.id} name={pick.player.name} url={pick.player.photo}/>
           <div className="top-pick-main">
             <div className="top-matchup">{pick.player.team} · {pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
@@ -300,7 +349,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
           </div>
           <div className="top-pick-stat projection-stat"><small>PROJECTION</small><b>{pick.projection.toFixed(1)}</b><small>vs. {pick.line} Line</small></div>
           <div className="top-pick-stat chance-stat"><small>EST. HIT RATE</small><b style={rateStyle(pick.chance)}>{formatRate(pick.chance)}</b><small>{pick.hits}/{pick.history.length} prior</small></div>
-          <div className="top-pick-stat defense-stat"><small>MATCHUP</small><b>{pick.matchup||'—'}</b><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
+          <div className="top-pick-stat defense-stat"><small>MATCHUP</small><b data-fit={pick.matchupTone} style={defenseRankStyle(pick.defense?.rank,32,pick.side)}>{pick.matchup||'—'}</b><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
           <div className="top-pick-actions">
             <button type="button" onClick={()=>onOpen(pick.player,{metric:pick.metric,point:pick.line,source:pick.quote.anytime?(pick.quote.isBookLine?'DraftKings Anytime TD Odds':'Model Estimate'):(pick.quote.isBookLine?'DraftKings':'Player Average')},pick.side,pick.game)}><Activity size={15}/>Charts</button>
           </div>
@@ -308,17 +357,18 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
               <div className="pick-reason">
                 <b>WHY THE MODEL LIKES THIS PICK</b>
                 <div className="pick-reason-grid">
+                  <section className="favorite-reason"><strong>TOP REASON · {pick.favoriteReason.label.toUpperCase()}</strong><span>{pick.favoriteReason.detail}</span></section>
+                  <section><strong>RANKING SCORE · {pick.rankScore}/100</strong><span>Ranked #{index+1} of {picks.length}. This comparative score shows how strongly the available signals support the pick; it is not a hit probability. Tap the information button beside the filters for the full scoring method.</span></section>
                   <section><strong>HISTORICAL RESULTS</strong><span>{pick.side.toUpperCase()} hit {pick.hits} of {pick.history.length} prior games; {pick.recentHits} of {pick.recent.length} in the {recentLabel}.</span></section>
                   <section><strong>PROJECTION</strong><span>{projectionReason(pick)}</span></section>
                   {pick.volumeSignal>.1&&<section><strong>{shareLabel.toUpperCase()}</strong><span>{fmtShare(pick.share.average)} of team {pick.usageKey} across {pick.share.count} recent games{pick.share.trend!=null?'; recent share '+(pick.share.trend>0?'+':'')+(pick.share.trend*100).toFixed(1)+' percentage points':''}.</span></section>}
                   {pick.usageTrend!=null&&pick.usageTrend*(pick.side==='over'?1:-1)>0&&<section><strong>RECENT WORKLOAD</strong><span>{pick.usageKey}: {pick.usageTrend>0?'+':''}{pick.usageTrend.toFixed(1)} per game over the last 3 compared with the previous 3.</span></section>}
-                  {pick.matchup&&<section><strong>DEFENSE MATCHUP</strong><span>{pick.game.opponent} {pick.matchup.toLowerCase()} ({pick.defense.average.toFixed(1)} per game over {pick.defense.games} games).</span></section>}
-                  {pick.metric==='scoredTDs'&&pick.redZoneSignal>.1&&(pick.rz20!=null||pick.rz5!=null)&&<section><strong>RED-ZONE TOUCHES</strong><span>{pick.rz20==null?'':pick.rz20.toFixed(1)+' inside-20 touches per game'}{pick.rz20!=null&&pick.rz5!=null?' · ':''}{pick.rz5==null?'':pick.rz5.toFixed(1)+' inside-5 touches per game'}; recent scoring-area usage supports this line.</span></section>}
+                  {pick.defense&&<section><strong>DEFENSE MATCHUP</strong><span data-fit={pick.matchupTone} style={defenseRankStyle(pick.defense.rank,32,pick.side)}>{pick.game.opponent} · {pick.matchup.toLowerCase()} ({pick.defense.average.toFixed(1)} per game over {pick.defense.games} games).</span></section>}
+                  {pick.metric==='scoredTDs'&&pick.scoring?.games>0&&(pick.scoring.targetShare!=null||pick.scoring.carryShare!=null)&&<section><strong>RED-ZONE USAGE · {pick.scoring.games} GAMES</strong><span>{pick.scoring.targetShare!=null?'Red-zone target share '+fmtShare(pick.scoring.targetShare):''}{pick.scoring.targetShare!=null&&pick.scoring.carryShare!=null?' · ':''}{pick.scoring.carryShare!=null?'Red-zone carry share '+fmtShare(pick.scoring.carryShare):''}{pick.scoring.redZoneTargets!=null?' · '+pick.scoring.redZoneTargets.toFixed(1)+' targets per game':''}{pick.scoring.redZoneCarries!=null?' · '+pick.scoring.redZoneCarries.toFixed(1)+' carries per game':''}{pick.scoring.redZoneTouches!=null?' · '+pick.scoring.redZoneTouches.toFixed(1)+' touches inside the 20 per game':''}{pick.scoring.inside5Touches!=null?' · '+pick.scoring.inside5Touches.toFixed(1)+' touches inside the 5 per game':''}.</span></section>}
                   {pick.quote.isBookLine&&pick.fairSide!=null&&pick.fairSide>=.52&&<section><strong>{pick.quote.anytime?'ANYTIME TD PRICE':'NO-VIG MARKET'}</strong><span>{pick.quote.anytime?'The listed Yes price implies '+formatRate(pick.fairSide)+' before removing sportsbook margin.':'Market price implies '+formatRate(pick.fairSide)+' for the '+pick.side+' side after removing the two-way vig.'}</span></section>}
                   {pick.weather&&pick.weather.signal>.08&&<section><strong>WEATHER FORECAST</strong><span>{pick.weather.details}. {pick.weather.interpretation}</span></section>}
                   {context.injuries.length>0&&<section className="injury-reason"><strong>KEY INJURIES</strong><span>{context.injuries.map(item=><span key={item.team+item.role+item.name}>{item.team} {item.role} · {item.name} · {item.status}{item.injury?' · '+item.injury:''}{Number.isFinite(item.volume)?' · '+item.volume.toFixed(1)+' workload per game':''}{item.selected?' · THIS PLAYER':''}</span>)}<small>Role ranks use recent team workload; only key skill-position reports are shown.</small></span></section>}
                 </div>
-                <small>The model weighs recent results, projection, matchup, relevant workload share, scoring-area usage, injuries, weather and available market prices. It only surfaces picks with a positive estimated edge and directional projection support. Estimated hit rate is not calibrated against completed Top Looks slates.</small>
               </div>
           </div>
         </article>;
