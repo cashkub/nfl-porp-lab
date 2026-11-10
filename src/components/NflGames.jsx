@@ -3,6 +3,7 @@ import {MatchReport} from './MatchReport.jsx';
 import PropsBoard from './PropsBoard.jsx';
 import {priceText} from '../lib/bookLine.js';
 import {teamColor} from '../lib/teamColors.js';
+import FilterMenu from './FilterMenu.jsx';
 import './NflGames.css';
 
 const kickoff = new Intl.DateTimeFormat('en-US', {
@@ -28,7 +29,7 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
   const week = weeks.includes(requestedWeek) ? requestedWeek : weeks[0];
   return <section className="panel nfl-games"><h1>NFL Games</h1>
     {weeks.length>0 && <><div className="board-controls"><label>Game week
-      <select value={week} onChange={e=>{setWeek(e.target.value);setSelected('')}}>{weeks.map(w=><option key={w}>{w}</option>)}</select>
+      <FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('')}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu>
     </label></div><p>Pregame market snapshot · {updated} · American odds</p></>}
     {upcoming.filter(g=>weekOf(g)===week).map(g=>{
       const id=g.id || g.kickoff+g.home, open=id===selectedId;
