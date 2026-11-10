@@ -1,4 +1,5 @@
 import React, {Children, useId} from 'react';
+import FilterMenu from './FilterMenu.jsx';
 
 const collator=new Intl.Collator('en',{numeric:true,sensitivity:'base'});
 
@@ -17,7 +18,7 @@ export default function ChartSelect({label, value, onChange, children}) {
   return <div className="chart-filter">
     <label htmlFor={id}>{label}</label>
     <div className="chart-select-row">
-      <select id={id} value={value} onChange={event => onChange(event.target.value)}>{options}</select>
+      <FilterMenu id={id} aria-label={label} value={value} onChange={event => onChange(event.target.value)}>{options}</FilterMenu>
       <div className="chart-step-buttons">
         {[-1, 1].map(step => {
           const action = step < 0 ? 'Previous' : 'Next';
