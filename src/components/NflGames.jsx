@@ -52,7 +52,9 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
     const teamGames={};
     for(const p of players||[]){
       for(const game of p.games||[]){
-        if(Number(game.season)!==Number(selected.season)||Number(game.week)>=cutoffWeek||![selected.home,selected.away].includes(game.team))continue;
+        const beforeSelectedGame=Number(game.season)<Number(selected.season)||
+          (Number(game.season)===Number(selected.season)&&Number(game.week)<cutoffWeek);
+        if(!beforeSelectedGame||![selected.home,selected.away].includes(game.team))continue;
         const key=game.gameId||game.id;
         if(!key)continue;
         teamGames[game.team]??={};
@@ -63,13 +65,21 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
     const output=[];
     for(const p of players||[]){
       if(!['QB','RB','WR','TE'].includes(p.position))continue;
-      const history=getPlayerGames(p,selected.season).filter(g=>Number(g.week)<cutoffWeek&&[selected.home,selected.away].includes(g.team));
-      const team=history.at(-1)?.team||p.team;
+      const team=[selected.home,selected.away].includes(p.team)?p.team:null;
+      if(!team)continue;
+      const history=getPlayerGames(p,'ALL').filter(g=>{
+        const prior=Number(g.season)<Number(selected.season)||
+          (Number(g.season)===Number(selected.season)&&Number(g.week)<cutoffWeek);
+        return prior&&g.team===team;
+      });
       if(!history.length||![selected.home,selected.away].includes(team))continue;
+      const currentSeason=history.filter(g=>Number(g.season)===Number(selected.season));
+      const observed=currentSeason.length?currentSeason:history;
+      const sampleLabel=currentSeason.length?`${selected.season} · ${currentSeason.length} G`:`CAREER · ${history.length} G`;
       for(const [metric,label] of marketsFor[p.position]||[]){
         if(market!=='ALL'&&market!==metric)continue;
         const usage=usageMetric[p.position];
-        const values=history.map(g=>Number(g.stats?.[metric])).filter(Number.isFinite);
+        const values=observed.map(g=>Number(g.stats?.[metric])).filter(Number.isFinite);
         if(!values.length)continue;
         const recent=values.slice(-5),shareValues=history.map(g=>{
           const total=teamGames[g.team]?.[g.gameId||g.id]?.[usage[0]]||0;
@@ -77,9 +87,9 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
           return total>0?own/total:null;
         }).filter(Number.isFinite);
         const line=bookGame?.lines?.find(l=>l.metric===metric&&l.player?.toLowerCase().replace(/[^a-z]/g,'')===p.name?.toLowerCase().replace(/[^a-z]/g,''));
-        output.push({p,team,metric,label,seasonAvg:values.reduce((a,b)=>a+b,0)/values.length,
+        output.push({p,team,metric,label,sampleLabel,seasonAvg:values.reduce((a,b)=>a+b,0)/values.length,
           recentAvg:recent.reduce((a,b)=>a+b,0)/recent.length,history:history.length,
-          usageLabel:usage[1],usageAvg:history.reduce((sum,g)=>sum+Number(g.usage?.[usage[0]]||0),0)/history.length,
+          usageLabel:usage[1],usageAvg:observed.reduce((sum,g)=>sum+Number(g.usage?.[usage[0]]||0),0)/observed.length,
           share:shareValues.length?shareValues.reduce((a,b)=>a+b,0)/shareValues.length:null,line,
           values:values.slice(-5)});
       }
@@ -131,9 +141,10 @@ function GamePredictions({game,model}){
 function MarketTile({label,value}){return <article className="nfl-market-tile"><small>{label}</small><b>{value}</b></article>}
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
-  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Current player usage before this matchup, plus available timestamped sportsbook props.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{Object.entries(METRICS).filter(([k])=>['passingYards','passingTDs','rushingAttempts','rushingYards','receivingYards','receptions'].includes(k)).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
-    <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON AVG</th><th>ROLE / SHARE</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=><tr key={r.p.id+':'+r.metric}>
-      <td><span className="nfl-player-cell" style={{'--club':teamColor(r.team)}}><PlayerPhoto id={r.p.id} name={r.p.name} url={r.p.photo}/><span><b>{r.p.name}</b><small>{r.team} · {r.p.position}</small></span></span></td><td>{r.label}</td><td>{format(r.recentAvg)}</td><td>{format(r.seasonAvg)}</td><td><b>{format(r.usageAvg)} {r.usageLabel}</b><small>{r.share==null?'SHARE N/A':`${(r.share*100).toFixed(1)}% AVG SHARE`}</small></td><td>{r.line?<><b>{format(r.line.point)}</b><small>O {priceText(r.line.over)} · U {priceText(r.line.under)}</small><small>Updated {new Date(r.line.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></>:'—'}</td><td><button className="nfl-chart-link" type="button" onClick={()=>onOpen?.(r.p,{metric:r.metric,point:r.line?.point},'over',game)} aria-label={'Open charts for '+r.p.name}><ArrowUpRight size={16}/><span>CHARTS</span></button></td>
+  const propMarkets=Object.entries(METRICS).filter(([k])=>['passingYards','passingTDs','rushingAttempts','rushingYards','receivingYards','receptions'].includes(k)).sort((a,b)=>a[1].label.localeCompare(b[1].label));
+  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Completed player history before this matchup, plus available timestamped sportsbook props.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
+    <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON / CAREER AVG</th><th>ROLE / SHARE</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=><tr key={r.p.id+':'+r.metric}>
+      <td><span className="nfl-player-cell" style={{'--club':teamColor(r.team)}}><PlayerPhoto id={r.p.id} name={r.p.name} url={r.p.photo}/><span><b>{r.p.name}</b><small>{r.team} · {r.p.position}</small></span></span></td><td>{r.label}</td><td>{format(r.recentAvg)}</td><td><b>{format(r.seasonAvg)}</b><small>{r.sampleLabel}</small></td><td><b>{format(r.usageAvg)} {r.usageLabel}</b><small>{r.share==null?'SHARE N/A':`${(r.share*100).toFixed(1)}% AVG SHARE`}</small></td><td>{r.line?<><b>{format(r.line.point)}</b><small>O {priceText(r.line.over)} · U {priceText(r.line.under)}</small><small>Updated {new Date(r.line.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></>:'—'}</td><td><button className="nfl-chart-link" type="button" onClick={()=>onOpen?.(r.p,{metric:r.metric,point:r.line?.point},'over',game)} aria-label={'Open charts for '+r.p.name}><ArrowUpRight size={16}/><span>CHARTS</span></button></td>
     </tr>)}</tbody></table></div>
     {!rows.length&&<p className="nfl-empty-state">No player history or sportsbook props are available for this matchup yet.</p>}
     <div className="nfl-probability-honesty"><Info size={17}/><span>Season and last-five averages are historical context, not model projections. Player probability forecasts are not shown until opportunity-based projections are independently validated. Missing sportsbook lines remain blank.</span></div>
