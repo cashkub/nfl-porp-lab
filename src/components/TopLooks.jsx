@@ -9,6 +9,7 @@ import {teamColor} from '../lib/teamColors.js';
 import {getPlayerGames,formatRate,isHit} from '../lib/stats.js';
 import {METRICS} from '../lib/stats.js';
 import {rateStyle,defenseRankStyle} from './HitRate.jsx';
+import FilterMenu from './FilterMenu.jsx';
 import './TopLooks.css';
 
 const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
@@ -325,12 +326,12 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
       <span className="slate-count">{picks.length} QUALIFIED</span>
     </div>
     <section className="top-filter panel">
-      <label>Show Picks By<select value={mode} onChange={event=>{setMode(event.target.value);setSelected('');}}>
+      <label>Show Picks By<FilterMenu value={mode} onChange={event=>{setMode(event.target.value);setSelected('');}}>
         <option value="day">Game Date</option><option value="week">Week</option>
-      </select><ChevronDown size={15}/></label>
-      <label>{mode==='day'?'Date':'Week'}<select value={value} onChange={event=>setSelected(event.target.value)}>
+      </FilterMenu></label>
+      <label>{mode==='day'?'Date':'Week'}<FilterMenu value={value} onChange={event=>setSelected(event.target.value)}>
         {options.map(option=><option key={option} value={option}>{mode==='day'?dayLabel(option):'Week '+option}</option>)}
-      </select><ChevronDown size={15}/></label>
+      </FilterMenu></label>
       <div className="pick-type" role="group" aria-label="Pick Type"><span>PICK TYPE</span><div><button type="button" aria-pressed={type==='anytime'} onClick={()=>setType('anytime')}>Anytime Touchdowns</button><button type="button" aria-pressed={type==='props'} onClick={()=>setType('props')}>Player Props</button></div></div>
       <span>{kickDate} · {slate.length} {slate.length===1?'game':'games'}</span>
       <details className="model-guide"><summary aria-label="What The Model Considers" title="What The Model Considers"><Info size={17}/></summary><div className="model-guide-panel"><b>WHAT TOP LOOKS CONSIDERS</b><p>Picks with real sportsbook lines come first. Within the real-line and average-line groups, picks sort by comparative model score; averages fill the remaining places after the sportsbook picks.</p><div className="model-guide-grid"><section><strong>38% · MARKET EDGE</strong><span>Estimated chance compared with available sportsbook odds after removing two-way vig. Anytime touchdown Yes prices are shown as listed, before removing margin.</span></section><section><strong>22% · PROJECTION</strong><span>Weighted season and recent averages compared with the selected prop line.</span></section><section><strong>12% · DEFENSE MATCHUP</strong><span>Whether the defense allows more or fewer of that position’s selected stat. Color reflects the bet direction.</span></section><section><strong>{type==='anytime'?'12%':'18%'} · WORKLOAD</strong><span>{type==='anytime'?'Attempts, carries, targets, touches, and team share, alongside red-zone scoring opportunities.':'Volume and team share are matched to the selected prop: pass attempts for passing props, carries for rushing props, and targets for receiving props.'}</span></section><section><strong>6% · WEATHER</strong><span>Wind, rain, and cold are used only when the forecast is available and relevant to the market.</span></section>{type==='anytime'&&<section><strong>6% · RED-ZONE USAGE</strong><span>Red-zone target share for receivers, carry share for runners and quarterbacks; running backs can benefit from either. Scoring-area volume is included when play-by-play data exists.</span></section>}<section><strong>4% · KEY INJURIES</strong><span>Availability and workload context for the player or a key teammate when an automated report and role estimate are available.</span></section></div><small>The score is for comparing picks, not a win probability. Missing lines and odds are labeled. A date appears only when at least one future game is scheduled.</small></div></details>
@@ -353,7 +354,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
           </div>
           <div className="top-pick-stat projection-stat"><small>PROJECTION</small><b>{pick.projection.toFixed(1)}</b><small>vs. {pick.line} Line</small></div>
           <div className="top-pick-stat chance-stat"><small title="The model's predicted chance that this prop hits, based on the available data.">MODEL PREDICTED HIT RATE</small><b style={rateStyle(pick.chance)}>{formatRate(pick.chance)}</b><small>{pick.hits}/{pick.history.length} PRIOR · <span style={rateStyle(pick.hits/pick.history.length)}>{formatRate(pick.hits/pick.history.length)} PRIOR RATE</span></small></div>
-          <div className="top-pick-stat defense-stat"><small>MATCHUP</small><b data-fit={pick.matchupTone} style={defenseRankStyle(pick.defense?.rank,32,pick.side)}>{pick.matchup||'—'}</b><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
+          <div className="top-pick-stat defense-stat"><small>TOP REASON</small><b data-fit={pick.favoriteReason.label==='Matchup'?pick.matchupTone:undefined} style={pick.favoriteReason.label==='Matchup'?defenseRankStyle(pick.defense?.rank,32,pick.side):undefined}>{pick.favoriteReason.label}</b><small className="top-reason-detail">{pick.favoriteReason.label==='Matchup'?pick.matchup:pick.favoriteReason.detail}</small><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
           <div className="top-pick-actions">
             <button type="button" onClick={()=>onOpen(pick.player,{metric:pick.metric,point:pick.line,source:pick.quote.anytime?(pick.quote.isBookLine?'DraftKings Anytime TD Odds':'Model Estimate'):(pick.quote.isBookLine?'DraftKings':'Player Average')},pick.side,pick.game)}><Activity size={15}/>Charts</button>
           </div>
