@@ -76,7 +76,7 @@ function makeScoringVolumes(players,season){
   const totals=new Map();
   for(const player of players)for(const game of player.games||[]){
     if(season!=='ALL'&&Number(game.season)!==Number(season))continue;
-    if(!game.gameId||game.scoringChances?.length<5)continue;
+    if(!game.gameId||!Array.isArray(game.scoringChances)||game.scoringChances.length<5)continue;
     const team=game.team||player.team,key=game.gameId+'|'+team;
     if(!team)continue;
     if(!totals.has(key))totals.set(key,{carries:0,targets:0,touches:0,inside5Carries:0,inside5Touches:0});
