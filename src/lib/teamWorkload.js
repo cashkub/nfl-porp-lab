@@ -1,8 +1,10 @@
 export function teamWorkload(players,team,game){
   const byGame=new Map();
+  const normalize=t=>({LA:'LAR',STL:'LAR',WSH:'WAS',JAC:'JAX',OAK:'LV',SD:'LAC'}[t]||t);
+  const selectedTeam=normalize(team);
   const pregame=row=>Number(row.season)<Number(game.season)||(Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week));
   for(const player of players||[])for(const row of player.games||[]){
-    if(row.team!==team||!pregame(row)||!['QB','RB','FB','WR','TE'].includes(player.position))continue;
+    if(normalize(row.team)!==selectedTeam||!pregame(row)||!['QB','RB','FB','WR','TE'].includes(player.position))continue;
     const key=row.gameId||`${row.season}:${row.week}`;
     if(!key)continue;
     let bucket=byGame.get(key);

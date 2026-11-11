@@ -36,3 +36,13 @@ test('team workload falls back to career only when selected-season games are abs
   assert.equal(result.targets,6);
   assert.equal(result.targetLeader[0],'Receiver');
 });
+
+test('team workload matches nflverse aliases to the schedule team code',()=>{
+  const players=[{name:'Rams QB',position:'QB',games:[
+    {season:2026,week:4,gameId:'rams-game',team:'LA',usage:{attempts:32,carries:1},stats:{passingYards:256}}
+  ]}];
+  const result=teamWorkload(players,'LAR',{season:2026,week:5});
+  assert.equal(result.games,1);
+  assert.equal(result.passAttempts,32);
+  assert.equal(result.yardsPerAttempt,8);
+});
