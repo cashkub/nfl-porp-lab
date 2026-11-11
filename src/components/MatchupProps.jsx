@@ -1,6 +1,8 @@
 import React from 'react';
 import {priceText} from '../lib/bookLine.js';
-import PlayerPhoto from './PlayerPhoto.jsx';
+import TeamLogo from './TeamLogo.jsx';
+import {teamColor} from '../lib/teamColors.js';
+import {propGap,sortColumns} from '../lib/propSort.js';
 
 const number=n=>Number.isFinite(n)?String(Number(n.toFixed(1))):'—';
 const teamPositions={QB:'quarterbacks',RB:'running backs',WR:'wide receivers',TE:'tight ends'};
@@ -17,7 +19,7 @@ function Projection({row}){
     {row.line?.anytime&&<small>Chance to score</small>}{row.note&&<small>{row.note}</small>}</>;
 }
 function Player({row}){
-  return <span className="prop-identity"><PlayerPhoto id={row.p.id} name={row.p.name} url={row.p.photo}/>
+  return <span className="prop-identity"><TeamLogo team={row.team}/>
     <span><strong>{row.p.name}</strong><small>{[row.team,row.p.position,row.status].filter(Boolean).join(' · ')}</small></span></span>;
 }
 function Role({row}){
@@ -36,20 +38,34 @@ function Charts({row,onOpen,game}){
       source:row.line?'DraftKings':'Player Average'},'over',game)}>Charts ↗</button>;
 }
 
-export default function MatchupProps({rows,game,onOpen}){
+export default function MatchupProps({rows,game,onOpen,order,onSort}){
   const key=r=>[r.p.name,r.metric,r.line?.point,r.line?.anytime].join(':');
+  const headers=[['player','Player'],['market','Market'],['line','Prop line'],['model','Model projection'],['gap','Gap %'],['recent','Last 5 avg'],['season','Season avg'],['role','Role / share'],['defense','Defense']];
+  function direction(key){
+    if(!sortColumns[key].includes(order))return undefined;
+    return ['player','market','low','below'].includes(order)||order.endsWith('Low')?'ascending':'descending';
+  }
+  function header(key,label){
+    const dir=direction(key);
+    return <button className="prop-column-button" type="button" onClick={()=>onSort(key)}
+      aria-label={'Sort by '+label+(dir?', currently '+dir:'')}>{label}<i aria-hidden="true">{dir==='ascending'?'↑':dir==='descending'?'↓':'↕'}</i></button>;
+  }
+  function gap(r){
+    const value=propGap(r);
+    return value==null?'—':(value>0?'+':'')+number(100*value)+'%';
+  }
   if(!rows.length)return <p className="nfl-empty-state">No players match these filters.</p>;
   return <>
-    <div className="matchup-props-desktop"><table><thead><tr>{['Player','Market','Prop line','Model projection','Last 5 avg','Season avg','Role / share','Defense','Chart'].map(h=><th key={h}>{h}</th>)}</tr></thead>
-      <tbody>{rows.map(r=><tr key={key(r)}><td><Player row={r}/></td><td>{r.label}</td><td><Price row={r}/></td><td><Projection row={r}/></td>
-        <td>{number(r.recentAvg)}</td><td>{number(r.seasonAvg)}<small>{r.sampleLabel}</small></td><td><Role row={r}/></td><td><Defense row={r}/></td><td><Charts row={r} game={game} onOpen={onOpen}/></td></tr>)}</tbody></table></div>
+    <div className="matchup-props-desktop"><table><thead><tr>{headers.map(([key,label])=><th key={key} scope="col" aria-sort={direction(key)}>{header(key,label)}</th>)}<th>Chart</th></tr></thead>
+      <tbody>{rows.map(r=><tr key={key(r)} style={{'--club':teamColor(r.team)}}><td><Player row={r}/></td><td>{r.label}</td><td><Price row={r}/></td><td><Projection row={r}/></td>
+        <td>{gap(r)}</td><td>{number(r.recentAvg)}</td><td>{number(r.seasonAvg)}<small>{r.sampleLabel}</small></td><td><Role row={r}/></td><td><Defense row={r}/></td><td><Charts row={r} game={game} onOpen={onOpen}/></td></tr>)}</tbody></table></div>
     <div className="matchup-props-mobile">
-      <div className="prop-list-head" aria-hidden="true"><span>Player / market</span><span>{rows[0].line?'DK line':'Average'}</span><span>Model</span></div>
-      {rows.map(r=><details key={key(r)} className="prop-list-row">
+      <div className="prop-list-head"><span>{header('player','Player')}/{header('market','Market')}</span>{header('line',rows[0].line?'DK line':'Avg')}{header('model','Model')}{header('gap','Gap %')}</div>
+      {rows.map(r=><details key={key(r)} className="prop-list-row" style={{'--club':teamColor(r.team)}}>
         <summary>
-          <span className="prop-list-name"><b>{r.p.name}</b><small>{[r.team,r.label].filter(Boolean).join(' · ')}</small></span>
+          <span className="prop-list-name"><TeamLogo team={r.team}/><b>{r.p.name}</b><small>{[r.team,r.label].filter(Boolean).join(' · ')}</small></span>
           <span>{r.line?.anytime?priceText(r.line.over):number(r.line?.point??r.averageLine)}</span>
-          <span>{Number.isFinite(r.estimated)?number(r.estimated)+(r.line?.anytime?'%':''):'—'}<i aria-hidden="true">⌄</i></span>
+          <span>{Number.isFinite(r.estimated)?number(r.estimated)+(r.line?.anytime?'%':''):'—'}</span><span>{gap(r)}<i aria-hidden="true">⌄</i></span>
         </summary>
         <dl><dt>{r.line?'DraftKings':'Player average'}</dt><dd><Price row={r}/></dd>
           <dt>Model projection</dt><dd><Projection row={r}/></dd>

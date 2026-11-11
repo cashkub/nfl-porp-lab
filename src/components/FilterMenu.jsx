@@ -6,7 +6,7 @@ import './FilterMenu.css';
 export default function FilterMenu({children, value, onChange, disabled, className='', ...props}) {
   const options = React.Children.toArray(children).filter(React.isValidElement).map(({props:option})=>{
     const label = React.Children.toArray(option.children).join('');
-    return {label, value:String(option.value ?? label)};
+    return {label, group:option['data-group'], shortLabel:option['data-short-label'], value:String(option.value ?? label)};
   });
   const selected = options.findIndex(option=>option.value===String(value));
   const [open,setOpen] = useState(false), [query,setQuery] = useState('');
@@ -15,7 +15,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
   const button = useRef(null), popup = useRef(null), menu = useRef(null), searchInput = useRef(null), search = useRef({text:'',time:0});
   const id = useId();
   const searchable=options.length>8;
-  const visibleOptions=useMemo(()=>options.map((option,index)=>({...option,index})).filter(option=>!query||option.label.toLowerCase().includes(query.toLowerCase().trim())),[options,query]);
+  const visibleOptions=useMemo(()=>options.map((option,index)=>({...option,index})).filter(option=>!query||[option.group,option.label].filter(Boolean).join(' ').toLowerCase().includes(query.toLowerCase().trim())),[options,query]);
   const menuTitle=props['aria-label'] || button.current?.closest('label')?.childNodes[0]?.textContent?.trim() || 'Choose An Option';
 
   function show() {setQuery('');setActive(Math.max(0,selected));setOpen(true);}
@@ -87,7 +87,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
       disabled={disabled || !options.length} aria-haspopup="listbox" aria-expanded={Boolean(expanded)}
       aria-controls={expanded?id:undefined} aria-activedescendant={expanded&&visibleOptions.length?id+'-'+active:undefined}
       onClick={()=>open?setOpen(false):show()} onKeyDown={keyDown}>
-      <span>{options[selected]?.label || options[0]?.label || '—'}</span><ChevronDown size={15} aria-hidden="true"/>
+      <span>{options[selected]?.shortLabel || options[selected]?.label || options[0]?.label || '—'}</span><ChevronDown size={15} aria-hidden="true"/>
     </button>
     {expanded && position && createPortal(<div ref={popup} className="filter-popup" style={position}>
       <div className="filter-popup-heading"><b>{menuTitle}</b><small>{visibleOptions.length} of {options.length} options</small></div>
@@ -96,7 +96,7 @@ export default function FilterMenu({children, value, onChange, disabled, classNa
         {visibleOptions.length?visibleOptions.map((option,i)=><div role="option" aria-selected={selected===option.index} id={id+'-'+i} key={option.value}
           className={'filter-option'+(active===i?' active':'')} onPointerMove={()=>setActive(i)} onMouseDown={e=>e.preventDefault()}
           onClick={e=>{e.preventDefault();e.stopPropagation();choose(i);}}>
-          <span>{option.label}</span>{selected===option.index && <Check size={16} aria-hidden="true"/>}
+          <span>{option.group&&option.group!==visibleOptions[i-1]?.group&&<small className="filter-option-day">{option.group}</small>}{option.label}</span>{selected===option.index && <Check size={16} aria-hidden="true"/>}
         </div>):<div className="filter-empty">No matching options.</div>}
       </div>
     </div>,button.current.closest('.app') || document.body)}

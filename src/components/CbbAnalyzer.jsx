@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import PlayerStepper from './PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './GameFilter.jsx';
@@ -68,7 +69,7 @@ export default function CbbAnalyzer({initial = {}}) {
   const failed=[index,source,roster].find(s=>s.error);
   const highest=Math.max(1,line,...games.map(g=>g.stats[metric]));
   const rankCount=Object.keys(source.data?.ranks || {}).length;
-  return <div className="college-analyzer"><section className="match-header team-banner" style={{'--team-color':teamColor(team,source.data?.colors || {})}}><div className="match-player"><div className="match-context">{sportNames[sport]} · {season ? seasonLabel(sport,season):''}</div><h1 className="player-title">{player && <PlayerPhoto large id={player.id} name={player.name} url={player.photo}/>} {player?.name || sport.toUpperCase()+' Analyzer'}</h1><p>{source.data?.teams?.[team]} · {statOptions.length?markets[metric].label+' '+direction+' '+line:'Player Research'}</p></div><div className="match-form"><span>Hit Rate</span><strong><HitRate rate={statOptions.length?summary.rate:null}/></strong><small>{summary.total} matching games</small></div></section>
+  return <div className="college-analyzer"><section className="match-header team-banner" style={{'--team-color':teamColor(team,source.data?.colors || {})}}><div className="match-player"><div className="match-context">{sportNames[sport]} · {season ? seasonLabel(sport,season):''}</div><h1 className="player-title">{player && <PlayerPhoto large id={player.id} name={player.name} url={player.photo}/>} {player?.name || sport.toUpperCase()+' Analyzer'}</h1><p><TeamLogo sport={sport} team={team}/>{source.data?.teams?.[team]} · {statOptions.length?markets[metric].label+' '+direction+' '+line:'Player Research'}</p></div><div className="match-form"><span>Hit Rate</span><strong><HitRate rate={statOptions.length?summary.rate:null}/></strong><small>{summary.total} matching games</small></div></section>
     <div className="workspace"><div className="analysis-rail"><aside className="panel setup college-settings" aria-label="Prop Settings">
       <button type="button" className="phone-settings" aria-expanded={settingsOpen} aria-controls="college-settings-fields" onClick={()=>setSettingsOpen(!settingsOpen)}>
         <span>{settingsOpen?'Fewer Filters':'More Filters'}</span>

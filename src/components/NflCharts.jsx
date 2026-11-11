@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import NflToolHeader from './NflToolHeader.jsx';
 import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
@@ -24,12 +25,6 @@ function leagueComparison(value,average,direction) {
   if (!Number.isFinite(value) || !Number.isFinite(average)) return undefined;
   if (value === average) return 'equal';
   return (direction === 'under' ? value < average : value > average) ? 'favorable' : 'tough';
-}
-
-function TeamLogo({team}) {
-  const normalized=({LA:'LAR',WSH:'WAS',JAC:'JAX'})[team] || team;
-  const code=normalized==='WAS'?'wsh':normalized?.toLowerCase();
-  return code?<img key={code} className="chart-logo" alt="" src={'https://a.espncdn.com/i/teamlogos/nfl/500/'+code+'.png'} onError={e=>{e.currentTarget.hidden=true}}/>:null;
 }
 
 function PlayerBoxScore({game,position,metric}) {
@@ -94,7 +89,7 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
       <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
         {line!=null && r===rows.at(-1) && <span className="chart-reference">{direction} {line}</span>}
         <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
-      <span className="chart-opponent"><TeamLogo team={r.game.opponent}/><b>{r.game.venue==='A'?'@':'vs'} {r.game.opponent}</b></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
+      <span className="chart-opponent"><TeamLogo className="chart-logo" team={r.game.opponent}/><b>{r.game.venue==='A'?'@':'vs'} {r.game.opponent}</b></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
       {showDetails&&<span className="bar-details"><span className="bar-detail-item"><b>{r.margin==null?'—':r.margin===0?'Push':marginNumber.format(r.margin)+' '+info.unit}</b><small>{line==null?'No Line':r.outcome==='Hit'?`${Math.abs(r.margin).toFixed(1)} ${info.unit} ${direction==='under'?'Below':'Above'} Line`:`${Math.abs(r.margin).toFixed(1)} ${info.unit} From Line`}</small></span>{usageFields.map(([key,label])=>{
         const own=Number(r.game.usage?.[key]),team=teamVolumes.get(r.game.gameId+'|'+r.game.team)?.[key];
         const share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';
@@ -102,7 +97,7 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
       })}<span className="bar-detail-item"><b>{formatRate(r.game.usage?.offenseSnapRate)}</b><small>Offensive Snaps</small></span></span>}
     </button>)}</div></div>
     {active?<section className="bar-report game-report" aria-label="Selected Game Details">
-      <header className="game-report-header"><div className="game-report-title"><TeamLogo team={active.game.opponent}/><div><small>SELECTED GAME · WEEK {active.game.week}</small><h3>{playerName}</h3><p>{active.game.team} {active.game.venue==='A'?'at':'vs.'} {active.game.opponent} <span>·</span> {gameDate(active.game)}</p></div></div><button type="button" className="game-report-clear" onClick={()=>setSelected('')}>Clear Selection</button></header>
+      <header className="game-report-header"><div className="game-report-title"><TeamLogo className="chart-logo" team={active.game.opponent}/><div><small>SELECTED GAME · WEEK {active.game.week}</small><h3>{playerName}</h3><p>{active.game.team} {active.game.venue==='A'?'at':'vs.'} {active.game.opponent} <span>·</span> {gameDate(active.game)}</p></div></div><button type="button" className="game-report-clear" onClick={()=>setSelected('')}>Clear Selection</button></header>
       <div className="game-report-summary">
         <div className="game-report-stat primary"><small>{info.label}</small><strong>{active.value} <i>{info.unit}</i></strong><span className="game-report-result" data-result={active.outcome}>{active.outcome}</span></div>
         <div className="game-report-stat"><small>Selected Line</small><strong>{line==null?'No Line':`${direction} ${line}`}</strong><span>{line==null?'Choose A Line To Grade This Game':active.margin===0?'Exactly On The Line':`${Math.abs(active.margin).toFixed(1)} ${info.unit} ${active.value>line?'Above':'Below'} The Line`}</span></div>
@@ -111,7 +106,7 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
       <div className="game-report-grid">
         <section className="game-report-card"><h4>Player Box Score</h4><PlayerBoxScore game={active.game} position={playerPosition} metric={metric}/></section>
         <section className="game-report-card"><h4>Workload &amp; Role</h4><dl className="game-report-stats">{usageFields.map(([key,label])=>{const own=Number(active.game.usage?.[key]),team=teamVolumes.get(active.game.gameId+'|'+active.game.team)?.[key],share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';return <div key={key}><dt>{label}</dt><dd>{Number.isFinite(own)?own:'—'} <small>{share} Team Share</small></dd></div>})}<div><dt>Offensive Snap Share</dt><dd>{formatRate(active.game.usage?.offenseSnapRate)}</dd></div>{Array.isArray(active.game.scoringChances) && <><div><dt>Red-Zone Carries</dt><dd>{active.game.scoringChances[0]??'—'}</dd></div><div><dt>Red-Zone Targets</dt><dd>{active.game.scoringChances[1]??'—'}</dd></div><div><dt>Carries From The 5 Or Closer</dt><dd>{active.game.scoringChances[2]??'—'}</dd></div></>}</dl></section>
-        <section className="game-report-card game-report-defense"><h4>Defense Against {playerPosition}s</h4>{active.defense?<><strong><TeamLogo team={active.game.opponent}/>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></strong><p>{formatNumber(active.defense.average)} {info.unit} allowed per game across {active.defense.games} earlier games.</p></>:<p>Pregame defense rank unavailable for this week.</p>}</section>
+        <section className="game-report-card game-report-defense"><h4>Defense Against {playerPosition}s</h4>{active.defense?<><strong><TeamLogo className="chart-logo" team={active.game.opponent}/>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></strong><p>{formatNumber(active.defense.average)} {info.unit} allowed per game across {active.defense.games} earlier games.</p></>:<p>Pregame defense rank unavailable for this week.</p>}</section>
       </div>
     </section>:<p className="bar-hint">{showDetails?'Tap A Game Bar To See The Full Box Score, Workload And Matchup.':'Select A Game Bar For Player Stats.'}</p>}</>;
 }
@@ -207,7 +202,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
   const headToHead=summarize(against,metric,line,direction);
   const unit=chartMarkets[metric].unit;
   return <section className="lab-block matchup-lab"><h2>Matchup research</h2>
-    <h3><TeamLogo team={game.away}/>{game.away} at {game.home}<TeamLogo team={game.home}/></h3>
+    <h3><TeamLogo className="chart-logo" team={game.away}/>{game.away} at {game.home}<TeamLogo className="chart-logo" team={game.home}/></h3>
     <KickoffConditions game={game}/>
     <dl><div><dt>{game.opponent} DEF Rank</dt><dd><DefenseRank rank={defense?.rank} total={defenses.length} label={chartMarkets[metric].label} position={player.position+'s'} side={direction}/></dd></div>
       <div><dt>Position group allowed per game</dt><dd data-vs-league={leagueComparison(defense?.average,leagueMean,direction)}>{formatNumber(defense?.average)} {unit}</dd></div>
@@ -224,7 +219,7 @@ function MatchResearch({players,game,player,metric,line,direction,history,defens
     <p className="method">{redZone ? redZone.touchdowns+' TDs Allowed On '+redZone.trips+' Red Zone Trips · '+redZone.games+' Games With Play Data Before Week '+game.week : 'No Earlier Red Zone Play Data Available.'}</p>
     <h3>Last Three Games Against {player.position}s</h3>
     {prior.length?<div className="history-scroll"><table><thead><tr><th>Game</th><th>Offense</th><th>Group Total</th><th>Leading Player</th></tr></thead><tbody>
-      {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td><span className="log-table-team"><TeamLogo team={g.team}/>{g.team}</span></td><td data-vs-league={leagueComparison(total,leagueMean,direction)}>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}
+      {prior.map(({game:g,total,leader})=><tr key={g.gameId}><td>{gameDate(g)} · W{g.week}</td><td><span className="log-table-team"><TeamLogo className="chart-logo" team={g.team}/>{g.team}</span></td><td data-vs-league={leagueComparison(total,leagueMean,direction)}>{total} {unit}</td><td>{leader && leader.value>0?leader.name+' · '+leader.value+' '+unit:'—'}</td></tr>)}
     </tbody></table></div>:<p>No Earlier Games Recorded This Season.</p>}
   </section>;
 }
@@ -281,7 +276,7 @@ function GameLog({player,currentSeason,line,direction,metric}) {
     </tr></thead><tbody>{ordered.map(g=>{
       const v=g.stats[metric] ?? 0;
       const {margin,outcome}=lineResult(v,line,direction);
-      return <tr key={g.gameId}><th scope="row">{g.week}</th><td><span className="log-table-team"><TeamLogo team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></td>
+      return <tr key={g.gameId}><th scope="row">{g.week}</th><td><span className="log-table-team"><TeamLogo className="chart-logo" team={g.opponent}/>{g.venue==='A'?'@':'vs.'} {g.opponent}</span></td>
         {columns.map(key=><td key={key}>{key===metric?<b style={gameLogStatStyle(v,line,direction)} data-result={outcome} title={line==null?'No prop line selected':outcome+' by '+Math.abs(margin).toFixed(1)}>{v}</b>:logFields[key][1](g) ?? '—'}</td>)}
         <td><span className="log-outcome" data-result={outcome}>{outcome}{margin!=null && ' '+marginNumber.format(margin)}</span></td>
         <td>{gameDate(g)}</td></tr>;
@@ -337,7 +332,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
           {!(manual && manualLabel==='Player Average') && quote && line===quote.point && <div className="prop-prices" aria-label="DraftKings odds">
             {['over','under'].map(side=><span key={side} data-selected={side===direction}>{side} <b>{priceText(quote[side])}</b></span>)}
           </div>}
-        </div><div className="player-next">{nextFixture?<><TeamLogo team={nextFixture.opponent}/><span><b>Next game</b> · {player.team} {nextFixture.venue==='Away'?'at':'vs.'} {nextFixture.opponent}<br/>{new Date(nextFixture.kickoff).toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',...(nextFixture.timeKnown===false?{}:{hour:'numeric',minute:'2-digit',timeZoneName:'short'})})}{nextFixture.timeKnown===false?' · Time TBD':''}</span></>:<span>No upcoming game scheduled</span>}</div></div>
+        </div><div className="player-next">{nextFixture?<><TeamLogo className="chart-logo" team={nextFixture.opponent}/><span><b>Next game</b> · {player.team} {nextFixture.venue==='Away'?'at':'vs.'} {nextFixture.opponent}<br/>{new Date(nextFixture.kickoff).toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',...(nextFixture.timeKnown===false?{}:{hour:'numeric',minute:'2-digit',timeZoneName:'short'})})}{nextFixture.timeKnown===false?' · Time TBD':''}</span></>:<span>No upcoming game scheduled</span>}</div></div>
       </div>
       <div className="player-numbers">
         <div><small>Median</small><b>{formatNumber(current.median)} <small>{chartMarkets[metric].unit}</small></b></div>

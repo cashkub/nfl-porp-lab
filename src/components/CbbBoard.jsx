@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import {BoardPlayerPicker} from './PlayerStepper.jsx';
 import GameFilter, {useGameFilter} from './GameFilter.jsx';
@@ -70,7 +71,7 @@ export default function CbbBoard({initialRanked=false,top,onOpen}){
     top ? <CollegePicks rows={rows} schedule={schedule} meta={meta.data} metric={metric} line={line} side={side} onOpen={p=>onOpen({player:p.id,team:p.team,season,metric,line,side})}/> :
     <div className="board-scroll"><SortableTable headers={['Player','Team','Manual Line','Average','Hit Rate',...(sport==='cfb'?['Games With Role']:[])]} rows={rows} sort={sort} onSort={setSort} limit={limit} descending={[3,4,5]}
       values={({p,avg,rate,metric,line})=>[p.name,meta.data.teams[p.team],line,avg,rate,sport==='cfb'?cfbRoleGames(p,metric):null]}
-      renderRow={({p,hits,total,rate,avg,metric,line})=><tr key={p.team+'-'+p.id+'-'+metric}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}><PlayerPhoto id={p.id} name={p.name}/> {p.name}</button></td><td>{meta.data.teams[p.team]}</td><td>{markets[metric].label} · {side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td>{sport==='cfb' && <td>{cfbRoleGames(p,metric)} of {total}</td>}</tr>}/>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
+      renderRow={({p,hits,total,rate,avg,metric,line})=><tr key={p.team+'-'+p.id+'-'+metric}><td className="team-edge" style={{'--team-color':teamColor(p.team,meta.data?.colors || {})}}><button className="board-player" onClick={()=>onOpen({player:p.id,team:p.team,season,metric,line,side})}><PlayerPhoto id={p.id} name={p.name}/> {p.name}</button></td><td><TeamLogo sport={sport} team={p.team}/>{meta.data.teams[p.team]}</td><td>{markets[metric].label} · {side==='over'?'Over':'Under'} {line}</td><td>{avg.toFixed(1)}</td><td><HitRate rate={rate}/> ({hits}/{total})</td>{sport==='cfb' && <td>{cfbRoleGames(p,metric)} of {total}</td>}</tr>}/>{!rows.length&&<p>No Players Match These Filters.</p>}</div>}
     {!top && rows.length>limit && <button className="outline-button" onClick={()=>setLimit(n=>n+40)}>Show More Players</button>}
   </section>;
 }

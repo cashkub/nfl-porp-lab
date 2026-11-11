@@ -159,6 +159,8 @@ def schedule_rows(text: str, seasons: list[int]) -> list[dict]:
                       "neutral": neutral, "homeRating": ratings[season].get(home), "awayRating": ratings[season].get(away),
                       "totalLine": market_number(row.get("total_line")),
                       "overPrice": market_number(row.get("over_odds")), "underPrice": market_number(row.get("under_odds")),
+                      "awaySpreadPrice": market_number(row.get("away_spread_odds")),
+                      "homeSpreadPrice": market_number(row.get("home_spread_odds")),
                       "homeSpread": -spread if spread is not None else None,
                       "homePrice": market_number(row.get("home_moneyline")), "awayPrice": market_number(row.get("away_moneyline"))})
     for game in games:

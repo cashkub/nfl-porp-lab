@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import {BoardPlayerPicker} from './PlayerStepper.jsx';
 import GameFilter from './GameFilter.jsx';
@@ -117,13 +118,9 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
       <label>Minimum Games<FilterMenu value={minimum} onChange={e=>filter(setMinimum,e)}><option value="0">Any</option>{[1,5,10].map(n=><option key={n}>{n}</option>)}</FilterMenu></label>
       <BoardPlayerPicker names={candidates.map(r=>r.line.player)} value={search} onSelect={value=>{setSearch(value);setLimit(30);}}/>
     </div>
-    <div className="board-sort">
-      <label>Sort By <FilterMenu value={sort} onChange={e=>changeSort(e.target.value)}>{Object.entries({kickoff:'Kickoff',player:'Player',category:'Stat Category',line:'Prop Line',over:'Over Price',under:'Under Price',rate:'Last 10 Hit Rate',modelRate:'Model Estimate',rank:'Defense Rank'}).map(([key,label])=><option key={key} value={key}>{label}</option>)}</FilterMenu></label>
-      <button className="outline-button" type="button" onClick={()=>changeSort(sort)}>{ascending ? '↑ Ascending' : '↓ Descending'}</button>
-    </div>
-    <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['modelRate','Model Estimate'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button></th>)}</tr></thead>
+    <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['modelRate','Model Estimate'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button>{(key==='player'||key==='line')&&<button type="button" onClick={()=>changeSort(key==='player'?'kickoff':'category')}>{key==='player'?'Kickoff':'Category'} {sort===(key==='player'?'kickoff':'category')&&(ascending?'↑':'↓')}</button>}</th>)}</tr></thead>
     <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,rankCount,summary,modelEstimate,pick})=><tr key={[g.id,line.player,line.metric,line.point,line.anytime,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
-      <td className="team-edge" style={{'--team-color':teamColor(entry?.team)}}><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{entry && <PlayerPhoto id={entry.p.id} name={line.player} url={entry.p.photo}/>} {line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
+      <td className="team-edge" style={{'--team-color':teamColor(entry?.team)}}><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{entry && <PlayerPhoto id={entry.p.id} name={line.player} url={entry.p.photo}/>} {line.player}</button><small><TeamLogo team={g.away}/>{g.away} at <TeamLogo team={g.home}/>{g.home} · {gameTime(g.kickoff)}</small></td>
       <td><strong>{pick==='over' ? 'Over ' : 'Under '}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
       <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td>{modelEstimate?<span className="model-rate-cell"><HitRate rate={modelEstimate.rate}/><small>MODEL · {modelEstimate.sample} G</small></span>:'—'}</td><td><DefenseRank rank={rank} total={rankCount} side={pick}/></td>
     </tr>)}</tbody></table></div>

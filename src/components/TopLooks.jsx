@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import React,{useEffect,useMemo,useState} from 'react';
 import {ChevronDown,Activity,Info} from 'lucide-react';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -72,7 +73,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
           <div className="pick-rank"><b>{String(displayRank).padStart(2,'0')}</b><small title="Comparative Model Score, Not A Percentage">{pick.rankScore} SCORE</small></div>
           <PlayerPhoto id={pick.player.id} name={pick.player.name} url={pick.player.photo}/>
           <div className="top-pick-main">
-            <div className="top-matchup">{pick.player.team} · {pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
+            <div className="top-matchup"><TeamLogo team={pick.player.team}/>{pick.player.team} · <TeamLogo team={pick.game.opponent}/>{pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
             <h2>{pick.player.name}</h2><p>{pick.quote.anytime?(pick.side==='over'?'ANYTIME TD · YES':'ANYTIME TD · NO'):pick.side.toUpperCase()+' '+pick.line+' '+markets[pick.metric]}</p>
             <div className="pick-meta-row"><small className={'line-origin '+(pick.quote.isBookLine?'sportsbook':'average')}>{pick.quote.anytime?(pick.quote.isBookLine?'DRAFTKINGS ANYTIME TD ODDS':'MODEL ESTIMATE · NO ODDS'):pick.quote.isBookLine?'DRAFTKINGS LINE':'PLAYER AVERAGE LINE'}</small><button className="why-toggle" type="button" aria-expanded={whyOpen} aria-controls={whyId} onClick={()=>setOpenWhy(whyOpen?'':pickKey)}><Info size={14}/>{whyOpen?'Hide Why':'Why This Pick'}<ChevronDown size={14}/></button></div>
           </div>
