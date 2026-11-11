@@ -1,7 +1,7 @@
 import NflToolHeader from './NflToolHeader.jsx';
 import React,{useMemo,useState} from 'react';
 import {availableStats} from '../lib/availableStats.js';
-import {quotedPlayers,matchupBook,fairSideProbability,priceText} from '../lib/bookLine.js';
+import {playerAverageLine,quotedPlayers,matchupBook,fairSideProbability,priceText} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
 import {getPlayerGames,formatRate,isHit,summarize,estimateModelHitRate} from '../lib/stats.js';
 import {teamColor} from '../lib/teamColors.js';
@@ -57,9 +57,9 @@ export default function NflPropList({players,roster,schedule,season,books,market
         const team=game.opponent===game.home?game.away:game.opponent===game.away?game.home:null;
         if(slate.team && slate.team!==team)continue;
         const recent=getPlayerGames(player,season,'ALL',venue).filter(g=>Number(g.week)<Number(game.week)).slice(-10);
-        const average=recent.length?recent.reduce((n,g)=>n+(g.stats[metric]??0),0)/recent.length:0;
+        const average=playerAverageLine(recent,metric);
         if(!quote && average<=0)continue;
-        const point=quote?.point??Number(average.toFixed(1));
+        const point=quote?.point??average;
         const key=player.position+'|'+metric;
         if(!ranks.has(key))ranks.set(key,defenseTable(players,season,player.position,metric,game.week));
         const table=ranks.get(key);
