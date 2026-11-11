@@ -6,7 +6,7 @@ export function highImpactInjuries(game,profiles={}){
     const status=String(player.gameStatus||player.status||'').toUpperCase();
     if(!relevantStatuses.has(status))return false;
     const position=String(player.position||'').toUpperCase();
-    if(position==='QB')return Boolean(primaryQbs.get(team)&&player.id===primaryQbs.get(team));
+    if(position==='QB')return Boolean(player.wasListedStarter||primaryQbs.get(team)&&player.id===primaryQbs.get(team));
     if(['RB','WR','TE','FB'].includes(position))return teamLeaders.get(team)?.has(String(player.name||'').toLowerCase())||false;
     return false;
   }).map(player=>({...player,team})));

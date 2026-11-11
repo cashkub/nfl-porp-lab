@@ -23,6 +23,17 @@ VENUES={'BAL00':(39.28,-76.62),'BOS00':(42.09,-71.26),'BUF00':(42.77,-78.79),
         'HOU00':(29.68,-95.41),'IND00':(39.76,-86.16),'PHO00':(33.53,-112.26)}
 
 
+# Team news can precede the weekly injury file. Scope each report to its game.
+QB_NEWS = {
+    ('2026_10_SEA_LV', 'SEA'): {
+        'out': {'id': '00-0034869', 'name': 'Sam Darnold', 'position': 'QB',
+                'gameStatus': 'Out', 'status': 'Out', 'injury': 'Quad',
+                'source': 'https://www.seahawks.com/news/updates-on-sam-darnold-quenton-nelson-other-seahawks-injuries'},
+        'expected': {'id': '00-0035704', 'name': 'Drew Lock'},
+    },
+}
+
+
 def forecast(item):
     game,row=item
     coords=VENUES.get(row.get('stadium_id'))
@@ -124,10 +135,30 @@ def enrich(payload,schedule_text):
                     'touchdowns': outcomes['rushTD'] + outcomes['passTD'] + outcomes['otherTD'],
                     'rushingTDs': outcomes['rushTD'], 'passingTDs': outcomes['passTD'],
                     'otherTDs': outcomes['otherTD']}
-            unavailable={p['id'] for p in g.get('injuries',{}).get(g[side],[]) if (p.get('gameStatus') or '').lower()=='out'}
-            chart=[q for q in depths.get(r[side+'_team'],depths.get(g[side],[])) if q['id'] not in unavailable]
-            p=form.matchup(r,side,w if r['roof'] in ('open','outdoors') else None,chart)
+            reports=g.setdefault('injuries',{}).setdefault(g[side],[])
+            news=QB_NEWS.get((r['game_id'],g[side]))
+            qb_row=r
+            if news:
+                confirmed=news['out']
+                report=next((p for p in reports if p.get('id')==confirmed['id'] or p['name']==confirmed['name']),None)
+                if report is None:
+                    reports.append(dict(confirmed))
+                else:
+                    report.update(confirmed)
+                qb_row={**r,side+'_qb_id':news['expected']['id'],side+'_qb_name':news['expected']['name']}
+            unavailable={p.get('id') for p in reports
+                         if (p.get('gameStatus') or p.get('status') or '').strip().lower()
+                         in ('out','doubtful','inactive','ir','injured reserve','suspended','pup')}
+            for report in reports:
+                if report.get('id') and report['id']==r.get(side+'_qb_id') and report['id'] in unavailable:
+                    report['wasListedStarter']=True
+                    # The replacement's QB efficiency already accounts for this change.
+                    report['deduction']=0
+            chart=depths.get(r[side+'_team'],depths.get(g[side],[]))
+            p=form.matchup(qb_row,side,w if r['roof'] in ('open','outdoors') else None,chart,unavailable=unavailable)
             if p:
+                if news and p['qbId']==news['expected']['id']:
+                    p['qbSource']='Expected starter (team news)'
                 delta={k:round((value-config['centers'][k])*config['weights'][k],3) for k,value in p['inputs'].items()}
                 delta['Calibration']=round(config['intercept'],3)
                 p['parts']=delta
