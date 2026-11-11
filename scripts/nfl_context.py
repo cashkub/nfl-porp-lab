@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from nfl_features import Form, plays, number
+from elo_backtest import evaluate_rows as evaluate_elo_rows, upcoming_forecasts
 
 # Venue coordinates rounded to the forecast grid. Keys identify the venue, including neutral sites.
 VENUES={'BAL00':(39.28,-76.62),'BOS00':(42.09,-71.26),'BUF00':(42.77,-78.79),
@@ -62,7 +63,12 @@ def depth_chart(season,now):
 def enrich(payload,schedule_text):
     config=json.loads(Path(__file__).with_name('nfl_weights.json').read_text())
     season=max(payload['seasons'])
-    rows=[r for r in csv.DictReader(io.StringIO(schedule_text)) if r['season']==str(season) and r['game_type']!='PRE']
+    all_schedule_rows=list(csv.DictReader(io.StringIO(schedule_text)))
+    regular_schedule_rows=[r for r in all_schedule_rows if r['game_type']=='REG']
+    elo_forecasts=upcoming_forecasts(regular_schedule_rows,current_season=season)
+    elo_report=evaluate_elo_rows(regular_schedule_rows)
+    latest_elo_fold=elo_report['folds'][-1] if elo_report['folds'] else None
+    rows=[r for r in all_schedule_rows if r['season']==str(season) and r['game_type']!='PRE']
     lookup={(r['gameday'],r['week'],r['away_team'],r['home_team']):r for r in rows}
     normalize=lambda team:{'LAR':'LA','WAS':'WAS','JAX':'JAX'}.get(team,team)
     games=[]
@@ -127,6 +133,10 @@ def enrich(payload,schedule_text):
                 p['parts']=delta
                 p['backupDelta']=round(p.pop('qbChange')*config['weights']['Quarterback'],2)
                 info[side]=p
+        if r['game_id'] in elo_forecasts:
+            info['elo']=elo_forecasts[r['game_id']]
         g['id']=r['game_id'];g['context']=info
-    payload['modelValidation']={'games':config['games'],'results':config['validation']}
-    return {r['game_id']:[int(r['away_score']),int(r['home_score'])] for r in csv.DictReader(io.StringIO(schedule_text)) if number(r.get('result')) is not None}
+    payload['modelValidation']={'games':config['games'],'results':config['validation'],
+                                'elo':{'model':elo_report['model'],'marketNote':elo_report['marketNote'],
+                                       'latest':latest_elo_fold}}
+    return {r['game_id']:[int(r['away_score']),int(r['home_score'])] for r in all_schedule_rows if number(r.get('result')) is not None}
