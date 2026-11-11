@@ -57,7 +57,7 @@ export function estimateModelHitRate(games,key,line,direction='over',{marketProb
   const profile=position&&distributionModels?.markets?.[position+':'+key+':opportunity'];
   const forecastMean=sharedProjection!=null&&Number.isFinite(Number(sharedProjection))?Number(sharedProjection):null;
   const calibrated=profile?.validation?.calibrated===true&&forecastMean!=null?probabilitiesFromResiduals({
-    projection:forecastMean,line,residuals:profile.residuals,
+    projection:forecastMean,line,residuals:profile.residuals,residualHistogram:profile.residualHistogram,
     minimumSamples:Math.max(100,Number(distributionModels.minimumSamples)||0)
   }):null;
   if(calibrated){
