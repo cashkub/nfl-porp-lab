@@ -1,15 +1,17 @@
 const USAGE_BY_MARKET={
-  QB:{passingYards:'attempts',passingTDs:'attempts',rushingYards:'carries'},
-  RB:{rushingAttempts:'carries',rushingYards:'carries',receivingYards:'targets'},
-  WR:{receptions:'targets',receivingYards:'targets'},
-  TE:{receptions:'targets',receivingYards:'targets'}
+  QB:{passingYards:'attempts',passingTDs:'attempts',rushingYards:'carries',scoredTDs:'carries'},
+  RB:{rushingAttempts:'carries',rushingYards:'carries',receivingYards:'targets',scoredTDs:'opportunities'},
+  FB:{rushingAttempts:'carries',rushingYards:'carries',receivingYards:'targets',scoredTDs:'opportunities'},
+  WR:{receptions:'targets',receivingYards:'targets',scoredTDs:'opportunities'},
+  TE:{receptions:'targets',receivingYards:'targets',scoredTDs:'opportunities'}
 };
 
 export const PLAYER_PROJECTION_MARKETS={
-  QB:[['passingYards','Pass Yards'],['passingTDs','Pass TDs'],['rushingYards','Rush Yards']],
-  RB:[['rushingAttempts','Carries'],['rushingYards','Rush Yards'],['receivingYards','Rec Yards']],
-  WR:[['receptions','Receptions'],['receivingYards','Rec Yards']],
-  TE:[['receptions','Receptions'],['receivingYards','Rec Yards']]
+  QB:[['passingYards','Pass Yards'],['passingTDs','Pass TDs'],['rushingYards','Rush Yards'],['scoredTDs','Anytime TD']],
+  RB:[['rushingAttempts','Carries'],['rushingYards','Rush Yards'],['receivingYards','Rec Yards'],['scoredTDs','Anytime TD']],
+  FB:[['rushingAttempts','Carries'],['rushingYards','Rush Yards'],['receivingYards','Rec Yards'],['scoredTDs','Anytime TD']],
+  WR:[['receptions','Receptions'],['receivingYards','Rec Yards'],['scoredTDs','Anytime TD']],
+  TE:[['receptions','Receptions'],['receivingYards','Rec Yards'],['scoredTDs','Anytime TD']]
 };
 
 export function getUsageMetric(position,market){
