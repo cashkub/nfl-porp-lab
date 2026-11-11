@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {estimateOpportunityProjection,getUsageMetric} from '../src/lib/playerProjection.js';
+import {estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole} from '../src/lib/playerProjection.js';
 
 test('opportunity projection uses the market-specific workload key',()=>{
   assert.equal(getUsageMetric('RB','receivingYards'),'targets');
@@ -32,4 +32,11 @@ test('rushing attempts use projected carries directly without efficiency convers
 test('projection withholds markets without enough historical information',()=>{
   assert.equal(estimateOpportunityProjection({history:[],position:'WR',market:'receivingYards',season:2026,priorEfficiency:2}),null);
   assert.equal(estimateOpportunityProjection({history:[{season:2026,week:1,stats:{receivingYards:0},usage:{targets:0}}],position:'WR',market:'receivingYards',season:2026}),null);
+});
+
+test('matchup table excludes thin-sample and low-workload player markets',()=>{
+  assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:.8,historyGames:8}),false);
+  assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:2,historyGames:8}),true);
+  assert.equal(hasMeaningfulProjectionRole({position:'RB',market:'rushingAttempts',projectedUsage:8,historyGames:1}),false);
+  assert.equal(hasMeaningfulProjectionRole({position:'QB',market:'passingYards',projectedUsage:5,historyGames:2,expectedStarter:true}),true);
 });

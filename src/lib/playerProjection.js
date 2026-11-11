@@ -9,6 +9,17 @@ export function getUsageMetric(position,market){
   return USAGE_BY_MARKET[position]?.[market]||null;
 }
 
+// Keep the matchup projection table focused on players with a real pregame role.
+// Expected starters can be retained with a smaller player sample, but their
+// underlying projection still needs enough history to be calculated.
+export function hasMeaningfulProjectionRole({position,market,projectedUsage,historyGames,expectedStarter=false}){
+  if(!Number.isFinite(Number(projectedUsage))||!Number.isFinite(Number(historyGames))||historyGames<2)return false;
+  if(position==='QB'&&expectedStarter)return true;
+  const usageKey=getUsageMetric(position,market);
+  const minimum={attempts:10,carries:1.5,targets:1.5}[usageKey];
+  return minimum!=null&&projectedUsage>=minimum;
+}
+
 const mean=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:null;
 
 // Research baseline matching the walk-forward opportunity × efficiency benchmark.

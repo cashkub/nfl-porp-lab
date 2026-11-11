@@ -3,7 +3,7 @@ import {ArrowUpRight,ChartNoAxesCombined,Cloud,Info,Shield,Target} from 'lucide-
 import {projection} from '../lib/projection.js';
 import {METRICS,getPlayerGames} from '../lib/stats.js';
 import {priceText} from '../lib/bookLine.js';
-import {estimateOpportunityProjection,getUsageMetric} from '../lib/playerProjection.js';
+import {estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole} from '../lib/playerProjection.js';
 import {teamWorkload} from '../lib/teamWorkload.js';
 import {highImpactInjuries} from '../lib/gameInjuries.js';
 import {defenseTable} from '../lib/matchup.js';
@@ -91,8 +91,6 @@ export default function NflGames({schedule,books,players,validation,season,now,o
       if(!team)continue;
       const history=getPlayerGames(p,'ALL').filter(isPregame);
       const teamHistory=history.filter(g=>normalizeTeamCode(g.team)===team);
-      const currentTeamHistory=teamHistory.filter(g=>Number(g.season)===Number(selected.season));
-      if(!currentTeamHistory.length)continue;
       const currentSeason=history.filter(g=>Number(g.season)===Number(selected.season));
       const observed=currentSeason.length?currentSeason:history;
       const sampleLabel=currentSeason.length?`${selected.season} · ${currentSeason.length} G`:`CAREER · ${history.length} G`;
@@ -110,6 +108,9 @@ export default function NflGames({schedule,books,players,validation,season,now,o
         const league=leagueUsage[p.position+':'+metric];
         const estimated=estimateOpportunityProjection({history,position:p.position,market:metric,season:selected.season,
           priorEfficiency:league?.opportunities?league.stats/league.opportunities:null});
+        const expectedQuarterback=String(game.context?.away?.qbId||'')===String(p.id)||String(game.context?.home?.qbId||'')===String(p.id);
+        if(!estimated||!hasMeaningfulProjectionRole({position:p.position,market:metric,
+          projectedUsage:estimated.projectedUsage,historyGames:history.length,expectedStarter:expectedQuarterback}))continue;
         const opponent=team===selected.home?selected.away:selected.home;
         const defense=(defenseByMarket[p.position+':'+metric]||[]).find(row=>normalizeTeamCode(row.team)===normalizeTeamCode(opponent));
         const line=bookGame?.lines?.find(l=>l.metric===metric&&l.player?.toLowerCase().replace(/[^a-z]/g,'')===p.name?.toLowerCase().replace(/[^a-z]/g,''));
@@ -177,7 +178,7 @@ function ModelEvidence({validation}){
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
   const propMarkets=Object.entries(METRICS).filter(([k])=>['passingYards','passingTDs','rushingAttempts','rushingYards','receivingYards','receptions'].includes(k)).sort((a,b)=>a[1].label.localeCompare(b[1].label));
-  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Pregame player history, an opportunity-based research baseline, and available timestamped sportsbook props.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
+  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Pregame player history, an opportunity-based research baseline, and available timestamped sportsbook props. The table focuses on established workload; low-use rows are hidden.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
     <div className="nfl-defense-legend"><span className="favorable">GREEN · ALLOWS MORE</span><span className="tough">RED · ALLOWS FEWER</span><span>RANKS USE PRIOR GAMES ONLY</span></div>
     <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON / CAREER AVG</th><th>OPPORTUNITY EST.†</th><th>ROLE / SHARE</th><th>DEFENSE MATCHUP</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=>{
       const rank=r.defense?.rank;
