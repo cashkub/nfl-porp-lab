@@ -9,9 +9,20 @@ from backtest_player_baselines import (backtest,build_forecast_distributions,mak
                                       probability_over_from_errors,
                                       probability_delta_intervals,
                                       score_probability_predictions)
+from build_nfl_player_distributions import compact_distribution_profiles
 
 
 class PlayerBaselineTests(unittest.TestCase):
+    def test_published_profiles_keep_only_validated_residual_histograms(self):
+        source=build_forecast_distributions({('QB','passingTDs','opportunity'):[-1,0,0,1]},
+            [{'season':2025,'week':17}],{'QB · passingTDs · opportunity':{
+                'games':900,'brier':.22,'logLoss':.62,'priorRateBrierDelta95CI':[-.03,-.01],
+                'priorRateLogLossDelta95CI':[-.05,-.02]}})
+        compact=compact_distribution_profiles(source)
+        profile=compact['markets']['QB:passingTDs:opportunity']
+        self.assertEqual(profile['residualHistogram'],[[-1.0,1],[0.0,2],[1.0,1]])
+        self.assertNotIn('residuals',profile)
+
     def test_shared_distributions_keep_only_walk_forward_opportunity_residuals(self):
         profiles=build_forecast_distributions({
             ('WR','receivingYards','opportunity'):[10.0,-5.0,2.0],
