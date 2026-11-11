@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole} from '../src/lib/playerProjection.js';
+import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole} from '../src/lib/playerProjection.js';
 
 test('opportunity projection uses the market-specific workload key',()=>{
   assert.equal(getUsageMetric('RB','receivingYards'),'targets');
@@ -39,4 +39,27 @@ test('matchup table excludes thin-sample and low-workload player markets',()=>{
   assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:2,historyGames:8}),true);
   assert.equal(hasMeaningfulProjectionRole({position:'RB',market:'rushingAttempts',projectedUsage:8,historyGames:1}),false);
   assert.equal(hasMeaningfulProjectionRole({position:'QB',market:'passingYards',projectedUsage:5,historyGames:2,expectedStarter:true}),true);
+});
+
+test('Top Looks and Game player projections share one pregame efficiency prior',()=>{
+  const matchup={season:2026,week:2};
+  const players=[
+    {position:'WR',games:[
+      {season:2025,week:17,stats:{receivingYards:30},usage:{targets:5}},
+      {season:2026,week:1,stats:{receivingYards:6},usage:{targets:3}},
+      {season:2026,week:3,stats:{receivingYards:100},usage:{targets:10}}
+    ]},
+    {position:'WR',games:[
+      {season:2025,week:17,stats:{receivingYards:50},usage:{targets:10}}
+    ]}
+  ];
+  const priors=buildOpportunityEfficiencyPriors(players,matchup);
+  assert.equal(priors['WR:receivingYards'],86/18);
+  const history=players[0].games.filter(g=>g.season<matchup.season||g.week<matchup.week);
+  const gameProjection=estimateOpportunityProjection({history,position:'WR',market:'receivingYards',season:matchup.season,
+    priorEfficiency:priors['WR:receivingYards']});
+  const topLooksProjection=estimateOpportunityProjection({history,position:'WR',market:'receivingYards',season:matchup.season,
+    priorEfficiency:priors['WR:receivingYards']});
+  assert.equal(gameProjection.projection,topLooksProjection.projection);
+  assert.equal(gameProjection.sampleGames,1);
 });
