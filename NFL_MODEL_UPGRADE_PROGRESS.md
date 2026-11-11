@@ -2,7 +2,7 @@
 
 **Development branch:** `codex/nfl-shared-engine-upgrade`  
 **Production/main:** unchanged; no deployment is authorized for this work.  
-**Status:** Phase 1 baseline audited; shared-engine implementation in progress.
+**Status:** Audit complete; first shared player forecast and probability pipeline is implemented on the review branch. Game-model integration and full validation remain in progress.
 
 ## Objective
 
@@ -41,39 +41,48 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 
 | Evaluation | Result | Interpretation |
 | --- | --- | --- |
-| Python unit suite | 38 tests passed | Includes importer, feature engineering, player/team backtests, data validation, and leakage guards. |
+| Python unit suite | 40 tests passed after implementation | Includes importer, feature engineering, player/team backtests, data validation, and leakage guards. |
 | Player-game sample | 7,103 completed games; 44,120 eligible player-game rows | Broad coverage for the opportunity × efficiency benchmark. |
 | Player point forecast | Opportunity × efficiency lowered MAE for many volume and yard markets across seasons; touchdown categories were mixed | Retain as a research candidate and validate market-by-market. |
 | Player probability benchmark | Rolling empirical residuals beat coin-flip Brier/log loss in tested eligible position-market groups; only select categories consistently beat the prior-rate baseline | This is a model-centered half-point diagnostic (not sportsbook-line performance). Need inspect exact market deltas before promotion. |
+| Player probability OOS gate | Five position-markets clear a game-cluster 95% CI for both Brier and log loss versus the prior-rate baseline | FB anytime TD (N=622), QB pass TD (4,512), RB anytime TD (10,838), TE receptions (8,635), WR receptions (17,413). These are centered half-point tests only; alternate lines remain exploratory. |
 | Team-score 2026 holdout | N=88; Base score MAE 7.39, margin MAE 9.37, total MAE 11.20, winner accuracy .632, win Brier .2236, log loss .6371 | Statistical candidate trails the closing-market reference. |
 | Closing market 2026 reference | N=88; score MAE 6.84, margin MAE 8.98, total MAE 10.32, winner accuracy .701, win Brier .2073, log loss .6059 | Retrospective benchmark only; not used as an independent prediction input. |
 | Elo 2026 holdout | N=135; Brier .2211, log loss .6320, winner accuracy .659 | Trails closing moneyline reference (.2152 / .6223 / .681). |
 | Candidate spread/total probabilities | 2026 holdout spread Brier .2510; total Brier .2579 | Weak/near no-information. Do not present as validated probabilities. |
-| JavaScript suite/build | Not yet run in this desktop shell: `node` and `npm` executables are absent although `node_modules` exists | Checking the available bundled JavaScript runtime as a safe way to run equivalent tests/build. |
+| JavaScript suite | 32 tests pass in the bundled Node test runner | The desktop shell lacks `node`/`npm`; a branch CI workflow now runs the standard `npm test`, production build, and Python suite. |
+| Forecast profile artifact | Generated from data through 2026 Week 9; 17 position-market residual profiles, 5 pass validation gate; 1.19 MB | The artifact is atomically rebuilt after weekly nflverse refresh. It is not copied into the repo from ignored research data; the workflow will publish it after the review branch is merged by the user. |
 
 ## Phases
 
 | Phase | Status | Work |
 | --- | --- | --- |
-| 1. Audit and baseline | In progress | Dependency map and baseline recorded. Capture exact player-probability output and complete JS verification route. |
-| 2. Shared data and features | Planned | Canonical input/output contracts, opponent-adjusted features, freshness and missing-data semantics. |
-| 3. Opportunity and efficiency | Planned | Consolidate player forecast generation and use one pregame workload/efficiency record. |
-| 4. Calibrated distributions | Planned | Reuse leak-safe historical residual distributions for adjustable lines; validate by market and threshold. |
+| 1. Audit and baseline | Complete | Prediction dependency map, data gaps, leakage risks, historical baselines, and test coverage recorded. |
+| 2. Shared data and features | In progress | Canonical forecast record now carries IDs, model version, pregame cutoff, freshness, role, residual range, and line probabilities. Opponent-adjusted feature definitions still need a common API. |
+| 3. Opportunity and efficiency | In progress | Games, Top Looks, Props, and Charts now call the same player projection API. Injury, pace, game script, and teammate-availability adjustments remain to be integrated and validated. |
+| 4. Calibrated distributions | In progress | OOS residual profiles build from weekly forecasts; strict market-level validation gate and push accounting are implemented. Only five position-markets pass for centered half-point lines; alternate thresholds still need dedicated evaluation. |
 | 5. Game/player simulations | Planned | Improve score/pace/script and TD forecasts only where validated; reconcile team and player outcomes. |
-| 6. Top Looks | Planned | Rank on validated probabilities/price/value/uncertainty; clearly separate ranking scores from hit probabilities. |
-| 7. V2 integration | Planned | Keep Games list and place analysis below it; make shared forecast identity visible in relevant NFL screens. |
-| 8. Tracking and continuous improvement | Planned | Immutable pregame snapshots, grading, automation, freshness/error handling, and model comparison. |
+| 6. Top Looks | In progress | Top Looks consumes the shared forecast/probability layer; its ranking remains a heuristic score pending leak-safe historical ranking validation. |
+| 7. V2 integration | In progress | Games, Top Looks, Props, Props Board, and Charts use the shared player forecast. The NFL Games analysis panel remains beneath the slate. |
+| 8. Tracking and continuous improvement | In progress | V3 locks now save the shared forecast ID, probability provenance, validation state, and data freshness. Model Record includes V2 and V3 records and explains calibration state. Scheduled generation and grading workflows are present; branch CI/build and PR review remain. |
 
 ## Change Log
 
-- Initial audit and baseline capture. No model code changed yet.
+- Added `NFL_MODEL_UPGRADE_PROGRESS.md` and created review branch `codex/nfl-shared-engine-upgrade` from current `main`.
+- Added `src/lib/nflForecast.js` as the canonical pregame opportunity × efficiency projection record and reusable residual-based line probability API. It filters out the matchup week, preserves push probability, carries model/data identity, and refuses calibrated labels for unsupported markets or non-benchmark lines.
+- Migrated Top Looks, NFL Games player rows, Player Props, Props Board, and Player Charts to the shared point forecast and probability source. The NFL Games analysis panel now follows the game slate/list.
+- Extended `scripts/backtest_player_baselines.py` and added `scripts/build_nfl_player_distributions.py` to generate OOS forecast errors, residual quantiles, and validation flags. The workflow refreshes current-season inputs and atomically publishes a complete public profile only after schema/sample checks.
+- Added a dedicated GitHub Actions validation workflow for JavaScript tests, frontend build, and Python tests on the development branch / pull request.
+- Updated V3 pick locking to preserve the shared forecast ID, calibrated/exploratory probability metadata, profile freshness, and Model Record visibility. Existing V2 locks remain immutable and visible alongside V3.
+- Python suite: 40 tests passed. JavaScript suite: 32 tests passed. Python modules compile successfully. The empirical distribution builder completed on local nflverse data through 2026 Week 9: 17 position-market profiles generated, five passed the validation gate. Artifact generation was directed to `/tmp` for verification, not into the production asset tree.
+- Frontend build and normal `npm test` remain pending the branch GitHub Actions runner because this desktop workspace has no Node/npm executable. Changes are on the review branch only; no merge or deployment has occurred.
 
 ## Outstanding Work / Limitations
 
-- Complete the repository audit with exact available feature schemas and automation behavior.
-- Capture player probability baseline values by market and compare empirical residual model against the prior-rate baseline, with game-cluster confidence intervals.
-- Build a single canonical forecast record and migrate all applicable NFL pages to it without changing CFB/CBB/NBA logic.
+- Improve independent NFL Game winner/spread/total forecasts; current candidates trail closing-market benchmarks and cannot be promoted as validated probabilities.
+- Test residual probabilities at thresholds away from the model-centered half-point before labeling any alternate line calibrated.
+- Replace the remaining Top Looks hand-weighted rank score only after a leak-safe selection-ranking backtest; no player-prop odds history exists to validate ROI or CLV.
+- Add actual forecast snapshots, grading, team/game consistency checks, and model-version tracking without rewriting existing records.
 - Improve and validate opponent adjustments, calibrated prop distributions, game predictions, Top Looks ranking, and anytime TD probabilities.
-- Add reliable forecast snapshot/grading automation without using missing historical injuries, weather, or player prop prices as if archived.
-- Run all Python tests, JavaScript tests, and production frontend build in a JavaScript-capable runtime. Review other-sport and existing V2 contracts before proposing a pull request.
+- Run all Python tests, JavaScript tests, and production frontend build in GitHub Actions. Review other-sport and existing V2 contracts before proposing a pull request.
 - No merge, main-branch write, or production deployment will be made by this work.
