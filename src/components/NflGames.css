@@ -51,3 +51,4 @@
 @media(prefers-reduced-motion:reduce){.nfl-analysis,.nfl-game,.nfl-analysis-tabs button{animation:none;transition:none}}
 @media(max-width:680px){.nfl-workload-panel{padding:.68rem}.nfl-workload-panel>header{flex-direction:column}.nfl-workload-grid{grid-template-columns:1fr}.nfl-workload-grid dl>div{padding:.42rem}.nfl-workload-panel header>span{align-self:flex-start}}
 .nfl-advanced-matchup{margin-top:.7rem}.nfl-advanced-matchup .nfl-workload-grid dl>div{align-items:flex-start}.nfl-advanced-matchup .nfl-workload-grid dd{max-width:68%;text-align:right;overflow-wrap:anywhere}.nfl-red-zone-title{margin:.75rem 0 .5rem;color:#ead9f5;font-size:.67rem;font-weight:950;letter-spacing:.08em}
+.nfl-advanced-matchup .nfl-workload-grid dl{grid-template-columns:1fr}.nfl-advanced-matchup .nfl-workload-grid dd{overflow-wrap:normal;word-break:normal}
