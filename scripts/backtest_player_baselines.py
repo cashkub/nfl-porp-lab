@@ -137,8 +137,8 @@ def probability_delta_intervals(predictions, resamples=500):
         log_deltas.append(log_sum/count)
     def interval(samples):
         samples.sort()
-        return [round(samples[int((len(samples)-1)*.025)],4),
-                round(samples[int((len(samples)-1)*.975)],4)]
+        bounds=[round(samples[int((len(samples)-1)*q)],4) for q in (.025,.975)]
+        return [0.0 if value==0 else value for value in bounds]
     return {'clusterGames':len(values),'priorRateBrierDelta95CI':interval(brier_deltas),
             'priorRateLogLossDelta95CI':interval(log_deltas)}
 
