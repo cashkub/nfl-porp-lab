@@ -5,7 +5,7 @@ on:
     paths: ['scripts/update_lines.py', 'src/lib/topLooksModel.js', '.github/workflows/update-lines.yml']
   workflow_dispatch:
   schedule:
-    - cron: '43 13 * * 0,3,6'
+    - cron: '43 12 * * 0,3'
 permissions:
   contents: write
 concurrency:
