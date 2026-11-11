@@ -74,8 +74,8 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 - Extended `scripts/backtest_player_baselines.py` and added `scripts/build_nfl_player_distributions.py` to generate OOS forecast errors, residual quantiles, and validation flags. The scheduled/manual workflow validates the complete profile and uploads it as a review artifact without writing to main.
 - Added a dedicated GitHub Actions validation workflow for JavaScript tests, frontend build, and Python tests on the development branch / pull request.
 - Updated V3 pick locking to preserve the shared forecast ID, calibrated/exploratory probability metadata, profile freshness, and Model Record visibility. Existing V2 locks remain immutable and visible alongside V3.
-- Python suite: 40 tests passed. JavaScript suite: 32 tests passed. Python modules compile successfully. The empirical distribution builder completed on local nflverse data through 2026 Week 9: 17 position-market profiles generated, five passed the validation gate. Artifact generation was directed to `/tmp` for verification, not into the production asset tree.
-- GitHub Actions run 5 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite. The desktop shell has no Node/npm executable; CI supplied the production build verification. Changes remain on the review branch only; no merge or deployment has occurred.
+- Python suite: 41 tests passed. JavaScript suite: 33 tests passed after compact histogram support was added. Python modules compile successfully. The empirical distribution builder completed on local nflverse data through 2026 Week 9: 17 position-market profiles generated, five passed the validation gate. The 38 KB public artifact includes exact two-decimal residual histograms only for validated profiles; other profiles retain summary/uncertainty metadata without unsupported probability distributions.
+- GitHub Actions run 5 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite before the compact histogram packaging update. A fresh CI run is pending for the final artifact/package changes. Changes remain on the review branch only; no merge or deployment has occurred.
 
 ## Outstanding Work / Limitations
 
@@ -84,5 +84,6 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 - Replace the remaining Top Looks hand-weighted rank score only after a leak-safe selection-ranking backtest; no player-prop odds history exists to validate ROI or CLV.
 - Add actual forecast snapshots, grading, team/game consistency checks, and model-version tracking without rewriting existing records.
 - Improve and validate opponent adjustments, calibrated prop distributions, game predictions, Top Looks ranking, and anytime TD probabilities.
+- The weekly workflow uploads a generated forecast artifact for review; it intentionally does not publish updated data to main automatically. The checked-in review asset is trained through 2026 Week 9 and needs a manual refresh/review before it becomes stale.
 - Review other-sport and existing V2 contracts in the draft pull request; collect review feedback before any merge.
 - No merge, main-branch write, or production deployment will be made by this work.
