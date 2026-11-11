@@ -1,9 +1,9 @@
-import React,{useMemo,useState} from 'react';
+import React,{useMemo,useRef,useState} from 'react';
 import {ArrowUpRight,ChartNoAxesCombined,Cloud,Info,Shield,Target} from 'lucide-react';
 import {projection} from '../lib/projection.js';
 import {METRICS,getPlayerGames} from '../lib/stats.js';
 import {priceText} from '../lib/bookLine.js';
-import {estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole} from '../lib/playerProjection.js';
+import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole,PLAYER_PROJECTION_MARKETS} from '../lib/playerProjection.js';
 import {teamWorkload} from '../lib/teamWorkload.js';
 import {highImpactInjuries} from '../lib/gameInjuries.js';
 import {defenseTable} from '../lib/matchup.js';
@@ -19,12 +19,7 @@ const weekOf=game=>game.season+' · Week '+game.week;
 const teamCode=t=>({WAS:'WSH',LAR:'LA'}[t]||t);
 const normalizeTeamCode=t=>({LA:'LAR',STL:'LAR',WSH:'WAS',JAC:'JAX',OAK:'LV',SD:'LAC'}[t]||t);
 const teamLabel=t=>({WAS:'Washington Commanders',WSH:'Washington Commanders',LAR:'Los Angeles Rams',LA:'Los Angeles Rams'}[t]||t);
-const marketsFor={
-  QB:[['passingYards','Pass Yards'],['passingTDs','Pass TDs'],['rushingYards','Rush Yards']],
-  RB:[['rushingAttempts','Carries'],['rushingYards','Rush Yards'],['receivingYards','Rec Yards']],
-  WR:[['receptions','Receptions'],['receivingYards','Rec Yards']],
-  TE:[['receptions','Receptions'],['receivingYards','Rec Yards']]
-};
+const marketsFor=PLAYER_PROJECTION_MARKETS;
 const usageLabels={attempts:'PASS ATT',carries:'CARRIES',targets:'TARGETS'};
 const format=n=>Number.isFinite(n)?(Number.isInteger(n)?String(n):n.toFixed(1)):'—';
 const ordinal=n=>`${n}${n%100>=11&&n%100<=13?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th')}`;
@@ -45,30 +40,25 @@ export default function NflGames({schedule,books,players,validation,season,now,o
   const [tab,setTab]=useState(()=>savedAnalysis().tab||'game');
   const [position,setPosition]=useState(()=>savedAnalysis().position||'ALL');
   const [market,setMarket]=useState(()=>savedAnalysis().market||'ALL');
+  const analysisRef=useRef(null);
   const upcoming=(schedule||[]).filter(g=>Date.parse(g.kickoff)>now).sort((a,b)=>Date.parse(a.kickoff)-Date.parse(b.kickoff));
   const weeks=[...new Set(upcoming.map(weekOf))];
   const week=weeks.includes(requestedWeek)?requestedWeek:weeks[0];
   const games=upcoming.filter(g=>weekOf(g)===week);
+  const matchupOptions=[...games].sort((a,b)=>(a.away+' @ '+a.home).localeCompare(b.away+' @ '+b.home));
   const selected=games.find(g=>(g.id||g.kickoff+g.home)===selectedId)||games[0];
+  const selectedGameId=selected?.id||selected?.kickoff+selected?.home||'';
   const bookGame=(books||[]).find(g=>sameGame(g,selected));
   React.useEffect(()=>{try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab,position,market}))}catch{}},[week,selected,tab,position,market]);
   const rows=useMemo(()=>{
     if(!selected)return [];
     const cutoffWeek=Number(selected.week);
-    const teamGames={},leagueUsage={};
+    const teamGames={},efficiencyPriors=buildOpportunityEfficiencyPriors(players||[],selected);
     const isPregame=game=>Number(game.season)<Number(selected.season)||
       (Number(game.season)===Number(selected.season)&&Number(game.week)<cutoffWeek);
     for(const p of players||[]){
       for(const game of p.games||[]){
         if(!isPregame(game))continue;
-        for(const [metric] of marketsFor[p.position]||[]){
-          const usageKey=getUsageMetric(p.position,metric),opportunities=Number(game.usage?.[usageKey]);
-          const value=Number(game.stats?.[metric]);
-          if(!usageKey||!Number.isFinite(opportunities)||opportunities<0||!Number.isFinite(value))continue;
-          const aggregate=leagueUsage[p.position+':'+metric]??={stats:0,opportunities:0};
-          aggregate.stats+=value;
-          aggregate.opportunities+=opportunities;
-        }
         if(![selected.home,selected.away].includes(normalizeTeamCode(game.team)))continue;
         const key=game.gameId||game.id;
         if(!key)continue;
@@ -105,9 +95,8 @@ export default function NflGames({schedule,books,players,validation,season,now,o
           const own=Number(g.usage?.[usageKey]||0);
           return total>0?own/total:null;
         }).filter(Number.isFinite);
-        const league=leagueUsage[p.position+':'+metric];
         const estimated=estimateOpportunityProjection({history,position:p.position,market:metric,season:selected.season,
-          priorEfficiency:league?.opportunities?league.stats/league.opportunities:null});
+          priorEfficiency:efficiencyPriors[p.position+':'+metric]??null});
         const expectedQuarterback=String(selected.context?.away?.qbId||'')===String(p.id)||String(selected.context?.home?.qbId||'')===String(p.id);
         if(!estimated||!hasMeaningfulProjectionRole({position:p.position,market:metric,
           projectedUsage:estimated.projectedUsage,historyGames:history.length,expectedStarter:expectedQuarterback}))continue;
@@ -124,12 +113,25 @@ export default function NflGames({schedule,books,players,validation,season,now,o
     return output.sort((a,b)=>a.team.localeCompare(b.team)||a.p.name.localeCompare(b.p.name)||a.label.localeCompare(b.label));
   },[players,selected,bookGame,market]);
   const breakdown=selected?projection(selected,selected.awayRating,selected.homeRating):null;
+  const selectedAnalysis=selected&&<section ref={analysisRef} className="nfl-analysis" aria-labelledby="nfl-analysis-title">
+    <header className="nfl-analysis-head"><div><small>SELECTED MATCHUP · {week}</small><h2 id="nfl-analysis-title">{teamLabel(selected.away)} <i>@</i> {teamLabel(selected.home)}</h2><p>{kickoff.format(new Date(selected.kickoff))}</p></div>
+      <div className="nfl-analysis-badges"><span style={{'--club':teamColor(selected.away)}}>{selected.away}</span><b>VS</b><span style={{'--club':teamColor(selected.home)}}>{selected.home}</span></div></header>
+    <nav className="nfl-analysis-tabs" role="tablist" aria-label="Game Analysis">
+      {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} id={'nfl-tab-'+key} type="button" role="tab" aria-controls={'nfl-view-'+key} aria-selected={tab===key} tabIndex={tab===key?0:-1} onClick={()=>{setTab(key);try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab:key,position,market}))}catch{}}}><Icon size={17}/>{label}</button>)}
+    </nav>
+    <div id={'nfl-view-'+tab} role="tabpanel" aria-labelledby={'nfl-tab-'+tab} tabIndex={0} className="nfl-tab-panel">
+      {tab==='game'&&<GamePredictions game={selected} model={breakdown} validation={validation}/>}
+      {tab==='players'&&<PlayerResearch game={selected} rows={rows} position={position} setPosition={setPosition} market={market} setMarket={setMarket} onOpen={onOpen} books={books} players={players} season={season} now={now}/>}
+      {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame} players={players}/>}
+    </div>
+  </section>;
 
   return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> SCHEDULE SNAPSHOT</span></header>
-    {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><p>Schedule data refreshed {updated} · game price fields have no per-matchup timestamp in this feed.</p></div>
+    {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><label>Matchup<FilterMenu aria-label="Matchup" value={selectedGameId} onChange={e=>{setSelected(e.target.value);requestAnimationFrame(()=>analysisRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));}}>{matchupOptions.map(g=>{const id=g.id||g.kickoff+g.home;return <option key={id} value={id}>{g.away} @ {g.home}</option>})}</FilterMenu></label><p>Schedule data refreshed {updated} · game price fields have no per-matchup timestamp in this feed.</p></div>
+      {selectedAnalysis}
       <div className="nfl-games-list" aria-label="Upcoming NFL matchups">{games.map(g=>{
         const id=g.id||g.kickoff+g.home,active=(selected?.id||selected?.kickoff+selected?.home)===id;
-        return <button type="button" className="nfl-game nfl-match-button" key={id} aria-pressed={active} onClick={()=>setSelected(id)}>
+        return <button type="button" className="nfl-game nfl-match-button" key={id} aria-pressed={active} onClick={()=>{setSelected(id);requestAnimationFrame(()=>analysisRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));}}>
           <span className="nfl-game-date">{g.timeKnown===false?g.date+' · TIME TBD':kickoff.format(new Date(g.kickoff))}</span>
           <span className="nfl-game-pair"><Team code={g.away} price={g.awayPrice}/><small>AT</small><Team code={g.home} price={g.homePrice}/></span>
           <span className="nfl-game-market">{Number.isFinite(g.totalLine)?'TOTAL '+g.totalLine+' · O '+priceText(g.overPrice)+' / U '+priceText(g.underPrice):'GAME TOTAL NOT AVAILABLE'}</span>
@@ -138,18 +140,6 @@ export default function NflGames({schedule,books,players,validation,season,now,o
       })}</div>
     </>}
     {!upcoming.length&&<p>{loading?'Loading the NFL schedule…':error||'No upcoming games in the current schedule.'}</p>}
-    {selected&&<section className="nfl-analysis" aria-labelledby="nfl-analysis-title">
-      <header className="nfl-analysis-head"><div><small>SELECTED MATCHUP · {week}</small><h2 id="nfl-analysis-title">{teamLabel(selected.away)} <i>@</i> {teamLabel(selected.home)}</h2><p>{kickoff.format(new Date(selected.kickoff))}</p></div>
-        <div className="nfl-analysis-badges"><span style={{'--club':teamColor(selected.away)}}>{selected.away}</span><b>VS</b><span style={{'--club':teamColor(selected.home)}}>{selected.home}</span></div></header>
-      <nav className="nfl-analysis-tabs" role="tablist" aria-label="Game Analysis">
-        {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} id={'nfl-tab-'+key} type="button" role="tab" aria-controls={'nfl-view-'+key} aria-selected={tab===key} tabIndex={tab===key?0:-1} onClick={()=>{setTab(key);try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab:key,position,market}))}catch{}}}><Icon size={17}/>{label}</button>)}
-      </nav>
-      <div id={'nfl-view-'+tab} role="tabpanel" aria-labelledby={'nfl-tab-'+tab} tabIndex={0} className="nfl-tab-panel">
-        {tab==='game'&&<GamePredictions game={selected} model={breakdown} validation={validation}/>}
-        {tab==='players'&&<PlayerResearch game={selected} rows={rows} position={position} setPosition={setPosition} market={market} setMarket={setMarket} onOpen={onOpen} books={books} players={players} season={season} now={now}/>}
-        {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame} players={players}/>}
-      </div>
-    </section>}
   </section>;
 }
 
@@ -157,22 +147,36 @@ function GamePredictions({game,model,validation}){
   const away=model?.a,home=model?.h;
   const margin=away&&home?home.score-away.score:null;
   const elo=game.context?.elo;
+  const projectedTotal=away&&home?away.score+home.score:null;
+  const homeProbability=Number(elo?.homeProbability),awayProbability=Number(elo?.awayProbability);
+  const hasWinnerForecast=Number.isFinite(homeProbability)&&Number.isFinite(awayProbability);
+  const winner=hasWinnerForecast&&Math.abs(homeProbability-awayProbability)>.0001
+    ?(homeProbability>awayProbability?{team:game.home,probability:homeProbability}:{team:game.away,probability:awayProbability})
+    :null;
+  const spreadEdge=Number.isFinite(margin)&&Number.isFinite(game.homeSpread)?margin+game.homeSpread:null;
+  const spreadTeam=spreadEdge==null||Math.abs(spreadEdge)<.05?null:spreadEdge>0?game.home:game.away;
+  const spreadLine=spreadTeam===game.home?game.homeSpread:-game.homeSpread;
+  const totalSide=Number.isFinite(projectedTotal)&&Number.isFinite(game.totalLine)
+    ?projectedTotal-game.totalLine>.05?'OVER':game.totalLine-projectedTotal>.05?'UNDER':'NO CLEAR SIDE'
+    :null;
   return <div className="nfl-view-panel">
-    <div className="nfl-projection-banner"><div><small>INDEPENDENT TEAM DATA PROJECTION</small><strong>{margin==null?'Projection Pending':Math.abs(margin)<.05?'Near Pick’em':(margin>0?game.home:game.away)+' BY '+Math.abs(margin).toFixed(1)}</strong><p>Built from the current opponent-adjusted scoring ratings and available matchup context.</p></div><span className="nfl-confidence-state">{elo?'ELO WIN PROBABILITY · RESEARCH':'PROBABILITIES IN VALIDATION'}</span></div>
-    <div className="nfl-score-grid">{[away,home].filter(Boolean).map((side,i)=><article key={side.team} style={{'--club':teamColor(side.team)}}><small>{i===0?'AWAY':'HOME'} · {side.team}</small><b>{side.score.toFixed(1)}</b><span>Projected Points</span><i/></article>)}</div>
-    <div className="nfl-market-grid"><MarketTile label="MONEYLINE" value={`${game.away} ${priceText(game.awayPrice)} · ${game.home} ${priceText(game.homePrice)}`}/><MarketTile label="SPREAD" value={Number.isFinite(game.homeSpread)?`${game.home} ${game.homeSpread>0?'+':''}${game.homeSpread}`:'Unavailable'}/><MarketTile label="TOTAL" value={Number.isFinite(game.totalLine)?`${game.totalLine} · O ${priceText(game.overPrice)} / U ${priceText(game.underPrice)}`:'Unavailable'} />{elo&&<WinProbabilityTile game={game} elo={elo}/>}</div>
-    <div className="nfl-probability-honesty"><Info size={17}/><span>{elo?`Win percentages are from an independently tested Elo model, calibrated using ${elo.calibrationSeason} only and updated with completed games through Week ${elo.asOfWeek}. The latest walk-forward holdout is shown below; it trails the closing-market reference, so this is a research forecast and does not indicate betting value. `:'No calibrated Elo forecast is available for this matchup. '}Spread, Over/Under, fair odds, expected value, and confidence intervals are withheld. Schedule prices are not verified live odds because this feed does not attach per-matchup timestamps.</span></div>
-    <ModelEvidence validation={validation}/>
-    <p className="nfl-market-footnote">A predicted score difference is not itself a win or bet probability. The schedule snapshot and independent team-data estimate are shown separately.</p>
+    <div className="nfl-predictions-heading"><div><small>GAME MODEL</small><h3>MODEL PICKS &amp; SCORE PROJECTION</h3></div><span>RESEARCH OUTPUT · NOT A BETTING EDGE</span></div>
+    <div className="nfl-pick-grid">
+      <PickTile label="WINNER PROJECTION" team={winner?.team} value={winner?.team||(hasWinnerForecast?'NO CLEAR WINNER':'Forecast unavailable')} detail={winner?`${(winner.probability*100).toFixed(1)}% model win probability · calibrated Elo`:hasWinnerForecast?'Elo probabilities are effectively even.':'No calibrated Elo forecast for this game.'}/>
+      <PickTile label="SPREAD PICK" team={spreadTeam} value={spreadTeam&&Number.isFinite(spreadLine)?`${spreadTeam} ${spreadLine>0?'+':''}${spreadLine}`:spreadEdge==null?'Spread line unavailable':'No clear side'} detail={Number.isFinite(margin)?`Model margin: ${margin>0?'+':''}${margin.toFixed(1)} points for ${game.home}.`:'Team score projection unavailable.'}/>
+      <PickTile label="OVER / UNDER PICK" value={totalSide&&Number.isFinite(game.totalLine)?`${totalSide} ${game.totalLine}`:totalSide||'Total line unavailable'} detail={Number.isFinite(projectedTotal)?`Projected total ${projectedTotal.toFixed(1)} points${Number.isFinite(game.totalLine)?` vs. ${game.totalLine} schedule line`:''}.`:'Team score projection unavailable.'}/>
+      <PickTile label="TEAM POINT PROJECTION" value={away&&home?`${game.away} ${away.score.toFixed(1)} · ${game.home} ${home.score.toFixed(1)}`:'Projection unavailable'} detail="Independent projected final score. These points drive the spread and total comparisons."/>
+    </div>
+    <div className="nfl-market-grid"><MarketTile label="MONEYLINE PRICE" value={`${game.away} ${priceText(game.awayPrice)} · ${game.home} ${priceText(game.homePrice)}`}/><MarketTile label="SPREAD LINE" value={Number.isFinite(game.homeSpread)?`${game.home} ${game.homeSpread>0?'+':''}${game.homeSpread}`:'Unavailable'}/><MarketTile label="TOTAL LINE" value={Number.isFinite(game.totalLine)?`${game.totalLine} · O ${priceText(game.overPrice)} / U ${priceText(game.underPrice)}`:'Unavailable'} /></div>
+    <div className="nfl-probability-honesty"><Info size={17}/><span>The winner percentage comes from Elo, calibrated on {elo?.calibrationSeason||'the prior season'} and updated through Week {elo?.asOfWeek??'—'}. The spread and total are directional picks from the score projection. Walk-forward tests show the closing market was more accurate than this research model; treat the picks as model comparisons, not betting edges. Schedule prices have no per-matchup timestamp.</span></div>
+    <details className="nfl-validation-details"><summary>MODEL VALIDATION &amp; DATA LIMITS <span>View the holdout record and comparisons</span></summary><ModelEvidence validation={validation}/></details>
   </div>;
 }
 
 function MarketTile({label,value}){return <article className="nfl-market-tile"><small>{label}</small><b>{value}</b></article>}
 
-function WinProbabilityTile({game,elo}){
-  const home=Number(elo.homeProbability),away=Number(elo.awayProbability);
-  if(!Number.isFinite(home)||!Number.isFinite(away))return null;
-  return <article className="nfl-market-tile nfl-elo-tile"><small>MODEL WIN PROBABILITY</small><div className="nfl-elo-probabilities"><b style={{'--club':teamColor(game.away)}}><span>{game.away}</span>{(away*100).toFixed(1)}%</b><i>VS</i><b style={{'--club':teamColor(game.home)}}><span>{game.home}</span>{(home*100).toFixed(1)}%</b></div><small>CALIBRATED ELO · {elo.calibrationSeason} HOLDOUT</small></article>;
+function PickTile({label,value,detail,team}){
+  return <article className="nfl-pick-tile" style={team?{'--club':teamColor(team)}:undefined}><small>{label}</small><b>{value}</b><span>{detail}</span></article>;
 }
 
 function ModelEvidence({validation}){
@@ -188,7 +192,7 @@ function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,
   const propMarkets=Object.entries(METRICS).filter(([k])=>['passingYards','passingTDs','rushingAttempts','rushingYards','receivingYards','receptions'].includes(k)).sort((a,b)=>a[1].label.localeCompare(b[1].label));
   return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>Pregame player history, an opportunity-based research baseline, and available timestamped sportsbook props. The table focuses on established workload; low-use rows are hidden.</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
     <div className="nfl-defense-legend"><span className="favorable">GREEN · ALLOWS MORE</span><span className="tough">RED · ALLOWS FEWER</span><span>RANKS USE PRIOR GAMES ONLY</span></div>
-    <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON / CAREER AVG</th><th>OPPORTUNITY EST.†</th><th>ROLE / SHARE</th><th>DEFENSE MATCHUP</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=>{
+    <div className="nfl-table-wrap"><table className="nfl-projection-table"><thead><tr><th>PLAYER</th><th>MARKET</th><th>LAST 5 AVG</th><th>SEASON / CAREER AVG</th><th>MODEL PROJECTION†</th><th>ROLE / SHARE</th><th>DEFENSE MATCHUP</th><th>BOOK LINE</th><th>CHART</th></tr></thead><tbody>{rows.filter(r=>position==='ALL'||r.p.position===position).map((r,i)=>{
       const rank=r.defense?.rank;
       const defenseTone=rank==null?'':rank<=10?'favorable':rank>=23?'tough':'average';
       const defensePhrase=rank==null?'DEFENSE SAMPLE N/A':`ALLOWS ${ordinal(rank<=16?rank:33-rank).toUpperCase()}-${rank<=16?'MOST':'FEWEST'} ${r.label.toUpperCase()} TO ${({QB:'QBS',RB:'RBS',WR:'WRS',TE:'TES'}[r.p.position])}`;
@@ -196,7 +200,7 @@ function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,
       <td><span className="nfl-player-cell" style={{'--club':teamColor(r.team)}}><PlayerPhoto id={r.p.id} name={r.p.name} url={r.p.photo}/><span><b>{r.p.name}</b><small>{r.team} · {r.p.position}</small></span></span></td><td>{r.label}</td><td>{format(r.recentAvg)}</td><td><b>{format(r.seasonAvg)}</b><small>{r.sampleLabel}</small></td><td><b>{format(r.estimated)}</b><small>RESEARCH BASELINE</small></td><td><b>{format(r.usageAvg)} {r.usageLabel}</b><small>{r.share==null?'SHARE N/A':`${(r.share*100).toFixed(1)}% AVG SHARE`}</small></td><td><span className={'nfl-defense-cell '+defenseTone} style={{'--club':teamColor(r.opponent)}}><b>{r.opponent} · {defensePhrase}</b><small>{r.defense?`${format(r.defense.average)} ALLOWED / GAME · ${r.defense.games} G`:'NO PRIOR GAME SAMPLE'}</small></span></td><td>{r.line?<><b>{format(r.line.point)}</b><small>O {priceText(r.line.over)} · U {priceText(r.line.under)}</small><small>Updated {new Date(r.line.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></>:'—'}</td><td><button className="nfl-chart-link" type="button" onClick={()=>onOpen?.(r.p,{metric:r.metric,point:r.line?.point},'over',game)} aria-label={'Open charts for '+r.p.name}><ArrowUpRight size={16}/><span>CHARTS</span></button></td>
     </tr>})}</tbody></table></div>
     {!rows.length&&<p className="nfl-empty-state">No player history or sportsbook props are available for this matchup yet.</p>}
-    <div className="nfl-probability-honesty"><Info size={17}/><span>† This experimental point baseline blends recent and season workload, then applies a shrinkage-adjusted efficiency from the same position and market. Walk-forward tests improved point error in most eligible seasons for standard volume and yardage markets; touchdown results were inconsistent. It has no matchup adjustment and does not produce hit probabilities. Missing sportsbook lines remain blank.</span></div>
+    <div className="nfl-probability-honesty"><Info size={17}/><span>† This is the same opportunity × efficiency point projection used in Top Looks. Both views use the selected season’s player history, a shared pregame league efficiency prior, and recent workload; Top Looks adds separate line hit-rate and matchup-ranking signals. Missing sportsbook lines remain blank.</span></div>
     <details className="nfl-full-props"><summary>OPEN FULL MATCHUP PROP BOARD <ArrowUpRight size={15}/></summary><PropsBoard fixedGame={game} title="Matchup Player Prop Board" games={(books||[]).filter(g=>sameGame(g,game))} schedule={[game]} players={players} season={season} now={now} onOpen={onOpen}/></details>
   </div>;
 }
