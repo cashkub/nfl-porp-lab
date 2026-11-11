@@ -10,6 +10,7 @@ import SortableTable from './components/SortableTable.jsx';
 import PlayerPhoto from './components/PlayerPhoto.jsx';
 import {ManualLeague} from './components/ManualLeague.jsx';
 import {teamColor} from './lib/teamColors.js';
+import {NFL_PLAYER_MODEL_VERSION,buildPlayerForecast} from './lib/nflForecast.js';
 import TrackedPicks from './components/TrackedPicks.jsx';
 import StatCard from './components/StatCard.jsx';
 import {availableStats} from './lib/availableStats.js';
@@ -25,6 +26,7 @@ import {
 import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
+import { hasRelevantPlayerRole,hasMeaningfulProjectionRole,PLAYER_PROJECTION_MARKETS } from './lib/playerProjection.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { bookLine, priceText, usageFor } from './lib/bookLine.js';
 import {CbbGames,Moneylines,UsageTrends} from './components/Research.jsx';
@@ -175,6 +177,7 @@ export default function App() {
   const [requestedMetric, setMetric] = useState('receivingYards');
   const [custom, setCustom] = useState(null);
   const [bookGames, setBookGames] = useState([]);
+  const [playerDistributions,setPlayerDistributions]=useState(null);
   useEffect(() => {
     if (!nflTool) return;
     const controller = new AbortController();
@@ -184,6 +187,17 @@ export default function App() {
       .catch(() => {});
     return () => controller.abort();
   }, [nflTool]);
+  useEffect(()=>{
+    if(!nflTool)return;
+    const controller=new AbortController();
+    fetch((import.meta.env.BASE_URL||'/')+'data/nfl-player-distributions.json?v='+Date.now(),
+      {signal:controller.signal,cache:'no-store'})
+      .then(response=>response.ok?response.json():null)
+      .then(payload=>{
+        if(payload?.schemaVersion===1&&payload.modelVersion===NFL_PLAYER_MODEL_VERSION&&payload.markets&&typeof payload.markets==='object')setPlayerDistributions(payload);
+      }).catch(()=>{});
+    return ()=>controller.abort();
+  },[nflTool]);
   const [direction, setDirection] = useState('over');
   const [venue, setVenue] = useState('ALL');
   const [opponent, setOpponent] = useState('ALL');
@@ -252,11 +266,27 @@ export default function App() {
   const multi = season === 'ALL';
   const seasonLabel = multi ? 'All Seasons' : String(season);
   const seasonPlayers = useMemo(() => players.flatMap(p => {
+    if(p.currentRoster===false)return [];
     const history=getPlayerGames(p,season);
     if(!availableStats(METRICS,history).length)return [];
-    const latest=history.at(-1);
-    return [{...p,team:latest.team || p.team}];
-  }), [players, season]);
+    const currentSeason=Math.max(...seasons);
+    const currentHistory=getPlayerGames(p,currentSeason);
+    const currentTeam=p.currentTeam||p.team||currentHistory.at(-1)?.team;
+    const nextFixture=(data.schedule??initialSchedule).filter(g=>g.season===currentSeason&&Date.parse(g.kickoff)>Date.now())
+      .find(g=>g.home===currentTeam||g.away===currentTeam);
+    const expectedStarter=Boolean(p.position==='QB'&&nextFixture&&[
+      nextFixture.context?.home?.qbId,nextFixture.context?.away?.qbId
+    ].some(id=>String(id||'')===String(p.id)));
+    const hasEstablishedRole=hasRelevantPlayerRole(p,currentHistory,{expectedStarter});
+    const injuryPromotion=Boolean(nextFixture&&!hasEstablishedRole&&
+      (PLAYER_PROJECTION_MARKETS[p.position]||[]).some(([market])=>{
+        const forecast=buildPlayerForecast({players,player:p,game:nextFixture,market});
+        return Boolean(forecast?.injuryAdjustment&&hasMeaningfulProjectionRole({position:p.position,market,
+          projectedUsage:forecast.projectedUsage,historyGames:forecast.sampleGames}));
+      }));
+    if(!hasEstablishedRole&&!injuryPromotion)return [];
+    return [{...p,team:currentTeam||currentHistory.at(-1)?.team||history.at(-1)?.team}];
+  }), [players, season, seasons, data.schedule]);
   const slateSeason = multi || page!=='analyzer' ? Math.max(...seasons) : season;
   const nflSchedule = useMemo(()=>(data.schedule ?? initialSchedule).filter(g=>g.season===slateSeason),[data.schedule,slateSeason]);
   const gameFilter = useGameFilter('nfl',slateSeason,nflSchedule);
@@ -350,13 +380,13 @@ export default function App() {
   const updateLabel = data.updatedAt ? new Date(data.updatedAt).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}) : 'Not yet imported';
 
   if(previewTools){
-    if(page==='nfl-top')return <ManualLeague.Provider value="nfl"><TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/></ManualLeague.Provider>;
-    if(page==='nfl-games')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="games"/><NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} validation={isDemo?null:data.modelValidation} season={scheduleSeason} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/></main></ManualLeague.Provider>;
+    if(page==='nfl-top')return <ManualLeague.Provider value="nfl"><TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart} distributions={playerDistributions}/></ManualLeague.Provider>;
+    if(page==='nfl-games')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="games"/><NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} validation={isDemo?null:data.modelValidation} season={scheduleSeason} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error} distributions={playerDistributions}/></main></ManualLeague.Provider>;
     if(page==='model-record')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="record"/><ModelRecord sport="nfl" validation={data.modelValidation}/></main></ManualLeague.Provider>;
     if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl">
       {(page==='prop-lists' || propListReturn.current) && <div hidden={page!=='prop-lists'}>
-      <NflPropList players={players} roster={seasonPlayers}
+      <NflPropList players={players} roster={seasonPlayers} distributions={playerDistributions}
       schedule={nflSchedule} season={scheduleSeason} books={bookGames} markets={chartMarkets} now={now} loading={loading} error={error}
       onOpen={({player:p,game,metric:key,quote:saved,point},side,historyVenue)=>{
         propListReturn.current={top:window.scrollY};
@@ -367,7 +397,7 @@ export default function App() {
         setCustom(saved?null:{context:[p.id,key,game.kickoff].join('|'),value:point,source:'Player Average'});
         window.location.hash='analyzer';
       }}/></div>}
-      {page==='analyzer' && <NflCharts players={players} seasons={seasons} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions}
+      {page==='analyzer' && <NflCharts players={players} seasons={seasons} nextFixture={nextGame(nflSchedule,player?.team,scheduleSeason,now)} slate={chartSlate} venue={venue} onVenue={setVenue} resetLine={()=>setCustom(null)} player={player} roster={roster} onPlayer={onSelectPlayer} season={season} markets={statOptions} distributions={playerDistributions}
       metric={metric} onMetric={onMetricChange} line={line} setLine={setLine} quote={quote} manual={manual} manualLabel={custom?.source || 'Custom Line'} direction={direction} setDirection={setDirection}
       windowSize={windowSize} setWindowSize={setWindowSize} upcoming={upcoming} defenses={defenseRows}
       loading={loading} error={error}/>}</ManualLeague.Provider>;
@@ -387,12 +417,12 @@ export default function App() {
       {launch ? <SportHome sport={page==='home'?null:sport}/> :
        manualLeague && page===sport ? <CbbAnalyzer key={sport} initial={initialCbb.sport===sport?initialCbb:{}}/> :
        (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
-       page==='nfl-top' ? <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/> :
-       page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} validation={isDemo?null:data.modelValidation} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/> :
+       page==='nfl-top' ? <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart} distributions={playerDistributions}/> :
+       page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} validation={isDemo?null:data.modelValidation} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error} distributions={playerDistributions}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        manualLeague && page===sport+'-games' ? <CbbGames key={sport}/> :
        manualLeague ? <CbbBoard top={page===sport+'-top'} key={page} initialRanked={window.location.hash==='#cbb-best'} onOpen={pick=>{setInitialCbb({...pick,sport});window.location.hash=sport;}}/> :
-       page!=='analyzer' ? <PropsBoard gameFilter={gameFilter} key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard}/> : <>
+       page!=='analyzer' ? <PropsBoard gameFilter={gameFilter} key={page} initialRanked={window.location.hash==='#best-hit-rates'} games={bookGames} schedule={data.schedule} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} distributions={playerDistributions}/> : <>
       <section className="match-header team-banner" style={{'--team-color':teamColor(player?.team)}} aria-label="Selected player and prop">
         <div className="field-lines" aria-hidden="true"/><img className="hero-football" src={import.meta.env.BASE_URL + "football.svg"} alt="" /><div className="match-player">
           <div className="match-context">{multi ? `All Seasons · ${Math.min(...seasons)}–${Math.max(...seasons)}` : `${season} regular season`} <span>/</span> {player?.team || 'NFL'} · {player?.position || 'Player'}</div>

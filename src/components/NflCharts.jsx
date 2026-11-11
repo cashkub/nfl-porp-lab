@@ -4,6 +4,7 @@ import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
 import {ChevronDown} from 'lucide-react';
 import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate,estimateModelHitRate} from '../lib/stats.js';
+import {buildPlayerForecast} from '../lib/nflForecast.js';
 import {fairSideProbability,priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
 import {DefenseRank,rateStyle} from './HitRate.jsx';
@@ -290,7 +291,7 @@ function GameLog({player,currentSeason,line,direction,metric}) {
   </section>;
 }
 
-export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,manualLabel,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error}) {
+export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine,nextFixture,player,roster,onPlayer,season,markets,metric,onMetric,line,setLine,quote,manual,manualLabel,direction,setDirection,windowSize,setWindowSize,upcoming,defenses,loading,error,distributions=null}) {
   const [filtersOpen,setFiltersOpen]=useState(false);
   const [chosenSeason,setChosenSeason]=useState('');
   const historySeason=chosenSeason || String(season);
@@ -299,7 +300,10 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const displayed=useMemo(()=>filteredWindow(allGames,windowSize),[allGames,windowSize]);
   const current=summarize(displayed,metric,line,direction);
   const marketProbability=fairSideProbability(quote,direction,line);
-  const modelRate=estimateModelHitRate(displayed,metric,line,direction,{marketProbability});
+  const sharedForecast=useMemo(()=>upcoming?buildPlayerForecast({players,player,game:upcoming,market:metric,line,side:direction,distributions}):null,
+    [players,player,upcoming,metric,line,direction,distributions]);
+  const modelRate=estimateModelHitRate(displayed,metric,line,direction,{marketProbability,position:player?.position,
+    projection:sharedForecast?.projection,distributionModels:distributions,forceExploratory:Boolean(sharedForecast?.injuryAdjustment)});
   const pushes=displayed.filter(g=>g.stats[metric]===line).length;
   const usage=metric==='scrimmageYards'?{key:'opportunities',label:'Carries + targets'}:usageFor(metric);
   const observedUsage=displayed.map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
@@ -342,10 +346,10 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div className="player-numbers">
         <div><small>Median</small><b>{formatNumber(current.median)} <small>{chartMarkets[metric].unit}</small></b></div>
         <div><small>Hit Rate</small>{line==null?<button type="button" onClick={()=>{const input=document.getElementById('chart-line');input.closest('details').open=true;input.focus()}}>Set Custom Line</button>:<><b style={rateStyle(current.rate)}>{formatRate(current.rate)}</b><small>{current.hits} Hits · {current.total-current.hits-pushes} Misses · {pushes} Pushes</small></>}</div>
-        <div><small>Model Projected Hit Rate</small>{line==null?<b>Set A Line</b>:<><b style={rateStyle(modelRate.rate)}>{formatRate(modelRate.rate)}</b><small>Estimate · {modelRate.sample} prior games</small></>}</div>
+        <div><small>{modelRate.calibrated?'Validated Model Hit Rate':'Exploratory Model Estimate'}</small>{line==null?<b>Set A Line</b>:<><b style={rateStyle(modelRate.rate)}>{formatRate(modelRate.rate)}</b><small>{modelRate.calibrated?`${modelRate.distributionSample.toLocaleString()} prior forecast errors`:'Probability calibration is not established for this market'} · {modelRate.sample} player games</small></>}</div>
         <div><small>Games Shown</small><b>{displayed.length}</b></div>
       </div>
-      <details className="model-rate-info"><summary>How The Model Estimate Works</summary><p>It recalculates for the selected line using the same base estimate as Top Looks: smoothed prior results and a weighted season/recent projection. No-vig sportsbook odds are included only when the selected line exactly matches the quote; for alternate or average lines without matching odds, that input stays neutral. Matchup-specific weather, injury, and red-zone signals appear in Top Looks when relevant. The separate Hit Rate is what the player actually did in the selected history.</p></details>
+      <details className="model-rate-info"><summary>How The Model Estimate Works</summary><p>{modelRate.calibrated?`This estimate applies the shared ${modelRate.modelVersion} forecast and a chronological out-of-sample error distribution to the selected line. Historical tests show improved Brier score and log loss over the prior-rate baseline for this market at model-centered half-point lines; arbitrary alternate-line performance is not yet separately established.`:'This market does not yet pass our out-of-sample calibration gate. The exploratory estimate uses the shared point projection and historical context, so treat it as a research aid rather than a validated probability.'} The separate Hit Rate is what the player actually did in the selected chart history.</p></details>
 
     </section>
     <section className="lab-block"><h2>Game By Game</h2>

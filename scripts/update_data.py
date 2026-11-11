@@ -380,6 +380,12 @@ def main() -> int:
     if not payload["players"]:
         print("ERROR: No searchable players in downloaded data; keeping old data.", file=sys.stderr)
         return 1
+    previous_payload={}
+    if OUTPUT.exists():
+        try:
+            previous_payload=json.loads(OUTPUT.read_text(encoding='utf-8'))
+        except (OSError,json.JSONDecodeError):
+            previous_payload={}
     schedule_text = None
     try:
         with urllib.request.urlopen("https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv", timeout=45) as response:
@@ -421,6 +427,7 @@ def main() -> int:
             if game["season"] == season:
                 game["injuries"] = {team:list(reports[(team, game["week"])].values())
                                     for team in (game["home"],game["away"])}
+                game["injuriesUpdatedAt"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
                 for team, players in game["injuries"].items():
                     for item in players:
                         if (item["gameStatus"] or "").lower() != "out":
@@ -433,6 +440,13 @@ def main() -> int:
                                                   + shares.get("targets",0), 2)
     except (OSError, ValueError) as exc:
         print(f"Injury reports unavailable: {exc}", file=sys.stderr)
+        old_games={(g.get('season'),str(g.get('week')),g.get('away'),g.get('home')):g
+                   for g in previous_payload.get('schedule',[])}
+        for game in payload.get('schedule',[]):
+            old=old_games.get((game.get('season'),str(game.get('week')),game.get('away'),game.get('home')))
+            if old and old.get('injuries'):
+                game['injuries']=old['injuries']
+                if old.get('injuriesUpdatedAt'):game['injuriesUpdatedAt']=old['injuriesUpdatedAt']
     if schedule_text:
         from nfl_context import enrich
         finals = enrich(payload,schedule_text)

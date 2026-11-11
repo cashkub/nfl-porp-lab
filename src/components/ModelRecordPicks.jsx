@@ -1,5 +1,5 @@
 import React,{useMemo,useState} from 'react';
-import {Activity,CalendarDays,ChevronDown,Filter,Search,Shield,Target,TrendingUp,UserRound} from 'lucide-react';
+import {Activity,CalendarDays,ChevronDown,Filter,Search,Shield,Target,TrendingUp} from 'lucide-react';
 import FilterMenu from './FilterMenu.jsx';
 import HitRate,{rateStyle} from './HitRate.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
@@ -14,6 +14,8 @@ const decided=r=>r.result==='Hit'||r.result==='Miss';
 const rate=rows=>{const graded=rows.filter(decided);return graded.length?graded.filter(won).length/graded.length:null};
 const fmt=n=>Number.isFinite(Number(n))?Number(n).toFixed(1):'—';
 const rateText=n=>n!=null&&Number.isFinite(Number(n))?`${Math.round(Number(n)*100)}%`:'—';
+const forecastLabel=r=>r.probabilityCalibrated?'V3 validated line':r.model==='2026.11.v3'?'V3 exploratory estimate':r.model==='2026.11.v2'?'V2 estimate':'Model estimate';
+const forecastDetail=r=>r.probabilityCalibrated?'Validated for this market and line':r.probabilitySource==='empirical-oos-residuals'?'Exploratory at this line · alternate thresholds are not independently validated':'Saved pregame estimate · calibration status unavailable';
 const statText=r=>r.kind==='touchdown'?`${r.actual??'—'} TD`:r.actual??'—';
 const sourceLabel=r=>r.kind==='touchdown'?(r.price==null?'Anytime TD · Odds Unavailable':'Sportsbook Anytime TD'):(r.lineSource==='average'||r.isAverageLine?'Average Line':r.price==null?'Line · Odds Unavailable':'Sportsbook Line');
 const sourceType=r=>r.lineSource==='average'||r.isAverageLine?'average':r.price==null?'unavailable':'book';
@@ -68,14 +70,14 @@ function RecordPick({row}){
     <div className="mr-pick-glance">
       <span className="mr-glance-date"><CalendarDays size={13}/>{Number.isFinite(kickoff)?dateLabel.format(new Date(kickoff)):row.date||'—'} · {recordPeriod(row,'nfl') ? periodLabel(recordPeriod(row,'nfl'),'nfl') : 'NFL'}</span>
       <span className="mr-glance-form"><small>PRE-GAME FORM</small><MiniForm row={row}/></span>
-      <span className="mr-glance-prediction"><small>MODEL EST. HIT RATE</small><b>{rateText(row.modelHitRate)} <i>V2 estimate · {observed==null?'prior rate —':`${rateText(observed)} observed · ${row.hits??'—'}/${row.total||history.length||'—'}`}</i></b></span>
+      <span className="mr-glance-prediction"><small>MODEL EST. HIT RATE</small><b>{rateText(row.modelHitRate)} <i>{forecastLabel(row)} · {observed==null?'prior rate —':`${rateText(observed)} observed · ${row.hits??'—'}/${row.total||history.length||'—'}`}</i></b></span>
     </div>
     {open&&<div className="mr-detail-grid">
       <section className="mr-detail-block"><h3><Activity size={15}/> Locked Performance</h3><dl>
         <div><dt>Line At Publish</dt><dd>{row.kind==='touchdown'?'0.5 TD':`${row.side||'—'} ${row.line??'—'} ${row.label||''}`}</dd></div>
         <div><dt>Sportsbook Price</dt><dd>{row.price==null?'Unavailable':priceText(row.price)}</dd></div>
         <div><dt>Break-Even Rate</dt><dd>{breakeven==null?'—':rateText(breakeven)}</dd></div>
-        <div><dt>Model Estimated Hit Rate</dt><dd>{rateText(row.modelHitRate)} <small>Version 2 estimate saved before kickoff</small></dd></div>
+        <div><dt>Model Estimated Hit Rate</dt><dd>{rateText(row.modelHitRate)} <small>{forecastDetail(row)} · saved before kickoff</small></dd></div>
         <div><dt>Ranking Score</dt><dd>{Number.isFinite(Number(row.rankScore))?`${row.rankScore}/100`:'—'} <small>comparative score, not a probability</small></dd></div>
         <div><dt>Observed Prior Hit Rate</dt><dd>{observed==null?'—':rateText(observed)} <small>({row.hits??'—'}/{row.total??'—'})</small></dd></div>
         {baseline!=null&&<div><dt>Smoothed Prior Rate</dt><dd>{rateText(baseline)} <small>adjusted for small samples</small></dd></div>}
@@ -97,25 +99,23 @@ function RecordPick({row}){
   </article>;
 }
 
-export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''}){
+export default function ModelRecordPicks({rows=[],kind='props'}){
   const [period,setPeriod]=useState('');
   const [market,setMarket]=useState('all');
   const [status,setStatus]=useState('all');
   const [source,setSource]=useState('all');
-  const [position,setPosition]=useState('all');
-  const [side,setSide]=useState('all');
+  const [model,setModel]=useState('all');
   const [query,setQuery]=useState('');
   const picks=useMemo(()=>rows.filter(row=>kind==='touchdowns'?row.kind==='touchdown':row.kind!=='touchdown'),[rows,kind]);
   const periods=useMemo(()=>[...new Set(picks.map(r=>recordPeriod(r,'nfl')).filter(Boolean))].sort().reverse(),[picks]);
   const selectedPeriod=periods.includes(period)?period:periods[0]||'all';
   const markets=useMemo(()=>[...new Set(picks.map(r=>r.kind==='touchdown'?'Anytime Touchdown':r.label||r.metric).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[picks]);
-  const positions=useMemo(()=>[...new Set(picks.map(r=>String(r.position||'Unknown').toUpperCase()))].sort((a,b)=>a.localeCompare(b)),[picks]);
+  const models=useMemo(()=>[...new Set(picks.map(r=>r.model).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[picks]);
   const filtered=useMemo(()=>picks.filter(r=>{
     const label=r.kind==='touchdown'?'Anytime Touchdown':r.label||r.metric;
     const text=`${r.player} ${r.team} ${r.home} ${r.away} ${label}`.toLowerCase();
-    const positionValue=String(r.position||'Unknown').toUpperCase(),sideValue=r.kind==='touchdown'?'Yes':String(r.side||'').toLowerCase()==='under'?'Under':'Over';
-    return (selectedPeriod==='all'||recordPeriod(r,'nfl')===selectedPeriod)&&(market==='all'||label===market)&&(status==='all'||(r.result||'Pending')===status)&&(source==='all'||sourceType(r)===source)&&(position==='all'||positionValue===position)&&(side==='all'||sideValue===side)&&(!query||text.includes(query.toLowerCase().trim()));
-  }).sort((a,b)=>Date.parse(b.kickoff)-Date.parse(a.kickoff)||(a.rank||99)-(b.rank||99)),[picks,selectedPeriod,market,status,source,position,side,query]);
+    return (selectedPeriod==='all'||recordPeriod(r,'nfl')===selectedPeriod)&&(market==='all'||label===market)&&(status==='all'||(r.result||'Pending')===status)&&(source==='all'||sourceType(r)===source)&&(model==='all'||r.model===model)&&(!query||text.includes(query.toLowerCase().trim()));
+  }).sort((a,b)=>Date.parse(b.kickoff)-Date.parse(a.kickoff)||(a.rank||99)-(b.rank||99)),[picks,selectedPeriod,market,status,source,model,query]);
   const hits=filtered.filter(r=>r.result==='Hit').length,misses=filtered.filter(r=>r.result==='Miss').length;
   const pending=filtered.filter(r=>(r.result||'Pending')==='Pending').length,push=filtered.filter(r=>r.result==='Push').length,noStat=filtered.filter(r=>r.result==='No Stat').length;
   const groups=breakdown(filtered);
@@ -132,8 +132,7 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
   const periodTitle=selectedPeriod==='all'?'All Weeks':periodLabel(selectedPeriod,'nfl');
   return <div className="model-record-picks">
     <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Each pick keeps its locked line, available odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
-    {emptyMessage&&<p className="record-v2-empty mr-empty-record-note">{emptyMessage}</p>}
-    <div className="mr-period-select"><label><CalendarDays size={16}/><span>WEEKLY RECORD VIEW</span><FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Official V2 picks only · pending picks are not counted as wins or losses.</small></div>
+    <div className="mr-period-select"><label><CalendarDays size={16}/> WEEKLY RECORD VIEW <FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Historical replay picks are excluded from this official record.</small></div>
     <div className="mr-kpis">
       <SummaryTile icon={Activity} label="ALL-TIME SETTLED RECORD" value={`${allTimeHits}–${allTimeMisses}`} detail={`${allTimeHits+allTimeMisses} graded · ${allTimePush} push · ${allTimeNoStat} no stat · ${allTimePending} pending`} tone="purple"/>
       <SummaryTile icon={TrendingUp} label="ALL-TIME HIT RATE" value={rate(picks)==null?'—':rateText(rate(picks))} detail="Official V2 locks · pending excluded" tone={rate(picks)==null?'':rate(picks)>=.55?'green':'red'}/>
@@ -147,10 +146,9 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
       <div className="mr-section-title"><div><span className="mr-eyebrow">PICK ARCHIVE</span><h2>EVERY LOCKED PICK</h2></div><span className="mr-count">{filtered.length} RECORDS</span></div>
       <div className="mr-filters">
         <label><Target size={15}/> MARKET <FilterMenu aria-label="Filter by market" value={market} onChange={e=>setMarket(e.target.value)}><option value="all">All Markets</option>{markets.map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>
-        <label><UserRound size={15}/> POSITION <FilterMenu aria-label="Filter by player position" value={position} onChange={e=>setPosition(e.target.value)}><option value="all">All Positions</option>{positions.map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>
-        <label><TrendingUp size={15}/> PICK SIDE <FilterMenu aria-label="Filter by pick side" value={side} onChange={e=>setSide(e.target.value)}><option value="all">All Sides</option>{[...new Set(picks.map(r=>r.kind==='touchdown'?'Yes':String(r.side||'').toLowerCase()==='under'?'Under':'Over'))].sort((a,b)=>a.localeCompare(b)).map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>
-        <label><Filter size={15}/> RESULT <FilterMenu aria-label="Filter by result" value={status} onChange={e=>setStatus(e.target.value)}>{['all','Hit','Miss','No Stat','Pending','Push'].map(value=><option key={value} value={value}>{value==='all'?'All Results':value}</option>)}</FilterMenu></label>
-        <label><TrendingUp size={15}/> LINE TYPE <FilterMenu aria-label="Filter by line source" value={source} onChange={e=>setSource(e.target.value)}><option value="all">All Lines</option><option value="average">Average Lines</option><option value="unavailable">Odds Unavailable</option><option value="book">Sportsbook Lines</option></FilterMenu></label>
+        <label><Filter size={15}/> RESULT <FilterMenu aria-label="Filter by result" value={status} onChange={e=>setStatus(e.target.value)}>{['all','Hit','Miss','Pending','Push','No Stat'].map(value=><option key={value} value={value}>{value==='all'?'All Results':value}</option>)}</FilterMenu></label>
+        <label><TrendingUp size={15}/> LINE TYPE <FilterMenu aria-label="Filter by line source" value={source} onChange={e=>setSource(e.target.value)}><option value="all">All Lines</option><option value="book">Sportsbook Lines</option><option value="average">Average Lines</option><option value="unavailable">Odds Unavailable</option></FilterMenu></label>
+        <label><Activity size={15}/> MODEL VERSION <FilterMenu aria-label="Filter by model version" value={model} onChange={e=>setModel(e.target.value)}><option value="all">All Versions</option>{models.map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>
         <label className="mr-search"><Search size={16}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search player, team, market…" aria-label="Search picks"/></label>
       </div>
       <div className="mr-totals"><strong><i>{hits} HIT</i><b>{misses} MISS</b><span>{push} PUSH</span><em>{pending} PENDING</em></strong><small>Hit rate counts only graded wins and losses. Pushes, no-stat games, and pending picks are excluded.</small></div>

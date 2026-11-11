@@ -103,7 +103,7 @@ if(sport==='nfl'){
     return {games:covered.length,window:recent.length,totals:[0,1,2].map(i=>covered.reduce((sum,g)=>sum+g.scoringChances[i],0))};
   }
   for(const row of archive){
-    if(row.model==='2026.11.v2')continue;
+    if(['2026.11.v2','2026.11.v3'].includes(row.model))continue;
     if(row.kind!=='touchdown')continue;
     if(!row.chances && Date.parse(row.kickoff)>now){
       const entry=byName.get(playerKey(row.player)+'|'+row.team);
@@ -233,7 +233,9 @@ if(sport==='nfl'){
 }
 if(sport==='nfl'){
   const data=read('stats.json'),season=Math.max(...data.seasons),books=read('lines.json').games;
-  const locked=new Set(archive.filter(row=>row.model==='2026.11.v2').map(row=>nflDayKey(row.kickoff)+'|'+(row.kind==='touchdown'?'anytime':'props')));
+  const trackingModel='2026.11.v3';
+  const distributions=fs.existsSync(root+'nfl-player-distributions.json')?read('nfl-player-distributions.json'):null;
+  const locked=new Set(archive.filter(row=>['2026.11.v2',trackingModel].includes(row.model)).map(row=>nflDayKey(row.kickoff)+'|'+(row.kind==='touchdown'?'anytime':'props')));
   const slates=new Map();
   for(const game of data.schedule||[]){
     if(!game.id||!upcoming(game))continue;
@@ -243,7 +245,7 @@ if(sport==='nfl'){
   }
   for(const [date,games] of slates)for(const type of ['props','anytime']){
     if(locked.has(date+'|'+(type==='anytime'?'anytime':'props')))continue;
-    const picks=buildTopLooks({players:data.players,slate:games,books,season,type});
+    const picks=buildTopLooks({players:data.players,slate:games,books,season,type,distributions});
     picks.forEach((pick,index)=>{
       const {player,game,quote}=pick;
       const kind=type==='anytime'?'touchdown':'prop';
@@ -255,18 +257,24 @@ if(sport==='nfl'){
       }:null;
       const roleDetail=[pick.usageKey+' share '+(Number.isFinite(pick.share.average)?(pick.share.average*100).toFixed(1)+'%':'unavailable'),pick.usageTrend==null?null:'recent volume '+(pick.usageTrend>0?'+':'')+pick.usageTrend.toFixed(1)].filter(Boolean).join(' · ');
       archive.push({
-        id:[game.id,player.id,pick.metric,pick.side,'v2'].join('|'),kind,gameId:game.id,kickoff:game.kickoff,date,
+        id:[game.id,player.id,pick.metric,pick.side,trackingModel].join('|'),kind,gameId:game.id,kickoff:game.kickoff,date,
         away:game.away,home:game.home,awayName:game.awayName,homeName:game.homeName,week:game.week,postseason:game.postseason,
         season,colors:game.colors,player:player.name,playerId:player.id,position:player.position,photo:player.photo,team:player.team,
         metric:pick.metric,label:kind==='touchdown'?'Anytime Touchdown':pick.market.label,line:pick.line,side:pick.side,
         price:Number.isFinite(price)?price:null,priceUpdated:quote.updated||null,breakEven:Number.isFinite(price)?(price<0?Math.abs(price)/(100+Math.abs(price)):100/(100+price)):null,
         lineSource:quote.isBookLine?'sportsbook':'average',isAverageLine:!quote.isBookLine,
         rank:index+1,score:pick.score,rankScore:pick.rankScore,modelHitRate:pick.chance,projection:pick.projection,
+        forecastId:pick.forecast?.forecastId||null,modelVersion:pick.forecast?.modelVersion||null,
+        probabilityCalibrated:Boolean(pick.probabilityModel?.calibrated),
+        probabilitySource:pick.probabilityModel?.probabilitySource||'unavailable',
+        probabilitySample:pick.probabilityModel?.distributionSample||null,
+        probabilityValidation:pick.probabilityModel?.validation||null,
+        dataFreshness:distributions?.trainedThrough||null,
         hits:pick.hits,total:pick.history.length,average:pick.average,values:pick.values,defenseRank:pick.defense?.rank||null,rankCount:32,
         role:roleDetail,usageKey:pick.usageKey,usageShare:pick.share,usageTrend:pick.usageTrend,
         scoring:pick.scoring||null,chances,weather:pick.weather||null,injuries:pick.injury.notes,
         favoriteReason:{label:pick.favoriteReason.label,detail:pick.favoriteReason.detail},context:pick.favoriteReason.detail,
-        snapshotVersion:2,model:'2026.11.v2',saved
+        snapshotVersion:3,model:trackingModel,saved
       });
     });
     if(picks.length)locked.add(date+'|'+(type==='anytime'?'anytime':'props'));

@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from update_data import (attach_model_validation, parse_player_stats_csv,
                          build_payload, save_if_changed, venue_from_game_id,
                          current_nfl_season)
+from nfl_context import parse_depth_charts, attach_current_roster
 
 CSV_TEXT = '''player_id,player_display_name,position,season,week,season_type,game_id,team,opponent_team,passing_yards,rushing_yards,receiving_yards,receptions,passing_tds,rushing_tds,receiving_tds
 p1,Test Player,WR,2026,1,REG,2026_01_BAL_CIN,CIN,BAL,0,0,89,7,0,0,1
@@ -18,6 +19,33 @@ p1,Test Player,WR,2026,20,POST,2026_20_CIN_BAL,CIN,BAL,0,0,50,4,0,0,1
 '''
 
 class DataImportTests(unittest.TestCase):
+    def test_current_depth_chart_uses_latest_supported_team_snapshot(self):
+        now=datetime(2026,11,11,tzinfo=timezone.utc)
+        csv_text=('dt,team,player_name,gsis_id,pos_abb,pos_rank,pos_slot\n'
+                  '2026-11-10T07:00:00Z,LV,Current Player,id1,RB,1,HB\n'
+                  '2026-10-01T07:00:00Z,NYJ,Stale Team,id1,RB,1,HB\n'
+                  '2026-11-10T07:00:00Z,LV,Backup,id2,RB,2,HB\n')
+        depth=parse_depth_charts(csv_text,now)
+        self.assertEqual(depth['players']['id1']['team'],'LV')
+        self.assertEqual(depth['players']['id2']['rank'],2)
+        self.assertEqual(depth['players']['id2']['slot'],'HB')
+        self.assertEqual([p['id'] for p in depth['teams']['LV'] if p['position']=='RB'],['id1','id2'])
+
+    def test_current_roster_replaces_stale_team_and_adds_current_player(self):
+        payload={'players':[{'id':'moved','team':'ATL','games':[]},{'id':'released','team':'ATL','games':[]}]}
+        roster={'checkedAt':'2026-11-11T07:00:00+00:00','players':{
+            'moved':{'team':'LV','status':'ACT','active':True,'position':'QB','depthChartPosition':'QB','depthChartRank':1,'depthChartUpdatedAt':None,'name':'Moved Player'},
+            'rookie':{'team':'LV','status':'DEV','active':False,'position':'WR','depthChartPosition':'WR','depthChartRank':3,'depthChartUpdatedAt':None,'name':'Rookie'}}}
+        attach_current_roster(payload,roster,2026)
+        moved=next(p for p in payload['players'] if p['id']=='moved')
+        released=next(p for p in payload['players'] if p['id']=='released')
+        rookie=next(p for p in payload['players'] if p['id']=='rookie')
+        self.assertEqual(moved['currentTeam'],'LV')
+        self.assertIsNone(released['team'])
+        self.assertFalse(released['currentRoster'])
+        self.assertEqual(rookie['depthChartRank'],3)
+        self.assertTrue(rookie['currentRoster'])
+
     def test_venue(self):
         self.assertEqual(venue_from_game_id('2026_01_BAL_CIN','CIN'),'H')
         self.assertEqual(venue_from_game_id('2026_02_CIN_CLE','CIN'),'A')

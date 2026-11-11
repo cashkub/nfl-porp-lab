@@ -1,0 +1,56 @@
+name: Update NFL Player Forecast Distributions
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run after the weekly stats import has had time to publish the latest games.
+    - cron: '30 18 * * 2'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nfl-player-distributions
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/nfl-shared-engine-upgrade
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: data/nfl-model
+          key: nflverse-player-model-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            nflverse-player-model-${{ runner.os }}-
+      - name: Refresh current season and validate public nflverse inputs
+        run: python scripts/download_nfl_model_data.py --output-dir data/nfl-model --refresh-current-season
+      - name: Build chronological out-of-sample player error distributions
+        run: python scripts/build_nfl_player_distributions.py data/nfl-model "$RUNNER_TEMP/nfl-player-distributions.json"
+      - name: Validate generated profiles
+        run: |
+          python - "$RUNNER_TEMP/nfl-player-distributions.json" <<'PY'
+          import json,sys
+          from pathlib import Path
+          data=json.loads(Path(sys.argv[1]).read_text())
+          assert data.get('schemaVersion')==1
+          assert data.get('modelVersion')=='opportunity-efficiency-v1'
+          assert data.get('trainedThrough') and data.get('markets')
+          assert all(row['sampleSize']>=data['minimumSamples'] for row in data['markets'].values())
+          assert all(sum(count for _,count in row['residualHistogram'])==row['sampleSize'] for row in data['markets'].values() if row.get('validation',{}).get('calibrated'))
+          print(f"Validated {len(data['markets'])} market profiles through {data['trainedThrough']}")
+          PY
+      - name: Upload validated forecast artifact for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: nfl-player-distributions-${{ github.run_id }}
+          path: ${{ runner.temp }}/nfl-player-distributions.json
+          if-no-files-found: error
+          retention-days: 30

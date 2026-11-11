@@ -160,7 +160,47 @@ def score_probability_predictions(predictions):
             'priorRateLogLoss':round(prior_logloss,4),**probability_delta_intervals(predictions)}
 
 
-def backtest(directory):
+def build_forecast_distributions(residual_history, rows, probability_validation=None):
+    """Create forward-use residual profiles from only chronological OOS errors."""
+    latest=max(rows,key=lambda row:(row['season'],row['week']),default=None)
+    profiles={}
+    for (position,market,model),errors in sorted(residual_history.items()):
+        if model!='opportunity':
+            continue
+        ordered=sorted(round(float(error),5) for error in errors if math.isfinite(float(error)))
+        validation=(probability_validation or {}).get(
+            f'{position} · {market} · {model}',{})
+        brier_ci=validation.get('priorRateBrierDelta95CI')
+        log_ci=validation.get('priorRateLogLossDelta95CI')
+        eligible=(validation.get('games',0)>=500 and brier_ci and log_ci and
+                  brier_ci[1]<0 and log_ci[1]<0 and validation.get('brier',1)<.25 and
+                  validation.get('logLoss',1)<math.log(2))
+        quantile=lambda q: ordered[min(len(ordered)-1,max(0,round(q*(len(ordered)-1))))] if ordered else None
+        profiles[f'{position}:{market}:{model}']={
+            'sampleSize':len(ordered),
+            'residuals':ordered,
+            'residualQuantiles':{'p10':quantile(.1),'p50':quantile(.5),'p90':quantile(.9)},
+            'validation':{
+                'calibrated':bool(eligible),
+                'outOfSampleGames':validation.get('games',0),
+                'brier':validation.get('brier'),
+                'logLoss':validation.get('logLoss'),
+                'priorRateBrierDelta95CI':brier_ci,
+                'priorRateLogLossDelta95CI':log_ci,
+                'scope':'Chronological half-point line centered on the model forecast; arbitrary alternate-line performance is not separately established.',
+            }
+        }
+    return {
+        'schemaVersion':1,
+        'modelVersion':'opportunity-efficiency-v1',
+        'createdFrom':'chronological out-of-sample nflverse player-game forecasts',
+        'minimumSamples':100,
+        'trainedThrough':({'season':latest['season'],'week':latest['week']} if latest else None),
+        'markets':profiles,
+    }
+
+
+def backtest(directory, include_distributions=False):
     completed=load_completed_ids(directory)
     rows=load_player_games(directory,completed)
     history=defaultdict(list)
@@ -275,6 +315,9 @@ def backtest(directory):
             row['beatsSeasonAverage']+=int(candidate['mae']<average['mae'])
             row['beatsRecentAverage']+=int(candidate['mae']<recent['mae']) if recent else 0
     report['seasonConsistency']=consistency
+    if include_distributions:
+        report['forecastDistributions']=build_forecast_distributions(
+            residual_history,rows,report['probabilityAggregate'])
     return report
 
 

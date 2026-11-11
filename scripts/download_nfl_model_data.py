@@ -90,19 +90,21 @@ def main():
     parser.add_argument('--start-year',type=int,default=2019)
     parser.add_argument('--end-year',type=int,default=current_nfl_season())
     parser.add_argument('--refresh',action='store_true',help='Redownload cached files to pick up upstream corrections.')
+    parser.add_argument('--refresh-current-season',action='store_true',help='Refresh games.csv and the selected end year while keeping cached prior-season archives.')
     args=parser.parse_args()
     if args.start_year<1999 or args.end_year<args.start_year:
         parser.error('Choose a start year from 1999 onward and an end year no earlier than the start year.')
     args.output_dir.mkdir(parents=True,exist_ok=True)
     games=args.output_dir/'games.csv'
-    download(GAMES_URL,games,args.refresh)
+    download(GAMES_URL,games,args.refresh or args.refresh_current_season)
     validate_games(games)
     for year in range(args.start_year,args.end_year+1):
         path=args.output_dir/f'{year}.gz'
-        download(PBP_URL.format(season=year),path,args.refresh)
+        refresh_year=args.refresh or (args.refresh_current_season and year==args.end_year)
+        download(PBP_URL.format(season=year),path,refresh_year)
         validate_pbp(path)
         stats=args.output_dir/'player-stats'/f'{year}.csv'
-        download(PLAYER_URL.format(season=year),stats,args.refresh)
+        download(PLAYER_URL.format(season=year),stats,refresh_year)
         validate_player_stats(stats)
     print(f'Validated nflverse model inputs in {args.output_dir}')
 

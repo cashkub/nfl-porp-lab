@@ -11,6 +11,8 @@ from urllib.request import urlopen
 from nfl_features import Form, plays, number
 from elo_backtest import evaluate_rows as evaluate_elo_rows, upcoming_forecasts
 
+SKILL_POSITIONS={'QB','RB','FB','WR','TE'}
+
 # Venue coordinates rounded to the forecast grid. Keys identify the venue, including neutral sites.
 VENUES={'BAL00':(39.28,-76.62),'BOS00':(42.09,-71.26),'BUF00':(42.77,-78.79),
         'CAR00':(35.23,-80.85),'CHI98':(41.86,-87.62),'CIN00':(39.10,-84.52),
@@ -42,22 +44,139 @@ def forecast(item):
         return None
 
 
+def _timestamp(value):
+    if not value:return None
+    try:
+        result=datetime.fromisoformat(str(value).replace('Z','+00:00'))
+        return result.replace(tzinfo=timezone.utc) if result.tzinfo is None else result.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def parse_depth_charts(text,now):
+    """Read the current timestamped nflverse charts (2025+ schema)."""
+    latest_by_team={}
+    for row in csv.DictReader(io.StringIO(text)):
+        player_id=(row.get('gsis_id') or '').strip()
+        team=(row.get('team') or row.get('club_code') or row.get('depth_team') or '').strip().upper()
+        position=(row.get('pos_abb') or row.get('position') or row.get('depth_position') or '').strip().upper()
+        stamp=_timestamp(row.get('dt'))
+        if not player_id or not team or position not in SKILL_POSITIONS or not stamp:continue
+        age=(now.astimezone(timezone.utc)-stamp).total_seconds()
+        if age<0 or age>10*86400:continue
+        try:rank=int(float(row.get('pos_rank') or row.get('depth_team') or 99))
+        except (TypeError,ValueError):rank=99
+        if rank<1:continue
+        entry={'id':player_id,'team':team,'position':position,'rank':rank,
+               'slot':(row.get('pos_slot') or '').strip(),
+               'name':(row.get('player_name') or row.get('full_name') or '').strip(),
+               'updatedAt':stamp.isoformat()}
+        previous=latest_by_team.get(team)
+        if previous is None or stamp>previous[0]:latest_by_team[team]=(stamp,{})
+        if stamp==latest_by_team[team][0]:
+            key=(player_id,position)
+            old=latest_by_team[team][1].get(key)
+            if old is None or rank<old['rank']:latest_by_team[team][1][key]=entry
+    teams={team:sorted(roster.values(),key=lambda item:(item['position'],item['rank'],item['name']))
+           for team,(_,roster) in latest_by_team.items()}
+    by_player={}
+    conflicts=set()
+    for team,roster in teams.items():
+        for entry in roster:
+            old=by_player.get(entry['id'])
+            stamp=_timestamp(entry['updatedAt'])
+            old_stamp=_timestamp(old['updatedAt']) if old else None
+            if old is None or stamp>old_stamp:
+                by_player[entry['id']]=entry.copy();conflicts.discard(entry['id'])
+            elif stamp==old_stamp and old['team']!=team:
+                conflicts.add(entry['id'])
+    for player_id in conflicts:by_player.pop(player_id,None)
+    newest=max((entry['updatedAt'] for rows in teams.values() for entry in rows),default=None)
+    return {'source':'nflverse depth charts','updatedAt':newest,'teams':teams,'players':by_player}
+
+
 def depth_chart(season,now):
     url=f'https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_{season}.csv'
-    teams={}
     try:
         with urlopen(url,timeout=40) as response:
-            for row in csv.DictReader(io.TextIOWrapper(response,encoding='utf-8-sig')):
-                if row['pos_abb']!='QB' or not row['gsis_id'] or not row['pos_rank'].isdigit():continue
-                dt=datetime.fromisoformat(row['dt'].replace('Z','+00:00'))
-                if not 0<=(now-dt).total_seconds()<=10*86400:continue
-                team=row['team']
-                if team not in teams or dt>teams[team][0]:teams[team]=(dt,{})
-                if dt==teams[team][0]:
-                    teams[team][1][row['gsis_id']]={'id':row['gsis_id'],'rank':int(row['pos_rank']),'name':row['player_name']}
+            return parse_depth_charts(io.TextIOWrapper(response,encoding='utf-8-sig').read(),now)
     except (OSError,ValueError,KeyError) as exc:
         print(f'Depth charts unavailable: {exc}')
-    return {t:sorted(roster.values(),key=lambda q:q['rank']) for t,(_,roster) in teams.items()}
+        return {'source':'nflverse depth charts','updatedAt':None,'teams':{},'players':{}}
+
+
+def current_roster(season,depth,now):
+    """Overlay daily roster membership/status with the latest depth-chart roles."""
+    url=f'https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_{season}.csv'
+    try:
+        with urlopen(url,timeout=40) as response:
+            text=io.TextIOWrapper(response,encoding='utf-8-sig').read()
+    except (OSError,ValueError) as exc:
+        print(f'Current roster unavailable: {exc}')
+        return None
+    players={}
+    excluded={'CUT','UFA','NWT','TRC','TRD','TRT','RET'}
+    for row in csv.DictReader(io.StringIO(text)):
+        player_id=(row.get('gsis_id') or '').strip()
+        team=(row.get('team') or '').strip().upper()
+        if not player_id or not team:continue
+        status=(row.get('status') or '').strip().upper()
+        if status in excluded:continue
+        chart=depth.get('players',{}).get(player_id,{})
+        if chart and chart['team']!=team:chart={}
+        entry={'team':team,'position':(row.get('position') or chart.get('position') or '').strip().upper(),
+               'status':status or 'UNK','name':(row.get('full_name') or chart.get('name') or '').strip(),
+               'photo':row.get('headshot_url') or '', 'active':status=='ACT',
+               'depthChartPosition':chart.get('position'),'depthChartRank':chart.get('rank'),
+               'depthChartSlot':chart.get('slot'),
+               'depthChartUpdatedAt':chart.get('updatedAt')}
+        players[player_id]=entry
+    if not players:return None
+    updated=now.astimezone(timezone.utc).isoformat(timespec='minutes')
+    return {'source':'nflverse current roster + depth charts','checkedAt':updated,
+            'depthChartsUpdatedAt':depth.get('updatedAt'),'players':players}
+
+
+def attach_current_roster(payload,roster,season):
+    if not roster:
+        cached_path=Path(__file__).resolve().parents[1]/'public'/'data'/'stats.json'
+        try:
+            cached=json.loads(cached_path.read_text(encoding='utf-8')).get('currentRoster')
+            checked=_timestamp((cached or {}).get('checkedAt'))
+            if checked and (datetime.now(timezone.utc)-checked).total_seconds()<=3*86400:
+                roster=cached
+                print('Using current-roster cache after upstream roster refresh failed.')
+        except (OSError,ValueError,TypeError):
+            pass
+    if not roster:return None
+    payload['currentRoster']=roster
+    by_id=roster['players']
+    existing={player['id'] for player in payload.get('players',[])}
+    for player in payload.get('players',[]):
+        current=by_id.get(player['id'])
+        if not current:
+            player.update({'team':None,'currentTeam':None,'currentRoster':False,
+                           'rosterStatus':'NOT ON CURRENT ROSTER','rosterActive':False,
+                           'depthChartPosition':None,'depthChartRank':None,'depthChartSlot':None,'depthChartUpdatedAt':None})
+            continue
+        player.update({'team':current['team'],'currentTeam':current['team'],'currentRoster':True,
+                       'rosterStatus':current['status'],'rosterActive':current['active'],
+                       'depthChartPosition':current['depthChartPosition'],
+                       'depthChartRank':current['depthChartRank'],'depthChartSlot':current.get('depthChartSlot'),
+                       'depthChartUpdatedAt':current['depthChartUpdatedAt']})
+        if current.get('position'):player['position']=current['position']
+        if current.get('photo'):player['photo']=current['photo']
+    for player_id,current in by_id.items():
+        if player_id in existing or current['position'] not in SKILL_POSITIONS:continue
+        if current['status'] not in ('ACT','DEV') and not current.get('depthChartRank'):continue
+        payload.setdefault('players',[]).append({'id':player_id,'name':current['name'],
+            'position':current['position'],'team':current['team'],'currentTeam':current['team'],'currentRoster':True,
+            'rosterStatus':current['status'],'rosterActive':current['active'],
+            'depthChartPosition':current['depthChartPosition'],'depthChartRank':current['depthChartRank'],
+            'depthChartSlot':current.get('depthChartSlot'),
+            'depthChartUpdatedAt':current['depthChartUpdatedAt'],'photo':current.get('photo') or '',
+            'seasons':[season],'games':[]})
+    return roster
 
 
 def enrich(payload,schedule_text):
@@ -105,6 +224,8 @@ def enrich(payload,schedule_text):
             if key in chances and key[0] in completed:
                 game['scoringChances']=chances[key].get(player['id'],[0,0,0,0,0])
     depths=depth_chart(season,now)
+    roster=current_roster(season,depths,now)
+    roster=attach_current_roster(payload,roster,season)
     form=Form()
     for r in sorted(rows,key=lambda r:(r['gameday'],r['gametime'])):
         if number(r.get('result')) is not None:form.add(logs.get(r['game_id'],{}))
@@ -125,7 +246,8 @@ def enrich(payload,schedule_text):
                     'rushingTDs': outcomes['rushTD'], 'passingTDs': outcomes['passTD'],
                     'otherTDs': outcomes['otherTD']}
             unavailable={p['id'] for p in g.get('injuries',{}).get(g[side],[]) if (p.get('gameStatus') or '').lower()=='out'}
-            chart=[q for q in depths.get(r[side+'_team'],depths.get(g[side],[])) if q['id'] not in unavailable]
+            chart=[q for q in depths.get('teams',{}).get(r[side+'_team'],depths.get('teams',{}).get(g[side],[]))
+                   if q['position']=='QB' and q['id'] not in unavailable]
             p=form.matchup(r,side,w if r['roof'] in ('open','outdoors') else None,chart)
             if p:
                 delta={k:round((value-config['centers'][k])*config['weights'][k],3) for k,value in p['inputs'].items()}
@@ -135,6 +257,10 @@ def enrich(payload,schedule_text):
                 info[side]=p
         if r['game_id'] in elo_forecasts:
             info['elo']=elo_forecasts[r['game_id']]
+        if roster:
+            info['rosterUpdatedAt']=roster.get('checkedAt')
+            info['depthChartsUpdatedAt']=roster.get('depthChartsUpdatedAt')
+        info['injuriesUpdatedAt']=g.get('injuriesUpdatedAt')
         g['id']=r['game_id'];g['context']=info
     payload['modelValidation']={'games':config['games'],'results':config['validation'],
                                 'elo':{'model':elo_report['model'],'marketNote':elo_report['marketNote'],
