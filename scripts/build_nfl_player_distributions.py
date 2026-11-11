@@ -1,6 +1,7 @@
 """Write leak-safe empirical error profiles for the shared NFL player model."""
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 from backtest_player_baselines import backtest
@@ -8,7 +9,21 @@ from backtest_player_baselines import backtest
 
 def build(directory):
     report=backtest(Path(directory),include_distributions=True)
-    return report['forecastDistributions']
+    return compact_distribution_profiles(report['forecastDistributions'])
+
+
+def compact_distribution_profiles(distributions):
+    """Keep only calibrated residual profiles and encode exact residual counts."""
+    compact=dict(distributions)
+    compact['markets']={}
+    for key,source in distributions.get('markets',{}).items():
+        profile={name:value for name,value in source.items() if name!='residuals'}
+        errors=source.get('residuals',[])
+        if source.get('validation',{}).get('calibrated'):
+            counts=Counter(round(float(value),2) for value in errors)
+            profile['residualHistogram']=[[value,counts[value]] for value in sorted(counts)]
+        compact['markets'][key]=profile
+    return compact
 
 
 if __name__=='__main__':
