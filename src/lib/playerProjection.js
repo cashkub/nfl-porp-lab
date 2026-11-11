@@ -5,6 +5,13 @@ const USAGE_BY_MARKET={
   TE:{receptions:'targets',receivingYards:'targets'}
 };
 
+export const PLAYER_PROJECTION_MARKETS={
+  QB:[['passingYards','Pass Yards'],['passingTDs','Pass TDs'],['rushingYards','Rush Yards']],
+  RB:[['rushingAttempts','Carries'],['rushingYards','Rush Yards'],['receivingYards','Rec Yards']],
+  WR:[['receptions','Receptions'],['receivingYards','Rec Yards']],
+  TE:[['receptions','Receptions'],['receivingYards','Rec Yards']]
+};
+
 export function getUsageMetric(position,market){
   return USAGE_BY_MARKET[position]?.[market]||null;
 }
@@ -21,6 +28,32 @@ export function hasMeaningfulProjectionRole({position,market,projectedUsage,hist
 }
 
 const mean=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:null;
+
+// Shared league efficiency prior used by both NFL Games and Top Looks. Only
+// rows completed before the selected matchup may contribute to the estimate.
+export function buildOpportunityEfficiencyPriors(players,matchup){
+  const totals={};
+  const isPregame=game=>Number(game.season)<Number(matchup.season)||
+    (Number(game.season)===Number(matchup.season)&&Number(game.week)<Number(matchup.week));
+  for(const player of players||[]){
+    for(const [market] of PLAYER_PROJECTION_MARKETS[player.position]||[]){
+      const usageKey=getUsageMetric(player.position,market);
+      if(!usageKey)continue;
+      for(const game of player.games||[]){
+        if(!isPregame(game))continue;
+        const opportunities=Number(game.usage?.[usageKey]),value=Number(game.stats?.[market]);
+        if(!Number.isFinite(opportunities)||opportunities<0||!Number.isFinite(value))continue;
+        const key=player.position+':'+market;
+        const total=totals[key]??={stats:0,opportunities:0};
+        total.stats+=value;
+        total.opportunities+=opportunities;
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(totals).map(([key,total])=>[
+    key,total.opportunities>0?total.stats/total.opportunities:null
+  ]));
+}
 
 // Research baseline matching the walk-forward opportunity × efficiency benchmark.
 // `history` must contain only games completed before the selected matchup.
