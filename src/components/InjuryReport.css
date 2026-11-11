@@ -1,0 +1,61 @@
+.injury-teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,20rem),1fr));
+  align-items: start;
+  gap: .7rem;
+}
+.injury-team {
+  min-width: 0;
+  color: #f5f1f8;
+  background: #1a1920;
+  border: 1px solid #504659;
+  border-radius: .7rem;
+  overflow: hidden;
+}
+.injury-team h5 {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0;
+  padding: .45rem .75rem;
+  border-inline-start: 4px solid var(--injury-club,#b898c9);
+  background: linear-gradient(100deg,color-mix(in srgb,var(--injury-club,#806791) 19%,#201f26),#211f27);
+  font: 800 .95rem/1.3 system-ui,sans-serif;
+}
+.injury-team h5 img { object-fit: contain; }
+.injury-team h5 small { margin-left: auto; font-size: .73rem; font-weight: 500; color: #d2cbd8; }
+.injury-team ul { list-style: none; padding: 0; margin: 0; }
+.injury-team .injury-entry {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: start;
+  gap: .25rem .5rem;
+  border-top: 1px solid #38333e;
+  padding: .65rem .75rem;
+  font: 500 .86rem/1.35 system-ui,sans-serif;
+  overflow-wrap: anywhere;
+}
+.injury-entry small { grid-column: 1/-1; color: #d0c9d6; font-size: .76rem; }
+.injury-entry .injury-attribution { color: #b5acbb; }
+.injury-entry small:empty { display: none; }
+.injury-designation {
+  color: #d7d5dc;
+  background: #35343c;
+  border: 1px solid currentColor;
+  border-radius: .4rem;
+  padding: .17rem .4rem;
+  max-width: 9rem;
+  font-size: .71rem;
+  font-weight: 750;
+  text-align: center;
+}
+.injury-designation[data-tone=out] { color:#ffb7be; background:#42212a; }
+.injury-designation[data-tone=reserve] { color:#e7c5ff; background:#392642; }
+.injury-designation[data-tone=doubtful] { color:#ffca9e; background:#402c20; }
+.injury-designation[data-tone=questionable] { color:#f7df91; background:#383221; }
+.injury-designation[data-tone=practice] { color:#b9dbff; background:#223349; }
+.injury-designation[data-tone=full] { color:#a2e5bf; background:#20382e; }
+.injury-team > p { padding: .5rem .75rem; }
+.injury-details { margin-top: .7rem; }
+.injury-details > summary { cursor: pointer; }
+.injury-details > a { display: inline-block; margin-top: .7rem; }

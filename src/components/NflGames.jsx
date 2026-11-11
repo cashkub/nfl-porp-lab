@@ -11,7 +11,8 @@ import {teamColor} from '../lib/teamColors.js';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import PropsBoard from './PropsBoard.jsx';
-import {InjuryReport,MatchReport} from './MatchReport.jsx';
+import {InjuryReport,InjuryTeams} from './InjuryReport.jsx';
+import {MatchReport} from './MatchReport.jsx';
 import './NflGames.css';
 
 const kickoff=new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
@@ -229,12 +230,7 @@ function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,
 function InjuryFlags({game,workload}){
   const reports=highImpactInjuries(game,workload);
   return <section className="nfl-injury-panel"><h4><Shield size={16}/> KEY MATCHUP INJURIES</h4>
-    {reports.length?reports.map(r=>{
-      const defense=(r.defenseSnapShare||0)>(r.offenseSnapShare||0);
-      const share=defense?r.defenseSnapShare:r.offenseSnapShare;
-      return <p key={r.team+(r.id||r.name)}><b>{r.team} · {r.position}</b> {r.name} · {r.gameStatus||r.status}
-        {r.injury?' · '+r.injury:''}{share>0?` · ${Math.round(share*100)}% of ${defense?'defensive':'offensive'} snaps in recent appearances`:''}</p>;
-    }):<p>No key-player flags in the available reports.</p>}
+    {reports.length?<InjuryTeams game={game} highlights={reports}/>:<p>No key-player flags in the available reports.</p>}
     <InjuryReport game={game}/>
   </section>;
 }
