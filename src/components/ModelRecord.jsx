@@ -1,3 +1,5 @@
+import GameMarketRecord from './GameMarketRecord.jsx';
+import {gameMarkets} from '../lib/gamePicks.js';
 import TeamLogo from './TeamLogo.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import SortableTable from './SortableTable.jsx';
@@ -66,7 +68,8 @@ export default function ModelRecord({validation,sport='nfl',initialTab='props'})
     .sort((a,b)=>Math.abs(Date.parse(a.kickoff)-Date.now())-Math.abs(Date.parse(b.kickoff)-Date.now()))[0];
   const summaryPeriod=period==='all'?(nearest?recordPeriod(nearest,sport):periods[0]):period;
   const summary=games && modelPicks?<PerformanceSummary games={games} picks={modelPicks} period={summaryPeriod} sport={sport}/>:null;
-  const tabs=<div className="board-sort model-record-tabs">{[['props','Player Props'],...(sport==='nfl'?[['touchdowns','Anytime Touchdowns']]:[]),...(sport==='nfl'?[]:[['games','Game Winners']])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}{sport==='nfl'&&<button type="button" className="outline-button future-record-tab" disabled title="Available when the NFL Games tab is built">Moneyline Record · Coming Soon</button>}</div>;
+  const tabs=<div className="board-sort model-record-tabs">{[['props','Player Props'],...(sport==='nfl'?[['touchdowns','Anytime Touchdowns']]:[]),...(sport==='nfl'?Object.entries(gameMarkets):[['games','Game Winners']])].map(([k,t])=><button key={k} className="outline-button" aria-pressed={tab===k} onClick={()=>setTab(k)}>{t}</button>)}</div>;
+  if(sport==='nfl'&&Object.hasOwn(gameMarkets,tab))return <section className="panel props-board model-record-shell">{tabs}{failed?<p>Game archive unavailable.</p>:games?<GameMarketRecord rows={games} market={tab}/>:<p>Loading game picks…</p>}</section>;
   if(tab!=='games')return <section className="panel props-board model-record-shell">{tabs}{picks.error?<p>Pick archive unavailable.</p>:!picks.rows?<p>Loading Locked Picks…</p>:<ModelRecordPicks rows={sport==='nfl'?modelPicks:modelPicks.filter(inPeriod)} kind={tab==='touchdowns'?'touchdowns':'props'} emptyMessage={sport==='nfl'&&!modelPicks.length?'No Version 2 picks have been officially locked yet. The official record starts with the first prospective V2 lock.':''}/>}</section>;
   return <section className="panel props-board">{tabs}<h1>{sport.toUpperCase()} Model Record</h1><p>{sport==='nfl'?'Latest saved prediction before kickoff.':sport==='cfb'?'First published prediction before kickoff.':'First published prediction before tipoff.'} Final scores are graded on the next stats refresh.</p>{selector}{summary}
     <div className="usage-trend"><h3>{period==='all'?'Overall Game Record':'Selected Game Record'}</h3><p><strong className="result-win">{right} Correct</strong> · <strong className="result-loss">{decided.length-right} Incorrect</strong></p>

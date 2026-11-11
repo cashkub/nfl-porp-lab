@@ -1,3 +1,4 @@
+import {gamePicks} from '../lib/gamePicks.js';
 import TeamLogo from './TeamLogo.jsx';
 import {teamNames} from '../lib/schedule.js';
 import React,{useMemo,useRef,useState} from 'react';
@@ -171,25 +172,6 @@ export default function NflGames({schedule,books,players,validation,season,now,o
     </>}
     {!upcoming.length&&<p>{loading?'Loading the NFL schedule…':error||'No upcoming games in the current schedule.'}</p>}
   </section>;
-}
-
-function gamePicks(game,model){
-  const away=model?.a,home=model?.h;
-  const margin=away&&home?home.score-away.score:null;
-  const elo=game.context?.elo;
-  const projectedTotal=away&&home?away.score+home.score:null;
-  const homeProbability=elo?.homeProbability,awayProbability=elo?.awayProbability;
-  const hasWinnerForecast=Number.isFinite(homeProbability)&&Number.isFinite(awayProbability);
-  const winner=hasWinnerForecast&&Math.abs(homeProbability-awayProbability)>.0001
-    ?(homeProbability>awayProbability?{team:game.home,probability:homeProbability}:{team:game.away,probability:awayProbability})
-    :null;
-  const spreadEdge=Number.isFinite(margin)&&Number.isFinite(game.homeSpread)?margin+game.homeSpread:null;
-  const spreadTeam=spreadEdge==null||Math.abs(spreadEdge)<.05?null:spreadEdge>0?game.home:game.away;
-  const spreadLine=spreadTeam===game.home?game.homeSpread:-game.homeSpread;
-  const totalSide=Number.isFinite(projectedTotal)&&Number.isFinite(game.totalLine)
-    ?projectedTotal-game.totalLine>.05?'OVER':game.totalLine-projectedTotal>.05?'UNDER':'NO CLEAR SIDE'
-    :null;
-  return {elo,margin,projectedTotal,winner,hasWinnerForecast,spreadTeam,spreadLine,spreadEdge,totalSide};
 }
 
 function WeeklySlate({games,onOpen}){

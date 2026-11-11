@@ -63,7 +63,7 @@ function RecordPick({row}){
       <span className="mr-photo" style={{'--club':teamColor(row.team)}}><PlayerPhoto id={row.playerId} name={row.player} url={row.photo}/></span>
       <span className="mr-player"><strong>{row.player||'Player'}</strong><small><TeamLogo team={row.team}/>{row.team||'NFL'}{row.position?` · ${row.position}`:''} <i>VS</i> {opponent||'Opponent'}</small></span>
       <span className="mr-bet"><strong>{row.kind==='touchdown'?'ANYTIME TD':`${String(row.side||'').toUpperCase()} ${row.line} ${row.label||row.metric||'Prop'}`}</strong><small>{sourceLabel(row)}{row.price!=null?` · ${priceText(row.price)}`:''}</small></span>
-      <span className="mr-final"><small>{row.result==='Pending'?'PENDING':'FINAL'}</small><strong>{statText(row)}</strong><em className={`mr-result ${resultClass(row)}`}>{row.result||'Pending'}</em></span>
+      <span className="mr-final"><small>{!row.result||row.result==='Pending'?'PENDING':'FINAL'}</small><strong>{statText(row)}</strong><em className={`mr-result ${resultClass(row)}`}>{row.result||'Pending'}</em></span>
       <ChevronDown className="mr-chevron" size={18}/>
     </button>
     <div className="mr-pick-glance">
@@ -108,7 +108,7 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
   const [query,setQuery]=useState('');
   const picks=useMemo(()=>rows.filter(row=>kind==='touchdowns'?row.kind==='touchdown':row.kind!=='touchdown'),[rows,kind]);
   const periods=useMemo(()=>[...new Set(picks.map(r=>recordPeriod(r,'nfl')).filter(Boolean))].sort().reverse(),[picks]);
-  const selectedPeriod=periods.includes(period)?period:periods[0]||'all';
+  const selectedPeriod=period==='all'||periods.includes(period)?period:periods[0]||'all';
   const markets=useMemo(()=>[...new Set(picks.map(r=>r.kind==='touchdown'?'Anytime Touchdown':r.label||r.metric).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[picks]);
   const positions=useMemo(()=>[...new Set(picks.map(r=>String(r.position||'Unknown').toUpperCase()))].sort((a,b)=>a.localeCompare(b)),[picks]);
   const filtered=useMemo(()=>picks.filter(r=>{
@@ -156,7 +156,7 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
       </div>
       <div className="mr-totals"><strong><i>{hits} HIT</i><b>{misses} MISS</b><span>{push} PUSH</span><em>{pending} PENDING</em></strong><small>Hit rate counts only graded wins and losses. Pushes, no-stat games, and pending picks are excluded.</small></div>
       <div className="mr-pick-list">{filtered.length?filtered.map((row,index)=><RecordPick row={row} key={`${row.gameId}-${row.playerId}-${row.metric}-${row.rank}-${index}`}/>):<div className="mr-empty">No archived picks match this selection.</div>}</div>
-      <p className="mr-footnote">Game moneyline predictions will have a separate record and evaluation model when the Games tab is built.</p>
+
     </section>
   </div>;
 }
