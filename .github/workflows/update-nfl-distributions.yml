@@ -1,0 +1,66 @@
+name: Update NFL Player Forecast Distributions
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run after the weekly stats import has had time to publish the latest games.
+    - cron: '30 18 * * 2'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nfl-player-distributions
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: data/nfl-model
+          key: nflverse-player-model-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            nflverse-player-model-${{ runner.os }}-
+      - name: Refresh current season and validate public nflverse inputs
+        run: python scripts/download_nfl_model_data.py --output-dir data/nfl-model --refresh-current-season
+      - name: Build chronological out-of-sample player error distributions
+        run: python scripts/build_nfl_player_distributions.py data/nfl-model "$RUNNER_TEMP/nfl-player-distributions.json"
+      - name: Validate profiles before replacing the public forecast asset
+        run: |
+          python - "$RUNNER_TEMP/nfl-player-distributions.json" <<'PY'
+          import json,sys
+          from pathlib import Path
+          data=json.loads(Path(sys.argv[1]).read_text())
+          assert data.get('schemaVersion')==1
+          assert data.get('modelVersion')=='opportunity-efficiency-v1'
+          assert data.get('trainedThrough') and data.get('markets')
+          assert all(row.get('sampleSize')==len(row.get('residuals',[])) for row in data['markets'].values())
+          assert all(row['sampleSize']>=data['minimumSamples'] for row in data['markets'].values())
+          print(f"Validated {len(data['markets'])} market profiles through {data['trainedThrough']}")
+          PY
+      - name: Publish a complete profile atomically
+        run: |
+          generated="$RUNNER_TEMP/nfl-player-distributions.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B main FETCH_HEAD
+            install -m 644 "$generated" public/data/nfl-player-distributions.json.tmp
+            mv public/data/nfl-player-distributions.json.tmp public/data/nfl-player-distributions.json
+            git add public/data/nfl-player-distributions.json
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: refresh NFL player forecast distributions"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep "$attempt"
+          done
+          exit 1
