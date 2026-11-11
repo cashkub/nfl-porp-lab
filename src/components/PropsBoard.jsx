@@ -9,6 +9,7 @@ import React, {useMemo, useState} from 'react';
 import {fairSideProbability,playerKey, priceText} from '../lib/bookLine.js';
 import {METRICS, getPlayerGames, summarize,estimateModelHitRate} from '../lib/stats.js';
 import {buildPlayerForecast} from '../lib/nflForecast.js';
+import {hasMeaningfulProjectionRole} from '../lib/playerProjection.js';
 import {defenseTable} from '../lib/matchup.js';
 
 const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
@@ -73,6 +74,13 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
 
       }
       const sides = side === 'both' ? ['over','under'] : [side];
+      if(!entry)return [];
+      const projected=buildPlayerForecast({players,player:entry.p,game:g,market:line.metric,line:line.point,side:sides[0],distributions});
+      const expectedStarter=entry.p.position==='QB'&&[
+        g.context?.home?.qbId,g.context?.away?.qbId
+      ].some(id=>String(id||'')===String(entry.p.id));
+      if(!projected||!hasMeaningfulProjectionRole({position:entry.p.position,market:line.metric,
+        projectedUsage:projected.projectedUsage,historyGames:projected.sampleGames,expectedStarter}))return [];
       return sides.map(pick => {
         const history=entry?.history.slice(-10)||[];
         const forecast=entry?buildPlayerForecast({players,player:entry.p,game:g,market:line.metric,line:line.point,side:pick,distributions}):null;
