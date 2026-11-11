@@ -1,3 +1,5 @@
+import {probabilitiesFromResiduals} from './nflForecast.js';
+
 export const METRICS = {
   passingYards: { label: 'Passing Yards', short: 'PASS YDS', unit: 'yds', defaultLine: 224.5, maximum: 600 },
   rushingAttempts: { label: 'Rushing Attempts', short: 'RUSH ATT', unit: 'att', defaultLine: 14.5, maximum: 60 },
@@ -49,9 +51,26 @@ export const summarize = (games, key, line, direction = 'over') => {
 // Line-specific probability estimate for chart and prop-list views. It combines
 // a small-sample-smoothed historical rate with a season/recent projection.
 // Context signals are optional and included only when the caller has a matching source.
-export function estimateModelHitRate(games,key,line,direction='over',{marketProbability=null,weatherSignal=0,redZoneSignal=0,injurySignal=0,injuryPenalty=0}={}){
+export function estimateModelHitRate(games,key,line,direction='over',{marketProbability=null,weatherSignal=0,redZoneSignal=0,injurySignal=0,injuryPenalty=0,position=null,projection:sharedProjection=null,distributionModels=null}={}){
   const sample=(games||[]).map(game=>Number(game.stats?.[key]??0)).filter(Number.isFinite);
   if(!sample.length||line==null||!Number.isFinite(Number(line)))return {rate:null,sample:sample.length,hits:0,pushes:0,observed:null,projection:null,marketProbability:null};
+  const profile=position&&distributionModels?.markets?.[position+':'+key+':opportunity'];
+  const forecastMean=sharedProjection!=null&&Number.isFinite(Number(sharedProjection))?Number(sharedProjection):null;
+  const calibrated=profile?.validation?.calibrated===true&&forecastMean!=null?probabilitiesFromResiduals({
+    projection:forecastMean,line,residuals:profile.residuals,
+    minimumSamples:Math.max(100,Number(distributionModels.minimumSamples)||0)
+  }):null;
+  if(calibrated){
+    const hits=sample.filter(value=>isHit(value,Number(line),direction)).length;
+    const pushes=sample.filter(value=>value===Number(line)).length;
+    const benchmarkLine=Math.floor(forecastMean)+.5;
+    const lineValidated=profile.validation.calibrated&&Math.abs(Number(line)-benchmarkLine)<1e-8;
+    return {rate:calibrated[direction],sample:sample.length,hits,pushes,observed:(sample.length-pushes)?hits/(sample.length-pushes):null,
+      projection:forecastMean,marketProbability:Number.isFinite(marketProbability)?marketProbability:null,
+      overRate:calibrated.over,underRate:calibrated.under,pushRate:calibrated.push,distributionSample:calibrated.sample,
+      calibrated:lineValidated,probabilitySource:lineValidated?calibrated.method:'empirical-residual alternate-line estimate',
+      modelVersion:distributionModels.modelVersion,validation:profile.validation};
+  }
   const pushes=sample.filter(value=>value===Number(line)).length;
   const decided=sample.length-pushes;
   const hits=sample.filter(value=>isHit(value,Number(line),direction)).length;
@@ -67,7 +86,8 @@ export function estimateModelHitRate(games,key,line,direction='over',{marketProb
   const market=Number.isFinite(marketProbability)?Math.min(.98,Math.max(.02,marketProbability)):.5;
   const rate=Math.min(.95,Math.max(.05,.61*posterior+.20*projectionChance+.15*market+
     .035*(Number(weatherSignal)||0)+.035*(Number(redZoneSignal)||0)+.025*(Number(injurySignal)||0)-(Number(injuryPenalty)||0)));
-  return {rate,sample:sample.length,decided,hits,pushes,observed,posterior,projection,projectionChance,marketProbability:Number.isFinite(marketProbability)?marketProbability:null};
+  return {rate,sample:sample.length,decided,hits,pushes,observed,posterior,projection:forecastMean??projection,projectionChance,marketProbability:Number.isFinite(marketProbability)?marketProbability:null,
+    calibrated:false,probabilitySource:'legacy-heuristic'};
 }
 
 export const filteredWindow = (games, selected) => selected === 'season' ? games : games.slice(-Number(selected));
