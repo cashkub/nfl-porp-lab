@@ -2,7 +2,7 @@ import TeamLogo from './TeamLogo.jsx';
 import React,{useMemo,useState} from 'react';
 import {Activity,CalendarDays,ChevronDown,Filter,Search,Shield,Target,TrendingUp,UserRound} from 'lucide-react';
 import FilterMenu from './FilterMenu.jsx';
-import HitRate,{rateStyle} from './HitRate.jsx';
+import RecordHeader from './RecordHeader.jsx';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
 import {priceText} from '../lib/bookLine.js';
@@ -37,16 +37,6 @@ function MiniForm({row}){
 
 function SummaryTile({icon:Icon,label,value,detail,tone=''}){
   return <article className={`mr-stat ${tone}`}><span className="mr-stat-icon"><Icon size={17}/></span><div><small>{label}</small><strong>{value}</strong><em>{detail}</em></div></article>;
-}
-
-function breakdown(rows){
-  const map=new Map();
-  for(const row of rows){
-    const label=row.kind==='touchdown'?'Anytime Touchdown':`${row.label||row.metric||'Player Prop'} · ${String(row.side||'').toUpperCase()}`;
-    if(!map.has(label))map.set(label,[]);
-    map.get(label).push(row);
-  }
-  return [...map].sort((a,b)=>a[0].localeCompare(b[0]));
 }
 
 function RecordPick({row}){
@@ -119,8 +109,6 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
   }).sort((a,b)=>Date.parse(b.kickoff)-Date.parse(a.kickoff)||(a.rank||99)-(b.rank||99)),[picks,selectedPeriod,market,status,source,position,side,query]);
   const hits=filtered.filter(r=>r.result==='Hit').length,misses=filtered.filter(r=>r.result==='Miss').length;
   const pending=filtered.filter(r=>(r.result||'Pending')==='Pending').length,push=filtered.filter(r=>r.result==='Push').length,noStat=filtered.filter(r=>r.result==='No Stat').length;
-  const groups=breakdown(filtered);
-  const winRate=rate(filtered);
   const allTimeHits=picks.filter(r=>r.result==='Hit').length,allTimeMisses=picks.filter(r=>r.result==='Miss').length;
   const allTimePending=picks.filter(r=>(r.result||'Pending')==='Pending').length;
   const allTimePush=picks.filter(r=>r.result==='Push').length;
@@ -132,7 +120,9 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
   const weekNoStat=weekRows.filter(r=>r.result==='No Stat').length;
   const periodTitle=selectedPeriod==='all'?'All Weeks':periodLabel(selectedPeriod,'nfl');
   return <div className="model-record-picks">
-    <header className="mr-hero"><div><span className="mr-eyebrow"><span/> PROP BETS · MODEL PERFORMANCE</span><h1>{kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} <em>RECORD</em></h1><p>Each pick keeps its locked line, available odds, model estimate, and pregame evidence.</p></div><div className="mr-hero-mark">{kind==='touchdowns'?<Target size={35}/>:<TrendingUp size={35}/>}<span>LOCKED<br/>PREGAME DATA</span></div></header>
+    <RecordHeader title={kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} icon={kind==='touchdowns'?Target:TrendingUp}>
+      Each pick keeps its locked line, available odds, model estimate, and pregame evidence.
+    </RecordHeader>
     {emptyMessage&&<p className="record-v2-empty mr-empty-record-note">{emptyMessage}</p>}
     <div className="mr-period-select"><label><CalendarDays size={16}/><span>WEEKLY RECORD VIEW</span><FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Official V2 picks only · pending picks are not counted as wins or losses.</small></div>
     <div className="mr-kpis">
@@ -141,9 +131,6 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
       <SummaryTile icon={Target} label={`${periodTitle.toUpperCase()} RECORD`} value={`${weekHits}–${weekMisses}`} detail={`${weekHits+weekMisses} graded · ${weekPush} push · ${weekNoStat} no stat · ${weekPending} pending`} tone="purple"/>
       <SummaryTile icon={Shield} label={`${periodTitle.toUpperCase()} HIT RATE`} value={rate(weekRows)==null?'—':rateText(rate(weekRows))} detail="Selected week · pending excluded" tone={rate(weekRows)==null?'':rate(weekRows)>=.55?'green':'red'}/>
     </div>
-    <section className="mr-market-summary"><div className="mr-section-title"><div><span className="mr-eyebrow">PERFORMANCE BREAKDOWN</span><h2>RECORD BY MARKET</h2></div><small>Small samples stay visible so rates are never shown without their count.</small></div>
-      {groups.length?<div className="mr-market-grid">{groups.map(([label,group])=>{const graded=group.filter(decided),wins=graded.filter(won).length;return <article className="mr-market-card" key={label}><div><strong>{label}</strong><span>{group.length} PICKS</span></div><b style={rateStyle(rate(group))}>{graded.length?rateText(wins/graded.length):'—'}</b><small>{wins}W – {graded.length-wins}L <i>· {group.filter(r=>(r.result||'Pending')==='Pending').length} pending</i></small><div className="mr-rate-rail"><i style={{width:`${graded.length?100*wins/graded.length:0}%`}}/></div></article>})}</div>:<div className="mr-empty">No market results match these filters yet.</div>}
-    </section>
     <section className="mr-archive">
       <div className="mr-section-title"><div><span className="mr-eyebrow">PICK ARCHIVE</span><h2>EVERY LOCKED PICK</h2></div><span className="mr-count">{filtered.length} RECORDS</span></div>
       <div className="mr-filters">
