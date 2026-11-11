@@ -64,18 +64,18 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 | 5. Game/player simulations | Planned | Improve score/pace/script and TD forecasts only where validated; reconcile team and player outcomes. |
 | 6. Top Looks | In progress | Top Looks consumes the shared forecast/probability layer; its ranking remains a heuristic score pending leak-safe historical ranking validation. |
 | 7. V2 integration | In progress | Games, Top Looks, Props, Props Board, and Charts use the shared player forecast. The NFL Games analysis panel remains beneath the slate. |
-| 8. Tracking and continuous improvement | In progress | V3 locks now save the shared forecast ID, probability provenance, validation state, and data freshness. Model Record includes V2 and V3 records and explains calibration state. Scheduled generation and grading workflows are present; branch CI/build and PR review remain. |
+| 8. Tracking and continuous improvement | In progress | V3 locks now save the shared forecast ID, probability provenance, validation state, and data freshness. Model Record includes V2 and V3 records and explains calibration state. The scheduled/manual profile workflow uploads an artifact for review without writing to main; branch CI/build passed. |
 
 ## Change Log
 
 - Added `NFL_MODEL_UPGRADE_PROGRESS.md` and created review branch `codex/nfl-shared-engine-upgrade` from current `main`.
 - Added `src/lib/nflForecast.js` as the canonical pregame opportunity × efficiency projection record and reusable residual-based line probability API. It filters out the matchup week, preserves push probability, carries model/data identity, and refuses calibrated labels for unsupported markets or non-benchmark lines.
 - Migrated Top Looks, NFL Games player rows, Player Props, Props Board, and Player Charts to the shared point forecast and probability source. The NFL Games analysis panel now follows the game slate/list.
-- Extended `scripts/backtest_player_baselines.py` and added `scripts/build_nfl_player_distributions.py` to generate OOS forecast errors, residual quantiles, and validation flags. The workflow refreshes current-season inputs and atomically publishes a complete public profile only after schema/sample checks.
+- Extended `scripts/backtest_player_baselines.py` and added `scripts/build_nfl_player_distributions.py` to generate OOS forecast errors, residual quantiles, and validation flags. The scheduled/manual workflow validates the complete profile and uploads it as a review artifact without writing to main.
 - Added a dedicated GitHub Actions validation workflow for JavaScript tests, frontend build, and Python tests on the development branch / pull request.
 - Updated V3 pick locking to preserve the shared forecast ID, calibrated/exploratory probability metadata, profile freshness, and Model Record visibility. Existing V2 locks remain immutable and visible alongside V3.
 - Python suite: 40 tests passed. JavaScript suite: 32 tests passed. Python modules compile successfully. The empirical distribution builder completed on local nflverse data through 2026 Week 9: 17 position-market profiles generated, five passed the validation gate. Artifact generation was directed to `/tmp` for verification, not into the production asset tree.
-- Frontend build and normal `npm test` remain pending the branch GitHub Actions runner because this desktop workspace has no Node/npm executable. Changes are on the review branch only; no merge or deployment has occurred.
+- GitHub Actions run 5 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite. The desktop shell has no Node/npm executable; CI supplied the production build verification. Changes remain on the review branch only; no merge or deployment has occurred.
 
 ## Outstanding Work / Limitations
 
@@ -84,5 +84,5 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 - Replace the remaining Top Looks hand-weighted rank score only after a leak-safe selection-ranking backtest; no player-prop odds history exists to validate ROI or CLV.
 - Add actual forecast snapshots, grading, team/game consistency checks, and model-version tracking without rewriting existing records.
 - Improve and validate opponent adjustments, calibrated prop distributions, game predictions, Top Looks ranking, and anytime TD probabilities.
-- Run all Python tests, JavaScript tests, and production frontend build in GitHub Actions. Review other-sport and existing V2 contracts before proposing a pull request.
+- Review other-sport and existing V2 contracts in the draft pull request; collect review feedback before any merge.
 - No merge, main-branch write, or production deployment will be made by this work.
