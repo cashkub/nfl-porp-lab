@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from elo_backtest import (build_predictions, calibrate_scale, elo_probability,
-                          market_probability, prediction_metrics)
+                          market_probability, prediction_metrics, upcoming_forecasts)
 
 
 class EloBacktestTests(unittest.TestCase):
@@ -39,6 +39,33 @@ class EloBacktestTests(unittest.TestCase):
         self.assertGreater(scale, 0)
         self.assertEqual(metrics["games"], 4)
         self.assertLess(metrics["brier"], .25)
+
+    def test_upcoming_forecasts_use_prior_season_calibration_and_prior_weeks_only(self):
+        rows = [
+            {"game_id":"2024_01_B_A", "season":2024, "week":1, "game_type":"REG",
+             "home_team":"A", "away_team":"B", "home_score":"24", "away_score":"10", "location":"Home"},
+            {"game_id":"2024_02_A_B", "season":2024, "week":2, "game_type":"REG",
+             "home_team":"B", "away_team":"A", "home_score":"17", "away_score":"21", "location":"Home"},
+            {"game_id":"2025_01_B_A", "season":2025, "week":1, "game_type":"REG",
+             "home_team":"A", "away_team":"B", "home_score":"31", "away_score":"7", "location":"Home"},
+            {"game_id":"2025_02_B_A", "season":2025, "week":2, "game_type":"REG",
+             "home_team":"A", "away_team":"B", "home_score":"0", "away_score":"45", "location":"Home"},
+            {"game_id":"2025_02_D_C", "season":2025, "week":2, "game_type":"REG",
+             "home_team":"C", "away_team":"D", "home_score":"", "away_score":"", "location":"Home"},
+            {"game_id":"2025_03_D_C", "season":2025, "week":3, "game_type":"REG",
+             "home_team":"C", "away_team":"D", "home_score":"", "away_score":"", "location":"Home"},
+        ]
+        forecast = upcoming_forecasts(rows, current_season=2025)
+        self.assertEqual(forecast["2025_02_D_C"]["calibrationSeason"], 2024)
+        self.assertEqual(forecast["2025_02_D_C"]["asOfWeek"], 1)
+        self.assertAlmostEqual(forecast["2025_02_D_C"]["homeRating"], 1500)
+        self.assertEqual(forecast["2025_03_D_C"]["asOfWeek"], 2)
+
+        # Changing a completed result in Week 2 cannot leak into another Week 2 forecast.
+        rows[3] = {**rows[3], "home_score":"7", "away_score":"42"}
+        changed = upcoming_forecasts(rows, current_season=2025)
+        self.assertEqual(forecast["2025_02_D_C"]["homeProbability"],
+                         changed["2025_02_D_C"]["homeProbability"])
 
 
 if __name__ == "__main__":
