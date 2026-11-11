@@ -18,15 +18,41 @@ export function getUsageMetric(position,market){
   return USAGE_BY_MARKET[position]?.[market]||null;
 }
 
+const MINIMUM_ROLE_USAGE={
+  QB:{attempts:12,carries:3},
+  RB:{carries:4,targets:2.5,opportunities:5},
+  FB:{carries:2.5,targets:2,opportunities:3},
+  WR:{targets:3,opportunities:4},
+  TE:{targets:2.5,opportunities:3.5}
+};
+
 // Keep the matchup projection table focused on players with a real pregame role.
 // Expected starters can be retained with a smaller player sample, but their
 // underlying projection still needs enough history to be calculated.
 export function hasMeaningfulProjectionRole({position,market,projectedUsage,historyGames,expectedStarter=false}){
-  if(!Number.isFinite(Number(projectedUsage))||!Number.isFinite(Number(historyGames))||historyGames<2)return false;
+  if(!Number.isFinite(Number(projectedUsage))||!Number.isFinite(Number(historyGames))||historyGames<3){
+    return Boolean(position==='QB'&&expectedStarter&&Number.isFinite(Number(projectedUsage)));
+  }
   if(position==='QB'&&expectedStarter)return true;
   const usageKey=getUsageMetric(position,market);
-  const minimum={attempts:10,carries:1.5,targets:1.5}[usageKey];
+  const minimum=MINIMUM_ROLE_USAGE[position]?.[usageKey];
   return minimum!=null&&projectedUsage>=minimum;
+}
+
+// Current-roster lists use the same workload cutoffs as matchup projections.
+// A player needs a sustained role in at least one market to appear in general
+// player selectors; upcoming matchup forecasts can separately admit a QB1.
+export function hasRelevantPlayerRole(player,history,{expectedStarter=false}={}){
+  if(player?.position==='QB'&&expectedStarter)return true;
+  if(!player||!Array.isArray(history)||history.length<3)return false;
+  const window=history.slice(-5);
+  return (PLAYER_PROJECTION_MARKETS[player.position]||[]).some(([market])=>{
+    const usageKey=getUsageMetric(player.position,market);
+    const values=window.map(game=>Number(game.usage?.[usageKey])).filter(Number.isFinite);
+    if(!values.length)return false;
+    const projectedUsage=values.reduce((sum,value)=>sum+value,0)/values.length;
+    return hasMeaningfulProjectionRole({position:player.position,market,projectedUsage,historyGames:history.length});
+  });
 }
 
 const mean=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:null;
