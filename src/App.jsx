@@ -351,7 +351,7 @@ export default function App() {
 
   if(previewTools){
     if(page==='nfl-top')return <ManualLeague.Provider value="nfl"><TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/></ManualLeague.Provider>;
-    if(page==='nfl-games')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="games"/><NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} season={scheduleSeason} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/></main></ManualLeague.Provider>;
+    if(page==='nfl-games')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="games"/><NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} validation={isDemo?null:data.modelValidation} season={scheduleSeason} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/></main></ManualLeague.Provider>;
     if(page==='model-record')return <ManualLeague.Provider value="nfl"><main className="chart-lab model-record-preview"><NflToolHeader active="record"/><ModelRecord sport="nfl" validation={data.modelValidation}/></main></ManualLeague.Provider>;
     if(page!=='prop-lists' && page!=='analyzer')return <a href="/preview/nfl/">NFL Menu</a>;
     return <ManualLeague.Provider value="nfl">
@@ -388,7 +388,7 @@ export default function App() {
        manualLeague && page===sport ? <CbbAnalyzer key={sport} initial={initialCbb.sport===sport?initialCbb:{}}/> :
        (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
        page==='nfl-top' ? <TopLooks players={players} schedule={nflSchedule} books={bookGames} season={scheduleSeason} now={now} loading={loading} error={error} onOpen={openTopLookChart}/> :
-       page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/> :
+       page==='nfl-games' ? <NflGames schedule={isDemo?[]:data.schedule} books={bookGames} players={players} validation={isDemo?null:data.modelValidation} season={Math.max(...seasons)} now={now} onOpen={openFromBoard} updated={updateLabel} loading={loading} error={error}/> :
        page==='moneylines' ? <Moneylines games={data.schedule} now={now} updated={updateLabel}/> :
        manualLeague && page===sport+'-games' ? <CbbGames key={sport}/> :
        manualLeague ? <CbbBoard top={page===sport+'-top'} key={page} initialRanked={window.location.hash==='#cbb-best'} onOpen={pick=>{setInitialCbb({...pick,sport});window.location.hash=sport;}}/> :

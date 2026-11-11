@@ -35,7 +35,7 @@ function Team({code,price}){
   </span>;
 }
 
-export default function NflGames({schedule,books,players,season,now,onOpen,updated,loading,error}){
+export default function NflGames({schedule,books,players,validation,season,now,onOpen,updated,loading,error}){
   const [requestedWeek,setWeek]=useState(()=>savedAnalysis().week||'');
   const [selectedId,setSelected]=useState(()=>savedAnalysis().selected||'');
   const [tab,setTab]=useState(()=>savedAnalysis().tab||'game');
@@ -131,7 +131,7 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
         {[['game','GAME PREDICTIONS',Target],['players','PLAYER PROJECTIONS',ChartNoAxesCombined],['breakdown','MODEL BREAKDOWN',Shield]].map(([key,label,Icon])=><button key={key} id={'nfl-tab-'+key} type="button" role="tab" aria-controls={'nfl-view-'+key} aria-selected={tab===key} tabIndex={tab===key?0:-1} onClick={()=>{setTab(key);try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab:key,position,market}))}catch{}}}><Icon size={17}/>{label}</button>)}
       </nav>
       <div id={'nfl-view-'+tab} role="tabpanel" aria-labelledby={'nfl-tab-'+tab} tabIndex={0} className="nfl-tab-panel">
-        {tab==='game'&&<GamePredictions game={selected} model={breakdown}/>}
+        {tab==='game'&&<GamePredictions game={selected} model={breakdown} validation={validation}/>}
         {tab==='players'&&<PlayerResearch game={selected} rows={rows} position={position} setPosition={setPosition} market={market} setMarket={setMarket} onOpen={onOpen} books={books} players={players} season={season} now={now}/>}
         {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame} players={players}/>}
       </div>
@@ -139,7 +139,7 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
   </section>;
 }
 
-function GamePredictions({game,model}){
+function GamePredictions({game,model,validation}){
   const away=model?.a,home=model?.h;
   const margin=away&&home?home.score-away.score:null;
   return <div className="nfl-view-panel">
@@ -147,11 +147,20 @@ function GamePredictions({game,model}){
     <div className="nfl-score-grid">{[away,home].filter(Boolean).map((side,i)=><article key={side.team} style={{'--club':teamColor(side.team)}}><small>{i===0?'AWAY':'HOME'} · {side.team}</small><b>{side.score.toFixed(1)}</b><span>Projected Points</span><i/></article>)}</div>
     <div className="nfl-market-grid"><MarketTile label="MONEYLINE" value={`${game.away} ${priceText(game.awayPrice)} · ${game.home} ${priceText(game.homePrice)}`}/><MarketTile label="SPREAD" value={Number.isFinite(game.homeSpread)?`${game.home} ${game.homeSpread>0?'+':''}${game.homeSpread}`:'Unavailable'}/><MarketTile label="TOTAL" value={Number.isFinite(game.totalLine)?`${game.totalLine} · O ${priceText(game.overPrice)} / U ${priceText(game.underPrice)}`:'Unavailable'} /></div>
     <div className="nfl-probability-honesty"><Info size={17}/><span>Win, cover, Over/Under, fair odds, expected value, and confidence intervals are withheld until the underlying probabilities pass out-of-sample calibration. Any game prices shown come from the schedule data and are not verified live odds because this feed does not attach per-matchup timestamps.</span></div>
+    <ModelEvidence validation={validation}/>
     <p className="nfl-market-footnote">A predicted score difference is not itself a win or bet probability. The schedule snapshot and independent team-data estimate are shown separately.</p>
   </div>;
 }
 
 function MarketTile({label,value}){return <article className="nfl-market-tile"><small>{label}</small><b>{value}</b></article>}
+
+function ModelEvidence({validation}){
+  const results=validation?.results;
+  if(!results)return null;
+  const entries=[['BASELINE','Base'],['PLAY-BY-PLAY CANDIDATE','Stats'],['CLOSING-MARKET BENCHMARK','Market'],['MARKET BLEND','Blend']].filter(([,key])=>results[key]);
+  const value=(key,metric)=>Number.isFinite(results[key]?.[metric])?results[key][metric].toFixed(2):'—';
+  return <section className="nfl-model-evidence"><header><div><small>HISTORICAL MODEL CHECK</small><h3>WALK-FORWARD SCORE ERROR</h3></div><span>{validation.games||0} GAMES</span></header><div className="nfl-evidence-table-wrap"><table><thead><tr><th>FORECAST</th><th>SCORE MAE</th><th>MARGIN MAE</th></tr></thead><tbody>{entries.map(([label,key])=><tr key={key}><th>{label}</th><td>{value(key,'scoreMAE')}</td><td>{value(key,'marginMAE')}</td></tr>)}</tbody></table></div><p>Lower error is better. The market benchmark uses historical closing prices; it is a reference, not a timestamped price guaranteed to have been available when a pick was made. MAE measures point accuracy, not probability calibration or betting returns.</p></section>;
+}
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
   const propMarkets=Object.entries(METRICS).filter(([k])=>['passingYards','passingTDs','rushingAttempts','rushingYards','receivingYards','receptions'].includes(k)).sort((a,b)=>a[1].label.localeCompare(b[1].label));
