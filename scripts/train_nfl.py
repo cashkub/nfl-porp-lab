@@ -181,16 +181,15 @@ def line_probability_metrics(pred, rows, market_scores, calibration_sigmas=None)
     Lines come from the historical closing spread/total and are explicitly
     retrospective. Sigma must be selected using a prior calibration season.
     """
+    if calibration_sigmas is None:
+        raise ValueError('Supply spread and total sigmas fitted on a prior calibration set.')
     pairs=_paired_line_outcomes(pred,rows,market_scores)
-    calibration_sigmas=calibration_sigmas or {}
     output={}
     for label,mean,line,actual in (
         ('spread','marginMean','marginLine','marginActual'),
         ('total','totalMean','totalLine','totalActual'),
     ):
         sigma=calibration_sigmas.get(label)
-        if sigma is None:
-            sigma=_fit_normal_sigma(pairs,mean,line,actual)
         decided=[row for row in pairs if row[actual] != row[line]]
         if sigma is None or not decided:
             output[label]={'games':len(decided),'sigma':sigma,'brier':None,'logLoss':None}

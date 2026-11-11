@@ -135,6 +135,12 @@ class BacktestMetricsTests(unittest.TestCase):
         self.assertLess(metrics["spread"]["brier"], 0.25)
         self.assertLess(metrics["total"]["brier"], 0.25)
 
+    def test_line_probability_grading_requires_prior_calibration(self):
+        with self.assertRaisesRegex(ValueError, "prior calibration set"):
+            line_probability_metrics([20, 25], [(2025, {}, 0, 0, 20, 0),
+                                                 (2025, {}, 0, 0, 25, 0)],
+                                     [20, 24])
+
 
 if __name__ == "__main__":
     unittest.main()
