@@ -8,13 +8,14 @@ import HitRate, {DefenseRank} from './HitRate.jsx';
 import React, {useMemo, useState} from 'react';
 import {fairSideProbability,playerKey, priceText} from '../lib/bookLine.js';
 import {METRICS, getPlayerGames, summarize,estimateModelHitRate} from '../lib/stats.js';
+import {buildPlayerForecast} from '../lib/nflForecast.js';
 import {defenseTable} from '../lib/matchup.js';
 
 const teamCode = t => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[t] || t);
 const day = date => new Date(date).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const gameTime = date => new Date(date).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
 
-export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Matchup Player Props' : 'Props Board',initialRanked=false,games,schedule,players,season,now,onOpen}) {
+export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Matchup Player Props' : 'Props Board',initialRanked=false,games,schedule,players,season,now,onOpen,distributions=null}) {
   const [team,setTeam] = useState('');
   const [stat,setStat] = useState('');
   const [side,setSide] = useState(initialRanked ? 'both' : 'over');
@@ -74,11 +75,13 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
       const sides = side === 'both' ? ['over','under'] : [side];
       return sides.map(pick => {
         const history=entry?.history.slice(-10)||[];
-        const modelEstimate=entry?estimateModelHitRate(history,line.metric,line.point,pick,{marketProbability:fairSideProbability(line,pick,line.point)}):null;
-        return {g,line,entry,rank,rankCount,pick,modelEstimate,summary:entry ? summarize(history,line.metric,line.point,pick) : null};
+        const forecast=entry?buildPlayerForecast({players,player:entry.p,game:g,market:line.metric,line:line.point,side:pick,distributions}):null;
+        const modelEstimate=entry?estimateModelHitRate(history,line.metric,line.point,pick,{marketProbability:fairSideProbability(line,pick,line.point),
+          position:entry.p.position,projection:forecast?.projection,distributionModels:distributions}):null;
+        return {g,line,entry,rank,rankCount,pick,forecast,modelEstimate,summary:entry ? summarize(history,line.metric,line.point,pick) : null};
       });
     });});
-  },[slate,players,season,side,stat,touchdown]);
+  },[slate,players,season,side,stat,touchdown,distributions]);
   const matchup = fixedGame || gameFilter.game;
   const visibleGames = slate.filter(g=>fixedGame || !gameFilter.date || day(g.kickoff)===gameFilter.date);
   const choices = matchup ? [matchup.away,matchup.home] : [...new Set(visibleGames.flatMap(g=>[g.home,g.away]))].sort();
@@ -125,10 +128,10 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
     <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,rankCount,summary,modelEstimate,pick})=><tr key={[g.id,line.player,line.metric,line.point,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
       <td className="team-edge" style={{'--team-color':teamColor(entry?.team)}}><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{entry && <PlayerPhoto id={entry.p.id} name={line.player} url={entry.p.photo}/>} {line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
       <td><strong>{pick==='over' ? 'Over ' : 'Under '}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
-      <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td>{modelEstimate?<span className="model-rate-cell"><HitRate rate={modelEstimate.rate}/><small>MODEL · {modelEstimate.sample} G</small></span>:'—'}</td><td><DefenseRank rank={rank} total={rankCount} side={pick}/></td>
+      <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td>{modelEstimate?<span className="model-rate-cell"><HitRate rate={modelEstimate.rate}/><small>{modelEstimate.calibrated?'CALIBRATED · '+modelEstimate.distributionSample.toLocaleString()+' ERRORS':'EXPLORATORY · '+modelEstimate.sample+' G'}</small></span>:'—'}</td><td><DefenseRank rank={rank} total={rankCount} side={pick}/></td>
     </tr>)}</tbody></table></div>
     {!filtered.length && <p className="board-foot">No saved props match these filters.</p>}
     {filtered.length>limit && <button className="outline-button" onClick={()=>setLimit(limit+30)}>Show More Props</button>}
-    <p className="board-foot">Last 10 and Model Estimate use prior player games. Model Estimate recalculates for the selected line; sportsbook odds are used only when they match that exact line. — means unavailable.</p>
+    <p className="board-foot">Validated estimates use chronological forecast-error profiles only for markets that beat a prior-rate baseline in held-out tests; alternate-line performance is not separately established. Other markets are marked exploratory. Last 10 is descriptive history. — means unavailable.</p>
   </section>;
 }
