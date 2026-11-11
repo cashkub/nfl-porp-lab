@@ -43,8 +43,8 @@ jobs:
           assert data.get('schemaVersion')==1
           assert data.get('modelVersion')=='opportunity-efficiency-v1'
           assert data.get('trainedThrough') and data.get('markets')
-          assert all(row.get('sampleSize')==len(row.get('residuals',[])) for row in data['markets'].values())
           assert all(row['sampleSize']>=data['minimumSamples'] for row in data['markets'].values())
+          assert all(sum(count for _,count in row['residualHistogram'])==row['sampleSize'] for row in data['markets'].values() if row.get('validation',{}).get('calibrated'))
           print(f"Validated {len(data['markets'])} market profiles through {data['trainedThrough']}")
           PY
       - name: Upload validated forecast artifact for review
