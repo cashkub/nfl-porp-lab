@@ -26,6 +26,7 @@ import {
 import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
+import { hasRelevantPlayerRole } from './lib/playerProjection.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { bookLine, priceText, usageFor } from './lib/bookLine.js';
 import {CbbGames,Moneylines,UsageTrends} from './components/Research.jsx';
@@ -267,9 +268,18 @@ export default function App() {
   const seasonPlayers = useMemo(() => players.flatMap(p => {
     const history=getPlayerGames(p,season);
     if(!availableStats(METRICS,history).length)return [];
-    const latest=history.at(-1);
-    return [{...p,team:latest.team || p.team}];
-  }), [players, season]);
+    const currentSeason=Math.max(...seasons);
+    const currentHistory=getPlayerGames(p,currentSeason);
+    const currentTeam=currentHistory.at(-1)?.team||p.team;
+    const nextFixture=(data.schedule??initialSchedule).filter(g=>g.season===currentSeason&&Date.parse(g.kickoff)>Date.now())
+      .find(g=>g.home===currentTeam||g.away===currentTeam);
+    const expectedStarter=Boolean(p.position==='QB'&&nextFixture&&[
+      nextFixture.context?.home?.qbId,nextFixture.context?.away?.qbId
+    ].some(id=>String(id||'')===String(p.id)));
+    if(!hasRelevantPlayerRole(p,currentHistory,{expectedStarter}))return [];
+    const latest=currentHistory.at(-1)||history.at(-1);
+    return [{...p,team:latest.team || currentTeam}];
+  }), [players, season, seasons, data.schedule]);
   const slateSeason = multi || page!=='analyzer' ? Math.max(...seasons) : season;
   const nflSchedule = useMemo(()=>(data.schedule ?? initialSchedule).filter(g=>g.season===slateSeason),[data.schedule,slateSeason]);
   const gameFilter = useGameFilter('nfl',slateSeason,nflSchedule);
