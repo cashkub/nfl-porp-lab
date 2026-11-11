@@ -1,6 +1,6 @@
-# PropBets — NFL Prop Analytics
+# PropBets — NFL Prop Lab V2
 
-A mobile-first, **React + Vite** NFL player prop research website. Search players, chart individual games, set your own lines, compare historical hit rates and filter by opponent and home/away. Uses **free nflverse player data**, with **GitHub Actions** for daily updates and **Cloudflare Pages** for hosting. No database, API key or paid sportsbook data feed required.
+A mobile-first, **React + Vite** sports analytics website with an active NFL V2 experience for player charts, prop research, Top Looks, model tracking, and upcoming-game analysis. The Games view keeps the existing schedule and adds independent score estimates, player projection research, and a detailed audit of available model inputs. Uses public nflverse data, GitHub Actions, and Cloudflare hosting; it does not require a paid sportsbook feed.
 
 > **Important:** The download initially contains **demo mode with entirely fictional players and results**. Run the data update workflow after pushing the repository to load actual NFL records. The user interface clearly labels sample data. Historical results are not win probabilities.
 
@@ -14,6 +14,9 @@ A mobile-first, **React + Vite** NFL player prop research website. Search player
 - Average, median, last-three hit percentage, recent trend.
 - Daily nflverse CSV import with idempotent commits. Supports prior seasons (default current NFL season plus previous two).
 - Optimized for mobile screens; horizontally scrollable bar graph and table.
+- NFL Games includes upcoming matchups, available schedule-feed prices, an opponent-adjusted score baseline, player opportunity estimates, matchup research, and a model-input audit directly below the game list.
+- NFL model validation runs chronological holdouts and reports score, margin, total, moneyline, spread, total-probability, and player-projection baselines when the public historical data supports them.
+- Games view clearly withholds game betting probabilities and player-prop hit probabilities unless the underlying method has passed relevant out-of-sample checks. Missing odds and timestamps are labeled rather than inferred.
 
 ## Quick start: publish your free website (recommended)
 
@@ -103,14 +106,16 @@ The UI uses **strict** comparisons: over a line means observed stat **>** line; 
 
 The source files are `https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv` for 2026, with the same naming convention for other years. If nflverse changes its release layout or CSV schema, the importer fails rather than silently publishing the wrong records. See the GitHub Actions run logs.
 
-## Limitations of the free first version
+## Current limitations
 
-- No live/in-game stats or betting odds. Betting-line thresholds are entered manually.
-- No automated sportsbook prop availability, prices, or injuries.
-- No independent predictive model or opponent defense rankings yet.
-- Nightly refresh depends on GitHub scheduled runs and an available nflverse release; it is **not guaranteed to update daily** if upstream is unavailable or workflow permissions change.
+- The NFL Games score estimate is a research baseline, not a validated betting-probability model. Historical holdouts have not shown a consistent independent advantage over closing-market score forecasts.
+- Historical sportsbook player-prop lines and prices are unavailable in the free data. The player opportunity estimator is a point-projection experiment; it does not establish prop-market value or ROI. Its experimental residual probabilities are evaluated in CI and are not promoted to the interface.
+- Schedule-feed moneylines and totals may lack a per-game timestamp. They are displayed as a schedule snapshot, not represented as verified live odds. Player prop lines are shown only when the data includes the market and timestamp.
+- Injury and weather sources are incomplete. Weather forecasts are fetched only for supported outdoor venues and near-term games; player availability is limited to the available report and recent depth-chart data.
+- Play-by-play efficiency, red-zone, and matchup details are historical context unless explicitly stated as model inputs. The score baseline does not use every displayed detail.
+- Nightly refresh depends on GitHub scheduled runs and available upstream data; it is **not guaranteed to update daily** if a source or workflow is unavailable.
 - The app has no login, subscriptions, analytics tracking, or database.
-- Reuse/republishing third-party player data or names in a commercial product may require reviewing applicable terms and intellectual-property rights. Attribute nflverse.
+- Review applicable source terms and intellectual-property rights before commercial reuse or redistribution. Credit nflverse when presenting or redistributing derived data as its license requires.
 
 ## Repository structure
 
@@ -148,6 +153,8 @@ nfl-prop-lab/
 
 Run `python scripts/download_nfl_model_data.py --output-dir data/nfl-model` to download the public schedule and play-by-play inputs, then run `python scripts/train_nfl.py data/nfl-model` to fit a candidate. The candidate is written to `scripts/nfl_weights.candidate.json`; it never overwrites production weights. The GitHub Actions workflow also runs the offline tests and creates a short-lived candidate artifact for review.
 
-Evaluation is chronological: features are trained on prior seasons, the market blend and win probabilities are calibrated on the next season, and results are compared across expanding untouched holdout seasons. Historical closing lines are labeled as reference benchmarks because the data does not include a pregame timestamp for those prices. Recency-weighted team ratings and calibration-season win-probability scales are reported as separate experiments and remain out of production unless they improve untouched holdouts. Historical observed weather and retrospectively listed starting quarterbacks are excluded from training until timestamped pregame snapshots are available. The candidate report is research output; production weights require a separate reviewed promotion.
+Evaluation is chronological: features are trained on prior seasons, the market blend is calibrated on the next season, and metrics are reported on a later holdout. Historical closing lines are labeled as reference benchmarks because the data does not include a pregame timestamp for those prices. Historical observed weather and retrospectively listed starting quarterbacks are excluded from training until timestamped pregame snapshots are available. The candidate report is research output; production weights require a separate reviewed promotion.
+
+The player projection diagnostic compares season-average, recent-average, and opportunity-times-efficiency point baselines using only earlier completed games. Its probability experiment estimates Over probability from past out-of-sample projection errors and compares that result with a smoothed prior Over-rate baseline. Thresholds are model-centered half-points because historical player-prop prices are unavailable. Results are research-only: beating a generic prior-rate benchmark does not establish accuracy at sportsbook lines or profitable betting value.
 
 **Disclaimer:** Use for historical research, not guaranteed gambling outcomes or financial decisions.
