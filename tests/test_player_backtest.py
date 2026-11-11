@@ -5,13 +5,34 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from backtest_player_baselines import (backtest,make_projection,
+from backtest_player_baselines import (backtest,build_forecast_distributions,make_projection,
                                       probability_over_from_errors,
                                       probability_delta_intervals,
                                       score_probability_predictions)
 
 
 class PlayerBaselineTests(unittest.TestCase):
+    def test_shared_distributions_keep_only_walk_forward_opportunity_residuals(self):
+        profiles=build_forecast_distributions({
+            ('WR','receivingYards','opportunity'):[10.0,-5.0,2.0],
+            ('WR','receivingYards','season'):[99.0],
+        },[{'season':2025,'week':17}])
+        self.assertEqual(profiles['modelVersion'],'opportunity-efficiency-v1')
+        self.assertEqual(profiles['trainedThrough'],{'season':2025,'week':17})
+        profile=profiles['markets']['WR:receivingYards:opportunity']
+        self.assertEqual(profile['sampleSize'],3)
+        self.assertEqual(profile['residuals'],[-5.0,2.0,10.0])
+        self.assertEqual(profile['residualQuantiles'],{'p10':-5.0,'p50':2.0,'p90':10.0})
+        self.assertFalse(profile['validation']['calibrated'])
+        self.assertNotIn('WR:receivingYards:season',profiles['markets'])
+
+    def test_probability_profile_requires_out_of_sample_gain_over_prior_rate(self):
+        profiles=build_forecast_distributions({('QB','passingTDs','opportunity'):[0.1]*700},
+            [{'season':2025,'week':17}],{'QB · passingTDs · opportunity':{
+                'games':900,'brier':.22,'logLoss':.62,'priorRateBrierDelta95CI':[-.03,-.01],
+                'priorRateLogLossDelta95CI':[-.05,-.02]}})
+        self.assertTrue(profiles['markets']['QB:passingTDs:opportunity']['validation']['calibrated'])
+
     def test_empirical_probability_requires_prior_week_residuals_and_uses_half_point(self):
         errors=[1.0]*60+[-1.0]*39
         self.assertIsNone(probability_over_from_errors(errors,10,10.5))
