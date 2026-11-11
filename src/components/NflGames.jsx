@@ -9,6 +9,7 @@ import {highImpactInjuries} from '../lib/gameInjuries.js';
 import {defenseTable} from '../lib/matchup.js';
 import {teamColor} from '../lib/teamColors.js';
 import {postedPriors,projectPosted} from '../lib/postedProjection.js';
+import {propSortOptions,sortPropRows} from '../lib/propSort.js';
 import MatchupProps from './MatchupProps.jsx';
 import GameChanges from './GameChanges.jsx';
 import FilterMenu from './FilterMenu.jsx';
@@ -223,10 +224,26 @@ function ModelEvidence({validation}){
 }
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
+  const [sortOrder,setSortOrder]=useState(()=>{
+    try {
+      const stored=sessionStorage.getItem('nfl-games-prop-sort');
+      return Object.hasOwn(propSortOptions,stored)?stored:'player';
+    } catch { return 'player'; }
+  });
+  function changeSort(event){
+    const order=event.target.value;
+    setSortOrder(order);
+    try { sessionStorage.setItem('nfl-games-prop-sort',order); } catch {}
+  }
+  const visibleRows=useMemo(()=>sortPropRows(rows.filter(r=>position==='ALL'||r.p.position===position),sortOrder),[rows,position,sortOrder]);
   const propMarkets=Object.entries(METRICS).sort((a,b)=>a[1].label.localeCompare(b[1].label));
-  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>{rows.some(r=>r.line)?'DraftKings lines and model estimates.':'Player averages and model estimates.'}</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label></div></div>
+  return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>{rows.some(r=>r.line)?'DraftKings lines and model estimates.':'Player averages and model estimates.'}</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label>
+      <label className="prop-sort-field">Sort by<FilterMenu aria-label="Sort player props" value={sortOrder} onChange={changeSort}>
+        {Object.entries(propSortOptions).map(([key,label])=><option key={key} value={key}>{label}</option>)}
+      </FilterMenu></label></div></div>
+    {(sortOrder==='high'||sortOrder==='low')&&market==='ALL'&&<p className="prop-sort-note">Projections ranked within each market.</p>}
     {!(books||[]).some(b=>sameGame(b,game)&&postedLines(b).length>0)&&<p className="nfl-empty-state">No DraftKings props in this matchup’s snapshot yet. The full slate is checked Wednesday and upcoming games are refreshed Sunday morning.</p>}
-    <MatchupProps key={game.id} rows={rows.filter(r=>position==='ALL'||r.p.position===position)} game={game} onOpen={onOpen}/>
+    <MatchupProps key={game.id} rows={visibleRows} game={game} onOpen={onOpen}/>
     <div className="nfl-probability-honesty"><Info size={17}/><span>Posted props use pregame workload and efficiency. Anytime TD shows the estimated chance of at least one rushing or receiving touchdown using a Poisson approximation. A new starting QB with only relief appearances uses league starter workload. Limited samples and gaps in recent appearances are flagged. For matchups without posted markets, the research line averages up to 10 prior games this season.</span></div>
     <details className="nfl-full-props"><summary>OPEN FULL MATCHUP PROP BOARD <ArrowUpRight size={15}/></summary><PropsBoard fixedGame={game} title="Matchup Player Prop Board" games={(books||[]).filter(g=>sameGame(g,game))} schedule={[game]} players={players} season={season} now={now} onOpen={onOpen}/></details>
   </div>;
