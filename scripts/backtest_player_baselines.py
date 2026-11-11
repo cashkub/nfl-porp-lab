@@ -6,6 +6,7 @@ import csv
 import json
 import math
 import sys
+from bisect import bisect_right
 from collections import defaultdict
 from pathlib import Path
 
@@ -89,7 +90,14 @@ def probability_over_from_errors(errors, projection, line, minimum_samples=100):
     """Empirical residual probability using only errors available before kickoff."""
     if len(errors)<minimum_samples or not math.isfinite(projection) or not math.isfinite(line):
         return None
-    over=sum(error>line-projection for error in errors)
+    return probability_over_from_sorted_errors(sorted(errors),projection,line,minimum_samples)
+
+
+def probability_over_from_sorted_errors(errors, projection, line, minimum_samples=100):
+    """Binary-search a pre-sorted residual distribution without rescanning it."""
+    if len(errors)<minimum_samples or not math.isfinite(projection) or not math.isfinite(line):
+        return None
+    over=len(errors)-bisect_right(errors,line-projection)
     # Laplace smoothing keeps sparse tails away from exact 0% and 100%.
     return (over+1)/(len(errors)+2)
 
@@ -122,6 +130,7 @@ def backtest(directory):
         batch=weeks[season,week]
         # Every forecast in a week uses data from completed prior weeks only.
         batch_errors=[]
+        sorted_residuals={}
         for row in batch:
             pid,position=row['player'],row['position']
             for market,usage_key in MARKETS[position]:
@@ -139,8 +148,10 @@ def backtest(directory):
                         predictions[season][position+' · '+market+' · '+model].append({'actual':actual,'predicted':value})
                         distribution_key=(position,market,model)
                         book_like_line=math.floor(value)+0.5
-                        probability=probability_over_from_errors(
-                            residual_history[distribution_key],value,book_like_line)
+                        if distribution_key not in sorted_residuals:
+                            sorted_residuals[distribution_key]=sorted(residual_history[distribution_key])
+                        probability=probability_over_from_sorted_errors(
+                            sorted_residuals[distribution_key],value,book_like_line)
                         if probability is not None and actual!=book_like_line:
                             probability_predictions[season][position+' · '+market+' · '+model].append({
                                 'probability':probability,'outcome':float(actual>book_like_line)})
