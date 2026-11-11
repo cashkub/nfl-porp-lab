@@ -26,7 +26,7 @@ import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
-import { matchupBook, postedLines, playerKey, bookLine, priceText, usageFor } from './lib/bookLine.js';
+import { playerAverageLine, matchupBook, postedLines, playerKey, bookLine, priceText, usageFor } from './lib/bookLine.js';
 import {CbbGames,Moneylines,UsageTrends} from './components/Research.jsx';
 import SportHome,{toolsBySport} from './components/SportHome.jsx';
 import CbbBoard from './components/CbbBoard.jsx';
@@ -327,8 +327,12 @@ export default function App() {
   const upcoming = !isDemo && player?.seasons?.includes(scheduleSeason) && nextGame(contextSchedule, player?.team, scheduleSeason, previewTools || chartFixture&&page==='analyzer' || gameFilter.game ? -Infinity : now);
   const quote = bookLine(bookGames, upcoming, player?.name, metric);
   const lineContext = [player?.id, metric, upcoming?.kickoff].join('|');
-  const manual = custom?.context === lineContext;
-  const line = manual ? custom.value : quote?.point ?? (previewTools?null:markets[metric].defaultLine);
+  const hasMarket=upcoming && postedLines(matchupBook(bookGames,upcoming)).length>0;
+  const averageLine=previewTools && upcoming && !hasMarket
+    ? playerAverageLine(getPlayerGames(player,scheduleSeason,'ALL',venue).filter(g=>Number(g.week)<Number(upcoming.week)),metric)
+    : null;
+  const manual = custom?.context === lineContext && !(custom.source==='Player Average' && hasMarket);
+  const line = manual ? custom.value : quote?.point ?? (previewTools?averageLine:markets[metric].defaultLine);
   const setLine = value => setCustom({context:lineContext, value});
   const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
@@ -353,7 +357,7 @@ export default function App() {
       else gameFilter.select(day,[day,next.away,next.home].join('|'));
     }
     const saved=bookLine(bookGames,next,p.name,market.metric);
-    setCustom(saved?.point===market.point?null:{context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point,source:'Selected Prop Line'});
+    setCustom(saved?.point===market.point?null:{context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point,source:market.source||'Selected Prop Line'});
     setPage('analyzer'); window.location.hash='analyzer'; window.scrollTo(0,0);
   }
   function openTopLookChart(p, market, side, game) {

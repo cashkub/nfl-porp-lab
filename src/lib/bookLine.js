@@ -52,3 +52,9 @@ export function usageFor(metric) {
   if (metric === 'rushingYards' || metric === 'rushingAttempts') return {key:'carries', label:'Carries'};
   return {key:'targets', label:'Targets'};
 }
+
+export function playerAverageLine(history,metric){
+  const values=history.slice(-10).map(g=>g.stats?.[metric]).filter(Number.isFinite);
+  if(!values.length)return null;
+  return Number((values.reduce((sum,value)=>sum+value,0)/values.length).toFixed(1));
+}

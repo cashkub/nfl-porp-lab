@@ -138,7 +138,7 @@ function LineControl({line,setLine,resetLine,manual,manualLabel,quote,median,gam
     <summary className="chart-disclosure">
       <ControlLabel>Prop Line</ControlLabel>
       <span className="line-selection">{line!=null && <strong>{direction} {line}</strong>}
-        {manual?manualLabel:quote?'DraftKings':'No Sportsbook Line'}
+        {manual?manualLabel:quote?'DraftKings':line!=null?'Player Average':'No Sportsbook Line'}
       </span>
     </summary>
     <div className="chart-line-panel">
@@ -332,7 +332,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <div className="player-identity"><PlayerPhoto key={player.id} large id={player.id} name={player.name} url={player.photo}/>
         <div><small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-prop">
           <strong>{line==null?'No Line Selected':direction+' '+line}</strong><span>{chartMarkets[metric].label}</span>
-          {line!=null && <small>{manual?manualLabel: 'DraftKings'}</small>}
+          {line!=null && <small>{manual?manualLabel:quote?'DraftKings':'Player Average'}</small>}
           {upcoming && <small className="prop-matchup">Prop Matchup · Week {upcoming.week} · {upcoming.venue==='Away'?'at':'vs.'} {upcoming.opponent}</small>}
           {!(manual && manualLabel==='Player Average') && quote && line===quote.point && <div className="prop-prices" aria-label="DraftKings odds">
             {['over','under'].map(side=><span key={side} data-selected={side===direction}>{side} <b>{priceText(quote[side])}</b></span>)}
