@@ -30,10 +30,17 @@ export function hasMeaningfulProjectionRole({position,market,projectedUsage,hist
 }
 
 const mean=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:null;
+const efficiencyPriorCache=new WeakMap();
 
 // Shared league efficiency prior used by both NFL Games and Top Looks. Only
 // rows completed before the selected matchup may contribute to the estimate.
 export function buildOpportunityEfficiencyPriors(players,matchup){
+  const cacheable=players&&typeof players==='object';
+  const cacheKey=Number(matchup.season)+':'+Number(matchup.week);
+  if(cacheable){
+    const seasonCache=efficiencyPriorCache.get(players);
+    if(seasonCache?.has(cacheKey))return seasonCache.get(cacheKey);
+  }
   const totals={};
   const isPregame=game=>Number(game.season)<Number(matchup.season)||
     (Number(game.season)===Number(matchup.season)&&Number(game.week)<Number(matchup.week));
@@ -52,9 +59,15 @@ export function buildOpportunityEfficiencyPriors(players,matchup){
       }
     }
   }
-  return Object.fromEntries(Object.entries(totals).map(([key,total])=>[
+  const priors=Object.fromEntries(Object.entries(totals).map(([key,total])=>[
     key,total.opportunities>0?total.stats/total.opportunities:null
   ]));
+  if(cacheable){
+    let seasonCache=efficiencyPriorCache.get(players);
+    if(!seasonCache){seasonCache=new Map();efficiencyPriorCache.set(players,seasonCache);}
+    seasonCache.set(cacheKey,priors);
+  }
+  return priors;
 }
 
 // Research baseline matching the walk-forward opportunity × efficiency benchmark.
