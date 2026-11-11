@@ -12,7 +12,9 @@ function Price({row}){
     {q?.updated&&<small>Updated {new Date(q.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small>}</>;
 }
 function Projection({row}){
-  return Number.isFinite(row.estimated)?<strong>{number(row.estimated)}</strong>:<small>Projection unavailable</small>;
+  if(!Number.isFinite(row.estimated))return <small>{row.note||'Projection unavailable'}</small>;
+  return <><strong>{number(row.estimated)}{row.line?.anytime?'%':''}</strong>
+    {row.line?.anytime&&<small>Chance to score</small>}{row.note&&<small>{row.note}</small>}</>;
 }
 function Player({row}){
   return <span className="prop-identity"><PlayerPhoto id={row.p.id} name={row.p.name} url={row.p.photo}/>
@@ -41,12 +43,18 @@ export default function MatchupProps({rows,game,onOpen}){
     <div className="matchup-props-desktop"><table><thead><tr>{['Player','Market','Prop line','Model projection','Last 5 avg','Season avg','Role / share','Defense','Chart'].map(h=><th key={h}>{h}</th>)}</tr></thead>
       <tbody>{rows.map(r=><tr key={key(r)}><td><Player row={r}/></td><td>{r.label}</td><td><Price row={r}/></td><td><Projection row={r}/></td>
         <td>{number(r.recentAvg)}</td><td>{number(r.seasonAvg)}<small>{r.sampleLabel}</small></td><td><Role row={r}/></td><td><Defense row={r}/></td><td><Charts row={r} game={game} onOpen={onOpen}/></td></tr>)}</tbody></table></div>
-    <div className="matchup-props-mobile">{rows.map(r=><article key={key(r)}>
-      <div className="prop-card-head"><Player row={r}/><b>{r.label}</b></div>
-      <div className="prop-comparison"><div><small>{r.line?'DraftKings':'Research line'}</small><Price row={r}/></div><div><small>Model projection</small><Projection row={r}/></div></div>
-      <details><summary>Stats &amp; matchup</summary><dl>
-        <dt>Last 5 average</dt><dd>{number(r.recentAvg)}</dd><dt>Season average</dt><dd>{number(r.seasonAvg)} {r.sampleLabel}</dd>
-        <dt>Role / share</dt><dd><Role row={r}/></dd><dt>Defense</dt><dd><Defense row={r}/></dd>
-      </dl><Charts row={r} game={game} onOpen={onOpen}/></details>
-    </article>)}</div></>;
+    <div className="matchup-props-mobile">
+      <div className="prop-list-head" aria-hidden="true"><span>Player / market</span><span>{rows[0].line?'DK line':'Average'}</span><span>Model</span></div>
+      {rows.map(r=><details key={key(r)} className="prop-list-row">
+        <summary>
+          <span className="prop-list-name"><b>{r.p.name}</b><small>{[r.team,r.label].filter(Boolean).join(' · ')}</small></span>
+          <span>{r.line?.anytime?priceText(r.line.over):number(r.line?.point??r.averageLine)}</span>
+          <span>{Number.isFinite(r.estimated)?number(r.estimated)+(r.line?.anytime?'%':''):'—'}<i aria-hidden="true">⌄</i></span>
+        </summary>
+        <dl><dt>{r.line?'DraftKings':'Player average'}</dt><dd><Price row={r}/></dd>
+          <dt>Model projection</dt><dd><Projection row={r}/></dd>
+          {r.status&&<><dt>Injury status</dt><dd>{r.status}</dd></>}
+          <dt>Last 5 average</dt><dd>{number(r.recentAvg)}</dd><dt>Season average</dt><dd>{number(r.seasonAvg)} {r.sampleLabel}</dd>
+          <dt>Role / share</dt><dd><Role row={r}/></dd><dt>Defense</dt><dd><Defense row={r}/></dd>
+      </dl><Charts row={r} game={game} onOpen={onOpen}/></details>)}</div></>;
 }
