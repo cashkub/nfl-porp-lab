@@ -380,6 +380,22 @@ def add_offensive_snaps(payload, previous, player_directory):
                 game["usage"]["offenseSnapRate"] = rate
 
 
+def keep_wednesday_injuries(schedule, previous, now):
+    old = {g.get("id"): g for g in previous if g.get("id")}
+    local = now.astimezone(ZoneInfo("America/New_York"))
+    for game in schedule:
+        days = (datetime.fromisoformat(game["kickoff"]).astimezone(local.tzinfo).date() - local.date()).days
+        baseline = old.get(game.get("id"), {}).get("wednesdayInjuries")
+        if baseline:
+            game["wednesdayInjuries"] = baseline
+        elif local.weekday() == 2 and 0 <= days <= 6 and any(game.get("injuries", {}).values()):
+            game["wednesdayInjuries"] = {
+                "asOf": local.isoformat(timespec="minutes"),
+                "teams": {team: [{"name": r["name"], "status": r.get("gameStatus") or r.get("status")}
+                                 for r in reports] for team, reports in game["injuries"].items()}
+            }
+
+
 def main() -> int:
     records = []
     failed = []
@@ -502,7 +518,9 @@ def main() -> int:
             for item in records:
                 if item["id"] in finals: item["final"]=finals[item["id"]]
             record_path.write_text(json.dumps(records,separators=(",",":"))+"\n")
-    add_offensive_snaps(payload, json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}, player_directory)
+    previous = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
+    add_offensive_snaps(payload, previous, player_directory)
+    keep_wednesday_injuries(payload.get("schedule", []), previous.get("schedule", []), datetime.now(timezone.utc))
     save_if_changed(payload)
     return 0
 

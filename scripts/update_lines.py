@@ -109,6 +109,12 @@ def main():
         games[event['id']] = {'version': 5, 'snapshotDate': snapshot_date.isoformat(),
                               'id': event['id'], 'home': home, 'away': away,
                               'kickoff': event['commence_time'], 'lines': lines, 'anytime': prices}
+        games[event['id']]['checkedAt'] = checked
+        if snapshot_date.weekday() == 6 and previous.get('snapshotDate'):
+            prior_date = datetime.fromisoformat(previous['snapshotDate']).date()
+            if (snapshot_date - prior_date).days == 4:
+                games[event['id']]['wednesday'] = {key: previous[key] for key in
+                    ('snapshotDate', 'checkedAt', 'lines', 'anytime') if key in previous}
         print(f'{away} at {home}: {len(lines)} props, {len(prices)} anytime TD prices')
     CACHE.write_text(json.dumps({'games':list(games.values())}, separators=(',', ':')) + '\n')
 

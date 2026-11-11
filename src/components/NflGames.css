@@ -88,3 +88,68 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.match-score {
+  padding: 1rem var(--games-inset);
+  background: linear-gradient(115deg,#262032,#171923 68%);
+}
+.match-score-caption, .prop-card-head {
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.35rem .8rem;
+}
+.nfl-games .match-score-caption h2 {margin:0; font-size:1rem; color:#f6f2f7}
+.match-score-caption > span, .matchup-props-desktop small, .matchup-props-mobile small {
+  display:block; color:#bfb6c8; font-size:.75rem; line-height:1.45;
+}
+.match-score-teams, .prop-comparison {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; margin-top:.7rem}
+.match-score-teams > div {
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.55rem;
+  border-inline-start:3px solid var(--club); border-radius:.55rem; padding:.65rem .8rem;
+  background:#171720; box-shadow:inset 0 0 0 1px #3b3544;
+}
+.match-score-teams img {width:clamp(2rem,5vw,3.5rem); height:auto}
+.match-score-teams small {display:block; color:#c3b6cd; text-transform:uppercase; font-size:.65rem; letter-spacing:.09em}
+.match-score-teams strong {font-size:clamp(1.45rem,3.6vw,2.6rem); font-variant-numeric:tabular-nums}
+.match-arrows {display:flex; gap:.3rem}
+.match-arrows button {border:1px solid #665474; border-radius:.55rem; background:#251f2d; color:#f1e7f8; min-width:44px; min-height:44px; cursor:pointer}
+.match-arrows button:disabled {opacity:.35; cursor:default}
+.nfl-games .nfl-pick-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
+.nfl-games .match-section-title {margin:1.35rem 0 .55rem; font-size:1rem}
+.slate-changes, .week-games {margin-top:1rem; border:1px solid #514459; background:#1c1922; border-radius:.7rem; padding:.8rem 1rem}
+.slate-changes summary, .week-games summary, .matchup-props-mobile summary {cursor:pointer; font-weight:700}
+.slate-changes section {padding-top:.7rem; margin-top:.7rem; border-top:1px solid #453c4b}
+.slate-changes h4 {margin:0 0 .3rem}.slate-changes small {display:block; color:#bfb6c8}
+.slate-changes ul {list-style:none; padding:0; margin:.5rem 0}
+.slate-changes li {display:flex; flex-wrap:wrap; justify-content:space-between; gap:.3rem 1rem; padding:.4rem 0; border-bottom:1px solid #34303b}
+.slate-changes li span {font-variant-numeric:tabular-nums}
+.matchup-props-desktop {max-width:100%; overflow:auto}
+.matchup-props-desktop table {width:100%; border-collapse:collapse; font-size:.82rem; font-variant-numeric:tabular-nums}
+.matchup-props-desktop :is(th,td) {padding:.65rem .5rem; text-align:left; border-bottom:1px solid #413748}
+.matchup-props-desktop th {background:#26212d; color:#d7c9e1}
+.matchup-props-desktop td:nth-child(4), .prop-comparison > div:last-child {background:#282133; color:#ead3ff}
+.prop-identity {display:inline-flex; align-items:center; gap:.45rem; min-width:0}
+.prop-identity .player-photo {width:2.25rem; height:2.25rem; flex:none}
+.matchup-props-mobile {display:none}
+@media(max-width:760px) {
+  .matchup-props-desktop {display:none}
+  .matchup-props-mobile {display:grid; gap:.75rem}
+  .matchup-props-mobile article {min-width:0; padding:.8rem; background:#1d1b23; border:1px solid #453b4d; border-radius:.7rem}
+  .prop-card-head > b {font-size:.78rem; color:#d7c3e5}
+  .prop-comparison > div {padding:.55rem .65rem; background:#24232b; border-radius:.45rem}
+  .prop-comparison > div > strong {display:block; font-size:1.2rem}
+  .matchup-props-mobile details {margin-top:.7rem; border-top:1px solid #453b4d; padding-top:.6rem; font-size:.82rem}
+  .matchup-props-mobile dl {display:grid; grid-template-columns:auto minmax(0,1fr); gap:.5rem; margin:.7rem 0}
+  .matchup-props-mobile dd {margin:0; text-align:right}
+  .matchup-props-mobile dt {color:#c6bacd}
+}
+@media(max-width:680px) {
+  .nfl-games .nfl-week-control {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:center}
+  .nfl-games .nfl-week-control p {grid-column:2; text-align:right}
+  .nfl-games .nfl-pick-grid {grid-template-columns:minmax(0,1fr)}
+  .nfl-games .nfl-pick-tile {min-height:0}
+}
+@media(max-width:460px) {
+  .match-score-teams > div {grid-template-columns:auto 1fr; padding:.5rem .6rem}
+  .match-score-teams strong {grid-column:1/-1}
+}
+.prop-defense.favorable b {color:#a7edc4}
+.prop-defense.tough b {color:#ffb8be}
