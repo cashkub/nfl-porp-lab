@@ -1,4 +1,4 @@
-.nfl-games{width:100%;min-width:0}
+.nfl-games{--games-inset:clamp(.8rem,2vw,1.4rem);width:100%;min-width:0}
 .nfl-games .nfl-games-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:clamp(1rem,2.5vw,1.7rem);border:1px solid color-mix(in srgb,#a977dc 48%,var(--rule));border-radius:1rem;background:radial-gradient(ellipse at 4% 0%,#672da52a,transparent 45%),linear-gradient(115deg,color-mix(in srgb,#17141d 96%,var(--canvas)),var(--canvas))}
 .nfl-games-heading small,.nfl-analysis-head small,.nfl-projection-banner small,.nfl-breakdown-intro small{color:#c9a2ee;font-weight:850;font-size:.68rem;letter-spacing:.15em}
 .nfl-games .nfl-games-heading h1{margin:.2rem 0 0;font-size:clamp(1.55rem,3vw,2.2rem);font-weight:900;letter-spacing:.015em}
@@ -64,8 +64,14 @@
 .nfl-defense-cell{border-left:2px solid var(--club)}.nfl-defense-legend{display:flex;flex-wrap:wrap;align-items:center;gap:.38rem;margin:-.15rem 0 .65rem}.nfl-defense-legend span{padding:.26rem .42rem;border:1px solid #4b4551;border-radius:999px;color:#d7ccdf;font-size:.55rem;font-weight:900;letter-spacing:.035em}.nfl-defense-legend .favorable{border-color:#368c63;color:#a7edc4;background:#173529}.nfl-defense-legend .tough{border-color:#a24c58;color:#ffb8be;background:#3a2026}
 
 
-/* Let each header wrap against the available card width. */
+/* Align the two headers and the week controls with the prediction panel. */
+.nfl-games .nfl-week-control {
+  padding-inline: var(--games-inset);
+  margin-block: .85rem;
+}
+
 .nfl-games :is(.nfl-games-heading, .nfl-analysis-head) {
+  padding-inline: var(--games-inset);
   flex-wrap: wrap;
   row-gap: .6rem;
 }
@@ -75,4 +81,10 @@
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 380px) {
+  .nfl-games .nfl-week-control {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
