@@ -1,3 +1,5 @@
+import TeamLogo from './TeamLogo.jsx';
+import {teamNames} from '../lib/schedule.js';
 import React,{useMemo,useRef,useState} from 'react';
 import {ArrowUpRight,ChartNoAxesCombined,Cloud,Info,Shield,Target} from 'lucide-react';
 import {projection} from '../lib/projection.js';
@@ -9,7 +11,7 @@ import {highImpactInjuries} from '../lib/gameInjuries.js';
 import {defenseTable} from '../lib/matchup.js';
 import {teamColor} from '../lib/teamColors.js';
 import {postedPriors,projectPosted} from '../lib/postedProjection.js';
-import {propSortOptions,sortPropRows} from '../lib/propSort.js';
+import {sortColumns,sortPropRows} from '../lib/propSort.js';
 import MatchupProps from './MatchupProps.jsx';
 import GameChanges from './GameChanges.jsx';
 import FilterMenu from './FilterMenu.jsx';
@@ -27,17 +29,15 @@ const format=n=>Number.isFinite(n)?(Number.isInteger(n)?String(n):n.toFixed(1)):
 const sameGame=(a,b)=>a&&b&&normalizeTeamCode(a.away)===normalizeTeamCode(b.away)&&normalizeTeamCode(a.home)===normalizeTeamCode(b.home)&&Math.abs(Date.parse(a.kickoff)-Date.parse(b.kickoff))<12*3600000;
 function savedAnalysis(){try{return JSON.parse(sessionStorage.getItem('nfl-games-analysis')||'{}')}catch{return {}}}
 
-function Team({code,price}){
-  const logoCode=({WAS:'wsh',LAR:'lar'})[code]||code.toLowerCase();
-  return <span className="nfl-game-team" style={{'--club':teamColor(code)}}>
-    <img alt="" loading="lazy" src={'https://a.espncdn.com/i/teamlogos/nfl/500/'+logoCode+'.png'} onError={e=>{e.currentTarget.hidden=true}}/>
-    <b>{code}</b><span>ML {priceText(price)}</span>
-  </span>;
-}
+const dayLabel=new Intl.DateTimeFormat('en-US',{weekday:'long',month:'short',day:'numeric',timeZone:'America/New_York'});
+const timeLabel=new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
+const gameKey=g=>g.id||g.kickoff+g.home;
+const gameDay=g=>dayLabel.format(new Date(g.kickoff));
+const gameTime=g=>g.timeKnown===false?'Time TBD':timeLabel.format(new Date(g.kickoff));
 
 export default function NflGames({schedule,books,players,validation,season,now,onOpen,updated,loading,error}){
   const [requestedWeek,setWeek]=useState(()=>savedAnalysis().week||'');
-  const [selectedId,setSelected]=useState(()=>savedAnalysis().selected||'');
+  const [selectedId,setSelected]=useState('');
   const [tab,setTab]=useState(()=>savedAnalysis().tab||'game');
   const [position,setPosition]=useState(()=>savedAnalysis().position||'ALL');
   const [market,setMarket]=useState(()=>savedAnalysis().market||'ALL');
@@ -46,9 +46,15 @@ export default function NflGames({schedule,books,players,validation,season,now,o
   const weeks=[...new Set(upcoming.map(weekOf))];
   const week=weeks.includes(requestedWeek)?requestedWeek:weeks[0];
   const games=upcoming.filter(g=>weekOf(g)===week);
-  const matchupOptions=[...games].sort((a,b)=>(a.away+' @ '+a.home).localeCompare(b.away+' @ '+b.home));
-  const selected=games.find(g=>(g.id||g.kickoff+g.home)===selectedId)||games[0];
-  const selectedGameId=selected?.id||selected?.kickoff+selected?.home||'';
+  const selected=games.find(g=>gameKey(g)===selectedId);
+  function openMatchup(id){
+    setSelected(id);
+    if(!selected)setTab('game');
+    requestAnimationFrame(()=>{
+      analysisRef.current?.focus({preventScroll:true});
+      analysisRef.current?.scrollIntoView({block:'start'});
+    });
+  }
   const bookGame=(books||[]).find(g=>sameGame(g,selected));
   React.useEffect(()=>{try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab,position,market}))}catch{}},[week,selected,tab,position,market]);
   const rows=useMemo(()=>{
@@ -127,14 +133,14 @@ export default function NflGames({schedule,books,players,validation,season,now,o
       return quotes.filter(({line})=>market==='ALL'||line.metric===market).map(({line,player,status})=>{
         const stats=output.find(row=>row.p.id===player?.id&&row.metric===line.metric);
         const fallback=stats?null:projectPosted({player,line,status,game:selected,priors});
-        return {...stats,...fallback,p:player||{name:line.player},team:player?.team,metric:line.metric,
+        return {...stats,...fallback,p:player||{name:line.player},team:player?.team||[selected.away,selected.home].find(t=>line.player.endsWith(teamNames[t]+' D/ST')),metric:line.metric,
           label:line.anytime?'Anytime TD':METRICS[line.metric]?.label||line.metric,line,status,chartAvailable:Boolean(player?.games?.length)};
       }).sort((a,b)=>a.p.name.localeCompare(b.p.name)||a.label.localeCompare(b.label));
     }
     return output.sort((a,b)=>a.team.localeCompare(b.team)||a.p.name.localeCompare(b.p.name)||a.label.localeCompare(b.label));
   },[players,selected,bookGame,market]);
   const breakdown=selected?projection(selected,selected.awayRating,selected.homeRating):null;
-  const selectedAnalysis=selected&&<section ref={analysisRef} className="nfl-analysis" aria-labelledby="nfl-analysis-title">
+  const selectedAnalysis=selected&&<section ref={analysisRef} tabIndex={-1} className="nfl-analysis" aria-labelledby="nfl-analysis-title">
     <section className="match-score" aria-labelledby="nfl-analysis-title">
       <div className="match-score-caption"><h2 id="nfl-analysis-title">Projected final score</h2><span>{selected.timeKnown===false?selected.date+' · Time TBD':kickoff.format(new Date(selected.kickoff))}</span></div>
       <div className="match-score-teams">{['away','home'].map(side=>{
@@ -155,32 +161,24 @@ export default function NflGames({schedule,books,players,validation,season,now,o
   </section>;
 
   return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> SCHEDULE SNAPSHOT</span></header>
-    {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><label>Matchup<FilterMenu aria-label="Matchup" value={selectedGameId} onChange={e=>{setSelected(e.target.value);requestAnimationFrame(()=>analysisRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));}}>{matchupOptions.map(g=>{const id=g.id||g.kickoff+g.home;return <option key={id} value={id}>{g.away} @ {g.home}</option>})}</FilterMenu></label><div className="match-arrows" aria-label="Switch matchup">{[-1,1].map(step=>{
-        const next=matchupOptions[matchupOptions.indexOf(selected)+step];
-        return <button type="button" key={step} disabled={!next} aria-label={step<0?'Previous matchup':'Next matchup'} onClick={()=>setSelected(next.id||next.kickoff+next.home)}>{step<0?'←':'→'}</button>;
-      })}</div><p>Schedule updated {updated}</p></div>
-      {selectedAnalysis}
-      <details className="week-games"><summary>All matchups · {week}</summary><div className="nfl-games-list" aria-label="Upcoming NFL matchups">{games.map(g=>{
-        const id=g.id||g.kickoff+g.home,active=(selected?.id||selected?.kickoff+selected?.home)===id;
-        return <button type="button" className="nfl-game nfl-match-button" key={id} aria-pressed={active} onClick={()=>{setSelected(id);requestAnimationFrame(()=>analysisRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));}}>
-          <span className="nfl-game-date">{g.timeKnown===false?g.date+' · TIME TBD':kickoff.format(new Date(g.kickoff))}</span>
-          <span className="nfl-game-pair"><Team code={g.away} price={g.awayPrice}/><small>AT</small><Team code={g.home} price={g.homePrice}/></span>
-          <span className="nfl-game-market">{Number.isFinite(g.totalLine)?'TOTAL '+g.totalLine+' · O '+priceText(g.overPrice)+' / U '+priceText(g.underPrice):'GAME TOTAL NOT AVAILABLE'}</span>
-          <span className="nfl-game-action">{active?'SELECTED MATCHUP':'ANALYZE MATCHUP'} ↓</span>
-        </button>;
-      })}</div></details>
+    {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><label>Matchup<FilterMenu aria-label="Matchup" value={selected?gameKey(selected):''} onChange={e=>openMatchup(e.target.value)}>
+        <option value="">All games</option>{games.map(g=><option key={gameKey(g)} value={gameKey(g)} data-group={gameDay(g)} data-short-label={g.away+' @ '+g.home}>{gameTime(g)+' · '+g.away+' @ '+g.home}</option>)}
+      </FilterMenu></label>{selected&&<div className="match-arrows" aria-label="Switch matchup">{[-1,1].map(step=>{
+        const next=games[games.indexOf(selected)+step];
+        return <button type="button" key={step} disabled={!next} aria-label={step<0?'Previous matchup':'Next matchup'} onClick={()=>openMatchup(gameKey(next))}>{step<0?'←':'→'}</button>;
+      })}</div>}<p>Schedule updated {updated}</p></div>
+      {selected?<><button className="slate-back" type="button" onClick={()=>setSelected('')}>← All games</button>{selectedAnalysis}</>:<WeeklySlate games={games} onOpen={openMatchup}/>}
     </>}
     {!upcoming.length&&<p>{loading?'Loading the NFL schedule…':error||'No upcoming games in the current schedule.'}</p>}
   </section>;
 }
 
-function GamePredictions({game,model,validation,players,bookGame}){
-  const workload=useMemo(()=>({away:teamWorkload(players,game.away,game),home:teamWorkload(players,game.home,game)}),[players,game]);
+function gamePicks(game,model){
   const away=model?.a,home=model?.h;
   const margin=away&&home?home.score-away.score:null;
   const elo=game.context?.elo;
   const projectedTotal=away&&home?away.score+home.score:null;
-  const homeProbability=Number(elo?.homeProbability),awayProbability=Number(elo?.awayProbability);
+  const homeProbability=elo?.homeProbability,awayProbability=elo?.awayProbability;
   const hasWinnerForecast=Number.isFinite(homeProbability)&&Number.isFinite(awayProbability);
   const winner=hasWinnerForecast&&Math.abs(homeProbability-awayProbability)>.0001
     ?(homeProbability>awayProbability?{team:game.home,probability:homeProbability}:{team:game.away,probability:awayProbability})
@@ -191,6 +189,41 @@ function GamePredictions({game,model,validation,players,bookGame}){
   const totalSide=Number.isFinite(projectedTotal)&&Number.isFinite(game.totalLine)
     ?projectedTotal-game.totalLine>.05?'OVER':game.totalLine-projectedTotal>.05?'UNDER':'NO CLEAR SIDE'
     :null;
+  return {elo,margin,projectedTotal,winner,hasWinnerForecast,spreadTeam,spreadLine,spreadEdge,totalSide};
+}
+
+function WeeklySlate({games,onOpen}){
+  const days=new Map();
+  for(const game of games){
+    const day=gameDay(game);
+    if(!days.has(day))days.set(day,[]);
+    days.get(day).push(game);
+  }
+  return <div className="weekly-slate">{[...days].map(([day,fixtures])=><section key={day}>
+    <h2>{day}</h2>
+    {fixtures.map(game=>{
+      const model=projection(game,game.awayRating,game.homeRating);
+      const {winner,hasWinnerForecast,spreadTeam,spreadLine,spreadEdge,totalSide}=gamePicks(game,model);
+      const winnerPrice=winner?.team===game.home?game.homePrice:game.awayPrice;
+      const spreadPrice=spreadTeam===game.home?game.homeSpreadPrice:game.awaySpreadPrice;
+      const totalPrice=totalSide==='OVER'?game.overPrice:game.underPrice;
+      return <button className="slate-fixture" type="button" key={gameKey(game)} onClick={()=>onOpen(gameKey(game))}>
+        <span className="slate-pair"><b><span style={{'--club':teamColor(game.away)}}><TeamLogo team={game.away}/>{game.away}</span> @ <span style={{'--club':teamColor(game.home)}}><TeamLogo team={game.home}/>{game.home}</span></b><small>{gameTime(game)}</small></span>
+        <span><small>Moneyline winner</small><b>{winner?winner.team+' '+priceText(winnerPrice):hasWinnerForecast?'Even':'Unavailable'}</b>
+          {winner&&<em>{(100*winner.probability).toFixed(1)}% model win</em>}</span>
+        <span><small>Spread</small><b>{spreadTeam?spreadTeam+' '+(spreadLine>0?'+':'')+spreadLine:spreadEdge==null?'Unavailable':'No clear side'}</b>
+          {spreadTeam&&Number.isFinite(spreadPrice)&&<em>{priceText(spreadPrice)}</em>}</span>
+        <span><small>Total</small><b>{totalSide==='OVER'||totalSide==='UNDER'?totalSide+' '+game.totalLine:totalSide||'Unavailable'}</b>
+          {(totalSide==='OVER'||totalSide==='UNDER')&&Number.isFinite(totalPrice)&&<em>{priceText(totalPrice)}</em>}</span>
+        <span className="slate-chevron" aria-hidden="true">›</span>
+      </button>;
+    })}
+  </section>)}</div>;
+}
+
+function GamePredictions({game,model,validation,players,bookGame}){
+  const workload=useMemo(()=>({away:teamWorkload(players,game.away,game),home:teamWorkload(players,game.home,game)}),[players,game]);
+  const {elo,margin,projectedTotal,winner,hasWinnerForecast,spreadTeam,spreadLine,spreadEdge,totalSide}=gamePicks(game,model);
   return <div className="nfl-view-panel">
     <div className="nfl-predictions-heading"><div><h3>Model picks</h3></div><span>RESEARCH OUTPUT · NOT A BETTING EDGE</span></div>
     <div className="nfl-pick-grid">
@@ -211,7 +244,7 @@ function GamePredictions({game,model,validation,players,bookGame}){
 function MarketTile({label,value}){return <article className="nfl-market-tile"><small>{label}</small><b>{value}</b></article>}
 
 function PickTile({label,value,detail,team}){
-  return <article className="nfl-pick-tile" style={team?{'--club':teamColor(team)}:undefined}><small>{label}</small><b>{value}</b><span>{detail}</span></article>;
+  return <article className="nfl-pick-tile" style={team?{'--club':teamColor(team)}:undefined}><small>{label}</small><b><TeamLogo team={team}/>{value}</b><span>{detail}</span></article>;
 }
 
 function ModelEvidence({validation}){
@@ -227,23 +260,22 @@ function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,
   const [sortOrder,setSortOrder]=useState(()=>{
     try {
       const stored=sessionStorage.getItem('nfl-games-prop-sort');
-      return Object.hasOwn(propSortOptions,stored)?stored:'player';
+      return Object.values(sortColumns).flat().includes(stored)?stored:'player';
     } catch { return 'player'; }
   });
-  function changeSort(event){
-    const order=event.target.value;
+  function changeSort(column){
+    const [first,second]=sortColumns[column];
+    const order=sortOrder===first?second:first;
     setSortOrder(order);
     try { sessionStorage.setItem('nfl-games-prop-sort',order); } catch {}
   }
   const visibleRows=useMemo(()=>sortPropRows(rows.filter(r=>position==='ALL'||r.p.position===position),sortOrder),[rows,position,sortOrder]);
   const propMarkets=Object.entries(METRICS).sort((a,b)=>a[1].label.localeCompare(b[1].label));
   return <div className="nfl-view-panel"><div className="nfl-player-toolbar"><div><h3>Player Prop Research</h3><p>{rows.some(r=>r.line)?'DraftKings lines and model estimates.':'Player averages and model estimates.'}</p></div><div className="board-controls"><label>Position<FilterMenu value={position} onChange={e=>setPosition(e.target.value)}><option value="ALL">All Positions</option>{['QB','RB','TE','WR'].map(p=><option key={p}>{p}</option>)}</FilterMenu></label><label>Market<FilterMenu value={market} onChange={e=>setMarket(e.target.value)}><option value="ALL">All Markets</option>{propMarkets.map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</FilterMenu></label>
-      <label className="prop-sort-field">Sort by<FilterMenu aria-label="Sort player props" value={sortOrder} onChange={changeSort}>
-        {Object.entries(propSortOptions).map(([key,label])=><option key={key} value={key}>{label}</option>)}
-      </FilterMenu></label></div></div>
+      </div></div>
     {(sortOrder==='high'||sortOrder==='low')&&market==='ALL'&&<p className="prop-sort-note">Projections ranked within each market.</p>}
     {!(books||[]).some(b=>sameGame(b,game)&&postedLines(b).length>0)&&<p className="nfl-empty-state">No DraftKings props in this matchup’s snapshot yet. The full slate is checked Wednesday and upcoming games are refreshed Sunday morning.</p>}
-    <MatchupProps key={game.id} rows={visibleRows} game={game} onOpen={onOpen}/>
+    <MatchupProps key={game.id} rows={visibleRows} order={sortOrder} onSort={changeSort} game={game} onOpen={onOpen}/>
     <div className="nfl-probability-honesty"><Info size={17}/><span>Posted props use pregame workload and efficiency. Anytime TD shows the estimated chance of at least one rushing or receiving touchdown using a Poisson approximation. A new starting QB with only relief appearances uses league starter workload. Limited samples and gaps in recent appearances are flagged. For matchups without posted markets, the research line averages up to 10 prior games this season.</span></div>
     <details className="nfl-full-props"><summary>OPEN FULL MATCHUP PROP BOARD <ArrowUpRight size={15}/></summary><PropsBoard fixedGame={game} title="Matchup Player Prop Board" games={(books||[]).filter(g=>sameGame(g,game))} schedule={[game]} players={players} season={season} now={now} onOpen={onOpen}/></details>
   </div>;

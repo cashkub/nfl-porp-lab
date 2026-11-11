@@ -19,3 +19,10 @@ test('projection sort ranks within market and preserves the input',()=>{
   assert.deepEqual(sortPropRows(input,'low').map(r=>r.p.name),['C','B','A','E','D']);
   assert.equal(input[0].p.name,'A');
 });
+
+test('column headers reverse name and numeric order and keep missing lines last',()=>{
+  assert.equal(names('playerReverse'),'DCBA');
+  const input=[row('Z','Yards',null,12),row('A','Yards',1,5),row('M','Yards',2,null)];
+  assert.deepEqual(sortPropRows(input,'lineHigh').map(r=>r.p.name),['Z','A','M']);
+  assert.deepEqual(sortPropRows(input,'lineLow').map(r=>r.p.name),['A','Z','M']);
+});

@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import SortableTable from './SortableTable.jsx';
 import HitRate from './HitRate.jsx';
@@ -74,7 +75,7 @@ export default function ModelRecord({validation,sport='nfl',initialTab='props'})
     {rows?.length?<div className="board-scroll"><SortableTable headers={[...(periodName==='Date'?['Game Date']:[]),'Matchup (Away First)','Overall Pick','Projected Score','Final','Result','Saved']} rows={rows}
       values={r=>[...(periodName==='Date'?[recordPeriod(r,sport)]:[]),r.away+' at '+r.home,!r.overall?null:margin(r.overall)===0?'No Pick':margin(r.overall)>0?r.home:r.away,r.overall?.join(' – '),r.final?.join(' – '),outcome(r),Date.parse(r.saved)]}
       renderRow={r=><tr key={r.id}>
-      {(sport==='nba'||sport==='cbb') && <td>{periodLabel(recordPeriod(r,sport),sport)}</td>}<td><span className="team-name" style={{'--team-color':teamColor(r.away,r.colors)}}>{r.away}</span> at <span className="team-name" style={{'--team-color':teamColor(r.home,r.colors)}}>{r.home}</span></td><td>{!r.overall?'—':margin(r.overall)===0?'No Pick':margin(r.overall)>0?r.home:r.away}</td>
+      {(sport==='nba'||sport==='cbb') && <td>{periodLabel(recordPeriod(r,sport),sport)}</td>}<td><span className="team-name" style={{'--team-color':teamColor(r.away,r.colors)}}><TeamLogo sport={sport} team={r.away}/>{r.away}</span> at <span className="team-name" style={{'--team-color':teamColor(r.home,r.colors)}}><TeamLogo sport={sport} team={r.home}/>{r.home}</span></td><td>{!r.overall?'—':margin(r.overall)===0?'No Pick':margin(r.overall)>0?r.home:r.away}</td>
       <td>{r.overall?.join(' – ') || '—'}</td><td>{r.final?.join(' – ') || '—'}</td>
       <td><strong className="record-result" data-result={outcome(r)}>{outcome(r)}</strong></td><td>{new Date(r.saved).toLocaleString()}</td></tr>}/></div>:<p>{failed?'Record unavailable.':rows?'No archived game predictions for this selection.':'Loading Record…'}</p>}</section>;
 }

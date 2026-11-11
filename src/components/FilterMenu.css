@@ -43,3 +43,4 @@
 .app .player-stepper > .filter-trigger {height:100%;padding-inline:20px}
 .app .player-stepper > .filter-trigger svg {right:4px}
 @media(prefers-reduced-motion:reduce){.app .filter-trigger,.filter-popup,.filter-popup [role=option]{animation:none;transition:none}}
+.filter-option-day {display:block; color:#ddbbea; font-size:.73rem; font-weight:750; margin-bottom:.23rem}

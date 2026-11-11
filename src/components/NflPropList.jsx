@@ -1,3 +1,4 @@
+import TeamLogo from './TeamLogo.jsx';
 import NflToolHeader from './NflToolHeader.jsx';
 import React,{useMemo,useState} from 'react';
 import {availableStats} from '../lib/availableStats.js';
@@ -87,7 +88,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Hits',value:r=>r.summary.hits,highFirst:true,render:r=>r.summary.hits+'/'+r.summary.total},
     {label:'Odds',value:r=>r.quote?.[side]??null,highFirst:true,render:r=>priceText(r.quote?.[side])},
     {label:'Source',value:r=>r.quote?'DraftKings':'Player Average'},
-    {label:'Team',value:r=>r.player.team},
+    {label:'Team',value:r=>r.player.team,render:r=><><TeamLogo team={r.player.team}/>{r.player.team}</>},
     {label:'Opponent',value:r=>r.game.opponent,render:r=>(r.game.venue==='Away'?'@ ':'vs. ')+r.game.opponent},
     {label:'DEF Rank',value:r=>r.rank,highFirst:true,render:r=><DefenseRank rank={r.rank} total={r.teams} label={markets[r.metric].label} position={r.player.position+'s'} side={side}/>},
     {label:'Pos',value:r=>r.player.position},
