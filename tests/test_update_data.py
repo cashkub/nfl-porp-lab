@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from update_data import parse_player_stats_csv, build_payload, save_if_changed, venue_from_game_id, current_nfl_season
+from update_data import (attach_model_validation, parse_player_stats_csv,
+                         build_payload, save_if_changed, venue_from_game_id,
+                         current_nfl_season)
 
 CSV_TEXT = '''player_id,player_display_name,position,season,week,season_type,game_id,team,opponent_team,passing_yards,rushing_yards,receiving_yards,receptions,passing_tds,rushing_tds,receiving_tds
 p1,Test Player,WR,2026,1,REG,2026_01_BAL_CIN,CIN,BAL,0,0,89,7,0,0,1
@@ -37,6 +39,23 @@ class DataImportTests(unittest.TestCase):
         self.assertEqual(payload['seasons'], [2026])
         self.assertEqual(len(payload['players']), 2)
         self.assertEqual(len(next(p for p in payload['players'] if p['id']=='p1')['games']), 2)
+
+    def test_data_refresh_preserves_production_model_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'weights.json'
+            validation = {'games': 224, 'validation': {'Base': {'scoreMAE': 7.42}}}
+            path.write_text(json.dumps(validation))
+            payload = attach_model_validation({'players': []}, path)
+        self.assertEqual(payload['modelValidation'], {
+            'games': 224, 'results': {'Base': {'scoreMAE': 7.42}}
+        })
+
+    def test_data_refresh_omits_invalid_model_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'weights.json'
+            path.write_text(json.dumps({'games': 0, 'validation': {}}))
+            payload = attach_model_validation({'players': []}, path)
+        self.assertNotIn('modelValidation', payload)
 
     def test_idempotent_data_import(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -266,6 +266,21 @@ def build_payload(records: list[dict]) -> dict:
     return {"schemaVersion": 1, "status": "ready", "source": "nflverse stats_player week CSV", "seasons": all_seasons, "players": players}
 
 
+def attach_model_validation(payload: dict, weights_path: Path | None = None) -> dict:
+    """Keep the production score-model audit attached during each data refresh."""
+    path = weights_path or ROOT / "scripts" / "nfl_weights.json"
+    try:
+        weights = json.loads(path.read_text())
+        results = weights.get("validation")
+        games = weights.get("games")
+        if not isinstance(results, dict) or not isinstance(games, int) or games <= 0:
+            raise ValueError("production model validation is incomplete")
+        payload["modelValidation"] = {"games": games, "results": results}
+    except (OSError, ValueError, TypeError) as exc:
+        print(f"Model validation summary unavailable: {exc}", file=sys.stderr)
+    return payload
+
+
 def save_if_changed(payload: dict, dest: Path = OUTPUT) -> bool:
     canonical = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -361,6 +376,7 @@ def main() -> int:
         print("ERROR: No usable nflverse data was retrieved; keeping existing site data.", file=sys.stderr)
         return 1
     payload = build_payload(records)
+    attach_model_validation(payload)
     if not payload["players"]:
         print("ERROR: No searchable players in downloaded data; keeping old data.", file=sys.stderr)
         return 1
