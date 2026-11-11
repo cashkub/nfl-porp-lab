@@ -25,9 +25,24 @@ function upperBound(values,target){
  * Residuals are actual minus forecast, generated only from earlier completed
  * games. Whole-number lines retain an explicit push probability.
  */
-export function probabilitiesFromResiduals({projection,line,residuals,minimumSamples=MIN_CALIBRATION_RESIDUALS}){
+export function probabilitiesFromResiduals({projection,line,residuals,residualHistogram,minimumSamples=MIN_CALIBRATION_RESIDUALS}){
   const mean=Number(projection),threshold=Number(line);
-  if(!Number.isFinite(mean)||!Number.isFinite(threshold)||!Array.isArray(residuals)||residuals.length<minimumSamples)return null;
+  if(!Number.isFinite(mean)||!Number.isFinite(threshold))return null;
+  if(Array.isArray(residualHistogram)){
+    const bins=residualHistogram.map(([value,count])=>[Number(value),Number(count)])
+      .filter(([value,count])=>Number.isFinite(value)&&Number.isFinite(count)&&count>0).sort((a,b)=>a[0]-b[0]);
+    const total=bins.reduce((sum,[,count])=>sum+count,0);
+    if(total<minimumSamples)return null;
+    const cutoff=threshold-mean;
+    let below=0,pushes=0;
+    for(const [value,count] of bins){if(value<cutoff)below+=count;else if(value===cutoff)pushes+=count;}
+    const overs=total-below-pushes,unders=below,decided=overs+unders,push=pushes/total;
+    if(!decided)return {over:0,under:0,push:1,sample:total,method:'empirical-chronological-residuals'};
+    const conditionalOver=(overs+1)/(decided+2);
+    return {over:(1-push)*conditionalOver,under:(1-push)*(1-conditionalOver),push,
+      sample:total,method:'empirical-chronological-residuals'};
+  }
+  if(!Array.isArray(residuals)||residuals.length<minimumSamples)return null;
   const errors=residuals.length>1&&residuals.every((value,index)=>index===0||Number(residuals[index-1])<=Number(value))
     ?residuals.map(Number):residuals.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
   if(errors.length<minimumSamples||errors.some(value=>!Number.isFinite(value)))return null;
@@ -63,7 +78,7 @@ export function buildPlayerForecast({players,player,game,market,line=null,side=n
     ?{p10:point.projection+Number(residualQuantiles.p10),p90:point.projection+Number(residualQuantiles.p90),level:.8,kind:'historical out-of-sample residual range'}:null;
   const lineValue=line==null?null:Number(line);
   const distribution=lineValue==null||profile?.validation?.calibrated!==true?null:probabilitiesFromResiduals({projection:point.projection,line:lineValue,
-    residuals:profile?.residuals,minimumSamples:Math.max(minimumSamples,Number(distributions?.minimumSamples)||0)});
+    residuals:profile?.residuals,residualHistogram:profile?.residualHistogram,minimumSamples:Math.max(minimumSamples,Number(distributions?.minimumSamples)||0)});
   const probabilityLineValidated=Boolean(distribution&&profile?.validation?.calibrated&&
     Math.abs(lineValue-(Math.floor(point.projection)+.5))<1e-8);
   const forecastId=[game.id||game.gameId||`${game.season}-${game.week}-${game.away}-${game.home}`,player.id,market,NFL_PLAYER_MODEL_VERSION].join(':');
