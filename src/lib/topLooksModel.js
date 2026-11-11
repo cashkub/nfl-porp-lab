@@ -1,5 +1,5 @@
 import {availableStats} from './availableStats.js';
-import {bookLine,playerKey} from './bookLine.js';
+import {bookLine,playerKey,postedLines,matchupBook} from './bookLine.js';
 import {defenseTable} from './matchup.js';
 import {getPlayerGames,formatRate,isHit,estimateModelHitRate,METRICS} from './stats.js';
 import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection} from './playerProjection.js';
@@ -251,10 +251,12 @@ export function buildTopLooks({players,slate,books,season,type}) {
   const scoringVolumes=makeScoringVolumes(players,season);
   const candidates=[],cache=new Map();
   for(const game of slate){
+    const quotedNames=new Set(postedLines(matchupBook(books,game)).map(q=>playerKey(q.player)));
     const roleRanks=buildRoleRanks(players,season,game);
     const efficiencyPriors=buildOpportunityEfficiencyPriors(players,game);
     for(const player of players){
       if(player.team!==game.home&&player.team!==game.away)continue;
+      if(quotedNames.size&&!quotedNames.has(playerKey(player.name)))continue;
       const opponent=player.team===game.home?game.away:game.home;
       const seasonHistory=getPlayerGames(player,season).filter(row=>Number(row.week)<Number(game.week));
       const history=getPlayerGames(player,'ALL').filter(row=>Number(row.season)<Number(game.season)||
@@ -264,6 +266,7 @@ export function buildTopLooks({players,slate,books,season,type}) {
         const isAnytime=metric==='scoredTDs';
         if((type==='props'&&isAnytime)||(type==='anytime'&&!isAnytime))continue;
         const quote=type==='anytime'?anytimeLine(books,game,player.name):bookLine(books,game,player.name,metric);
+        if(quotedNames.size&&!quote)continue;
         const average=mean(history.map(row=>Number(row.stats[metric]??0)));
         if(!Number.isFinite(quote?.point)&&average<=0)continue;
         const line=Number.isFinite(quote?.point)?quote.point:(type==='anytime'?0.5:Number(average.toFixed(1)));
@@ -285,9 +288,9 @@ export function buildTopLooks({players,slate,books,season,type}) {
         if(!cache.has(posMetric))cache.set(posMetric,defenseTable(players,season,player.position,metric,game.week));
         const defense=cache.get(posMetric).find(row=>row.team===opponent);
         const availability=playerInjuryStatus(game,player);
-        if(availability==='out'||availability==='doubtful')continue;
+        if(['out','doubtful','inactive','ir','injured reserve','suspended','pup'].includes(availability))continue;
         const sides=type==='anytime'?['over']:['over','under'];
-        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,pointProjection));
+        for(const side of sides.filter(s=>!quote||Number.isFinite(quote[s])))candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,pointProjection));
       }
     }
   }

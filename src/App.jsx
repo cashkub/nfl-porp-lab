@@ -26,7 +26,7 @@ import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
-import { bookLine, priceText, usageFor } from './lib/bookLine.js';
+import { matchupBook, postedLines, playerKey, bookLine, priceText, usageFor } from './lib/bookLine.js';
 import {CbbGames,Moneylines,UsageTrends} from './components/Research.jsx';
 import SportHome,{toolsBySport} from './components/SportHome.jsx';
 import CbbBoard from './components/CbbBoard.jsx';
@@ -253,7 +253,7 @@ export default function App() {
   const seasonLabel = multi ? 'All Seasons' : String(season);
   const seasonPlayers = useMemo(() => players.flatMap(p => {
     const history=getPlayerGames(p,season);
-    if(!availableStats(METRICS,history).length)return [];
+    if(!history.length)return [];
     const latest=history.at(-1);
     return [{...p,team:latest.team || p.team}];
   }), [players, season]);
@@ -263,16 +263,40 @@ export default function App() {
   const normalizeTeam = team => ({LA:'LAR',WSH:'WAS',JAC:'JAX'}[team] || team);
   const chartSlate=useChartSlate(previewTools?nflSchedule:[],Date.now());
   const scope=previewTools?chartSlate:gameFilter;
-  const scopedPlayers=seasonPlayers.filter(p=>chartFixture&&page==='analyzer'
-    ? [chartFixture.home,chartFixture.away].includes(normalizeTeam(p.team))
-    : scope.allows(normalizeTeam(p.team)));
+  const chartGames=previewTools ? (chartSlate.game?[chartSlate.game]:chartSlate.games)
+    : chartFixture?[chartFixture]:gameFilter.game?[gameFilter.game]:nflSchedule;
+  const pricedTeams=useMemo(()=>{
+    const grouped=new Map();
+    for(const game of chartGames){
+      if(page!=='analyzer')break;
+      const lines=postedLines(matchupBook(bookGames,game));
+      if(!lines.length)continue;
+      const byName=new Map();
+      for(const line of lines){
+        const key=playerKey(line.player);
+        if(!byName.has(key))byName.set(key,new Set());
+        byName.get(key).add(line.metric);
+      }
+      for(const team of [game.home,game.away])grouped.set(normalizeTeam(team),byName);
+    }
+    return grouped;
+  },[bookGames,chartGames,page]);
+  const scopedPlayers=seasonPlayers.filter(p=>{
+    const code=normalizeTeam(p.team);
+    const listed=pricedTeams.get(code);
+    if(page==='analyzer'&&listed&&!listed.has(playerKey(p.name)))return false;
+    return !previewTools&&chartFixture&&page==='analyzer' ? [chartFixture.home,chartFixture.away].includes(code) : scope.allows(code);
+  });
   const teams = useMemo(() => [...new Set(scopedPlayers.map(p => p.team).filter(Boolean))].sort(), [scopedPlayers]);
   const activeTeam = teams.includes(team) ? team : 'ALL';
   const roster = useMemo(() => activeTeam === 'ALL' ? scopedPlayers :
     scopedPlayers.filter(p => p.team === activeTeam), [scopedPlayers, activeTeam]);
   const player = roster.find(p => p.id === selectedId) ||
     roster.find(p => ['WR','QB','RB','TE'].includes(p.position)) || roster[0];
-  const statOptions=useMemo(()=>availableStats(markets,getPlayerGames(player,season)),[markets,player,season]);
+  const statOptions=useMemo(()=>{
+    const priced=player&&pricedTeams.get(normalizeTeam(player.team))?.get(playerKey(player.name));
+    return priced?[...priced].filter(key=>markets[key]):availableStats(markets,getPlayerGames(player,season));
+  },[markets,player,season,pricedTeams]);
   const metric=statOptions.includes(requestedMetric)?requestedMetric:statOptions[0] || 'receivingYards';
   useEffect(() => {
     if (boardSelection.current === player?.id) { boardSelection.current=null; return; }
@@ -328,7 +352,8 @@ export default function App() {
       if(previewTools){chartSlate.changeWeek(String(next.week));chartSlate.changeMatch(next.id);}
       else gameFilter.select(day,[day,next.away,next.home].join('|'));
     }
-    setCustom({context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point,source:'Selected Prop Line'});
+    const saved=bookLine(bookGames,next,p.name,market.metric);
+    setCustom(saved?.point===market.point?null:{context:[p.id,market.metric,next?.kickoff].join('|'),value:market.point,source:'Selected Prop Line'});
     setPage('analyzer'); window.location.hash='analyzer'; window.scrollTo(0,0);
   }
   function openTopLookChart(p, market, side, game) {

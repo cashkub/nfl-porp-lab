@@ -321,6 +321,31 @@ def recent_usage_shares(players, season, week):
     return shares
 
 
+def attach_injury_roles(schedule, season, rows, ids):
+    """Attach pregame participation even for linemen and defenders without player stats."""
+    history = {}
+    for row in rows:
+        player_id = ids.get(row.get("pfr_player_id"))
+        week = to_number(row.get("week"))
+        rates = [market_number(row.get(field)) for field in ("offense_pct", "defense_pct")]
+        if not player_id or not week or all(rate is None for rate in rates):
+            continue
+        key = (normalize_team(row["team"]), player_id)
+        history.setdefault(key, []).append((week, *rates))
+    for game in schedule:
+        if game["season"] != season:
+            continue
+        for team, reports in game.get("injuries", {}).items():
+            for report in reports:
+                before = [r for r in history.get((normalize_team(team), report.get("id")), [])
+                          if r[0] < int(game["week"])]
+                sample = sorted(before, key=lambda r: r[0])[-3:]
+                for index, field in ((1, "offenseSnapShare"), (2, "defenseSnapShare")):
+                    values = [r[index] for r in sample if r[index] is not None and 0 <= r[index] <= 1]
+                    if values:
+                        report[field] = round(sum(values) / len(values), 3)
+
+
 def add_offensive_snaps(payload, previous):
     base = "https://github.com/nflverse/nflverse-data/releases/download"
     def rows(path):
@@ -338,7 +363,9 @@ def add_offensive_snaps(payload, previous):
                if r["pfr_id"] and r["gsis_id"]}
         for season in payload["seasons"]:
             try:
-                for r in rows(f"snap_counts/snap_counts_{season}.csv"):
+                snap_rows = rows(f"snap_counts/snap_counts_{season}.csv")
+                attach_injury_roles(payload.get("schedule", []), season, snap_rows, ids)
+                for r in snap_rows:
                     rate = market_number(r["offense_pct"])
                     if r["pfr_player_id"] in ids and rate is not None and 0 <= rate <= 1:
                         snaps[ids[r["pfr_player_id"]], r["game_id"], normalize_team(r["team"])] = rate

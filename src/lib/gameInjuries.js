@@ -7,6 +7,7 @@ export function highImpactInjuries(game,profiles={}){
     if(!relevantStatuses.has(status))return false;
     const position=String(player.position||'').toUpperCase();
     if(position==='QB')return Boolean(player.wasListedStarter||primaryQbs.get(team)&&player.id===primaryQbs.get(team));
+    if(Math.max(player.offenseSnapShare||0,player.defenseSnapShare||0)>=.5)return true;
     if(['RB','WR','TE','FB'].includes(position))return teamLeaders.get(team)?.has(String(player.name||'').toLowerCase())||false;
     return false;
   }).map(player=>({...player,team})));
