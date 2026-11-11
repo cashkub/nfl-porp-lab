@@ -77,7 +77,7 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 - Added a dedicated GitHub Actions validation workflow for JavaScript tests, frontend build, and Python tests on the development branch / pull request.
 - Updated V3 pick locking to preserve the shared forecast ID, calibrated/exploratory probability metadata, profile freshness, and Model Record visibility. Existing V2 locks remain immutable and visible alongside V3.
 - Python suite: 41 tests passed. JavaScript suite: 34 tests passed after compact histogram, prior-cache, and role-filter support. Python modules compile successfully. The empirical distribution builder completed on local nflverse data through 2026 Week 9: 17 position-market profiles generated, five passed the validation gate. The 38 KB public artifact includes exact two-decimal residual histograms only for validated profiles; other profiles retain summary/uncertainty metadata without unsupported probability distributions.
-- GitHub Actions run 31 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite after compact histogram packaging and prior-cache update. The player-relevance filter update has local test coverage; branch CI is pending. Changes remain on the review branch only; no merge or deployment has occurred.
+- GitHub Actions run 45 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite after compact histogram packaging, prior caching, and player-relevance filters. Changes remain on the review branch only; no merge or deployment has occurred.
 
 ## Outstanding Work / Limitations
 
