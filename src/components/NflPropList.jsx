@@ -6,6 +6,7 @@ import {defenseTable} from '../lib/matchup.js';
 import {getPlayerGames,formatRate,isHit,summarize,estimateModelHitRate} from '../lib/stats.js';
 import {teamColor} from '../lib/teamColors.js';
 import {nextGame} from '../lib/schedule.js';
+import {buildPlayerForecast} from '../lib/nflForecast.js';
 import {WeekAndMatchup,TeamFilter,useChartSlate} from './ChartSlate.jsx';
 import {rateStyle,DefenseRank} from './HitRate.jsx';
 import SortableTable from './SortableTable.jsx';
@@ -25,7 +26,7 @@ function LastFive({row,side}) {
   })}</span>;
 }
 
-export default function NflPropList({players,roster,schedule,season,books,markets,now,loading,error,onOpen}) {
+export default function NflPropList({players,roster,schedule,season,books,markets,now,loading,error,onOpen,distributions=null}) {
   const future=useMemo(()=>schedule.filter(g=>Date.parse(g.kickoff)>now),[schedule,now]);
   const slate=useChartSlate(future,now);
   const [market,setMarket]=useState('ALL');
@@ -60,12 +61,14 @@ export default function NflPropList({players,roster,schedule,season,books,market
         const table=ranks.get(key);
         const opponent=({LAR:'LA',WAS:'WSH',JAX:'JAC'})[game.opponent];
         const defense=table.find(d=>d.team===game.opponent)??table.find(d=>d.team===opponent);
-        const modelEstimate=estimateModelHitRate(recent,metric,point,side,{marketProbability:fairSideProbability(quote,side,point)});
-        result.push({player,game,metric,point,quote,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),modelEstimate,rank:defense?.rank,teams:table.length});
+        const forecast=buildPlayerForecast({players,player,game,market:metric,line:point,side,distributions});
+        const modelEstimate=estimateModelHitRate(recent,metric,point,side,{marketProbability:fairSideProbability(quote,side,point),
+          position:player.position,projection:forecast?.projection,distributionModels:distributions});
+        result.push({player,game,metric,point,quote,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),forecast,modelEstimate,rank:defense?.rank,teams:table.length});
       }
     }
     return result.sort((a,b)=>Number(!!b.quote)-Number(!!a.quote) || b.summary.rate-a.summary.rate || b.summary.total-a.summary.total || a.player.name.localeCompare(b.player.name));
-  },[players,roster,season,books,markets,now,slate.week,slate.game,slate.team,future,market,side,venue]);
+  },[players,roster,season,books,markets,now,slate.week,slate.game,slate.team,future,market,side,venue,distributions]);
   const matches=rows.filter(r=>r.summary.total>=Number(minimum) && (source==='ALL' || (source==='book')===!!r.quote) && r.player.name.toLowerCase().includes(search.trim().toLowerCase()));
   const choices=[...new Map(matches.map(r=>[r.player.id,r.player])).values()].sort((a,b)=>a.name.localeCompare(b.name) || a.team.localeCompare(b.team));
   const activeId=choices.some(p=>p.id===playerId)?playerId:'';
@@ -77,7 +80,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
     {label:'Market',value:r=>markets[r.metric].label},
     {label:'Line',value:r=>r.point,render:r=><strong className="prop-point">{side} {r.point}</strong>},
     {label:'Historical Hit Rate',value:r=>r.summary.rate,highFirst:true,render:r=><b style={rateStyle(r.summary.rate)}>{formatRate(r.summary.rate)}</b>},
-    {label:'Model Estimate',value:r=>r.modelEstimate.rate,highFirst:true,render:r=><span className="model-rate-cell"><b style={rateStyle(r.modelEstimate.rate)}>{formatRate(r.modelEstimate.rate)}</b><small>MODEL · {r.modelEstimate.sample} G</small></span>},
+    {label:'Model Estimate',value:r=>r.modelEstimate.rate,highFirst:true,render:r=><span className="model-rate-cell"><b style={rateStyle(r.modelEstimate.rate)}>{formatRate(r.modelEstimate.rate)}</b><small>{r.modelEstimate.calibrated?'CALIBRATED · '+r.modelEstimate.distributionSample.toLocaleString()+' ERRORS':'EXPLORATORY · '+r.modelEstimate.sample+' G'}</small></span>},
     {label:'Last 5',value:r=>summarize(r.lastFive,r.metric,r.point,side).rate,highFirst:true,render:r=><LastFive row={r} side={side}/>},
     {label:'Hits',value:r=>r.summary.hits,highFirst:true,render:r=>r.summary.hits+'/'+r.summary.total},
     {label:'Odds',value:r=>r.quote?.[side]??null,highFirst:true,render:r=>priceText(r.quote?.[side])},
@@ -117,7 +120,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
             {columns.map(c=><td key={c.label}>{c.render?c.render(r):c.value(r)}</td>)}
           </tr>}/>
       </div>}
-      {filtered.length>0 && <p className="prop-list-note">Historical Hit Rates Use Up To 10 Prior {venue==='H'?'Home Games':venue==='A'?'Away Games':'Games'} This Season. Model Estimates Recalculate For Each Line From Prior Results And Projection; Sportsbook Odds Count Only When They Match The Listed Line. Last 5 Runs Oldest To Newest · Green = Hit · Red = Miss · Gold = Push.</p>}
+      {filtered.length>0 && <p className="prop-list-note">Validated estimates use chronological forecast-error profiles only for markets that beat a prior-rate baseline in held-out tests; alternate-line performance is not separately established. Other markets are clearly marked exploratory. Historical Hit Rates Use Up To 10 Prior {venue==='H'?'Home Games':venue==='A'?'Away Games':'Games'} This Season. Last 5 Runs Oldest To Newest · Green = Hit · Red = Miss · Gold = Push.</p>}
       {!filtered.length && <p>No Upcoming Props Match These Filters.</p>}
       {filtered.length>limit && <button className="prop-list-more" onClick={()=>setLimit(limit+24)}>Show More Props</button>}
     </>}
