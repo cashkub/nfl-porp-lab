@@ -3,6 +3,7 @@ import {bookLine,playerKey} from './bookLine.js';
 import {defenseTable} from './matchup.js';
 import {getPlayerGames,formatRate,isHit,estimateModelHitRate,METRICS} from './stats.js';
 import {buildPlayerForecast} from './nflForecast.js';
+import {hasMeaningfulProjectionRole} from './playerProjection.js';
 
 const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
 // `value` is an Eastern calendar date (YYYY-MM-DD), not a UTC instant.
@@ -270,6 +271,11 @@ export function buildTopLooks({players,slate,books,season,type,distributions=nul
         const selectedQuote=quote?{...quote,isBookLine:true}:{point:line,over:null,under:null,isBookLine:false,anytime:type==='anytime'};
         const forecast=buildPlayerForecast({players,player,game,market:metric,line,side:'over',distributions});
         if(!forecast)continue;
+        const expectedStarter=player.position==='QB'&&[
+          game.context?.home?.qbId,game.context?.away?.qbId
+        ].some(id=>String(id||'')===String(player.id));
+        if(!hasMeaningfulProjectionRole({position:player.position,market:metric,
+          projectedUsage:forecast.projectedUsage,historyGames:history.length,expectedStarter}))continue;
         const market={label:type==='anytime'?'Anytime Touchdown':METRICS[metric].label,unit:METRICS[metric].unit,short:metric};
         const posMetric=player.position+'|'+metric+'|'+game.week;
         if(!cache.has(posMetric))cache.set(posMetric,defenseTable(players,season,player.position,metric,game.week));
