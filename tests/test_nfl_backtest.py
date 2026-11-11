@@ -6,7 +6,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from train_nfl import calibrate_win_scale, fit, prediction_metrics, ridge_regression
+from train_nfl import (calibrate_win_scale, fit, fit_line_sigmas,
+                       line_probability_metrics, prediction_metrics, ridge_regression)
 
 
 class BacktestMetricsTests(unittest.TestCase):
@@ -109,6 +110,30 @@ class BacktestMetricsTests(unittest.TestCase):
         scores = prediction_metrics([10, 20, 14, 14], rows, 0.1)
         self.assertEqual(scores["games"], 2)
         self.assertEqual(scores["winProbabilityGames"], 1)
+
+    def test_line_probability_uncertainty_is_fit_from_calibration_rows(self):
+        rows = [(2025, {}, 0, 0, 14, 0), (2025, {}, 0, 0, 24, 0),
+                (2025, {}, 0, 0, 21, 0), (2025, {}, 0, 0, 20, 0)]
+        forecasts = [18, 26, 22, 20]
+        closing_market_scores = [20, 23, 22, 21]
+        sigmas = fit_line_sigmas(forecasts, rows, closing_market_scores)
+        self.assertGreater(sigmas["spread"], 0)
+        self.assertGreater(sigmas["total"], 0)
+        metrics = line_probability_metrics(forecasts, rows, closing_market_scores, sigmas)
+        self.assertIn("brier", metrics["spread"])
+        self.assertIn("logLoss", metrics["total"])
+        self.assertEqual(metrics["spread"]["games"], 1)
+
+    def test_line_probabilities_use_forecasts_and_exclude_pushes(self):
+        rows = [(2025, {}, 0, 0, 20, 0), (2025, {}, 0, 0, 30, 0),
+                (2025, {}, 0, 0, 20, 0), (2025, {}, 0, 0, 24, 0)]
+        metrics = line_probability_metrics([20, 28, 20, 24], rows,
+                                           [20, 24, 20, 24],
+                                           {"spread": 5, "total": 8})
+        self.assertEqual(metrics["spread"]["games"], 1)
+        self.assertEqual(metrics["total"]["games"], 1)
+        self.assertLess(metrics["spread"]["brier"], 0.25)
+        self.assertLess(metrics["total"]["brier"], 0.25)
 
 
 if __name__ == "__main__":

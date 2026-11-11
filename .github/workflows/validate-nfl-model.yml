@@ -77,7 +77,14 @@ jobs:
                  '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
           for name,metrics in backtest['holdout'].items():
               lines.append(f"| {name} | {metrics['scoreMAE']} | {metrics['marginMAE']} | {metrics['totalMAE']} | {metrics['winnerAccuracy'] if metrics['winnerAccuracy'] is not None else '—'} | {metrics.get('winBrier','—')} | {metrics.get('winLogLoss','—')} |")
-          lines.extend(['', backtest['marketNote'], '', backtest['weatherNote'], '', backtest['quarterbackNote'], '',
+          lines.extend(['', '**Calibrated spread and game-total probability candidates**', '',
+                        '| Forecast | Spread N | Spread Brier | Spread log loss | Total N | Total Brier | Total log loss |',
+                        '| --- | ---: | ---: | ---: | ---: | ---: | ---: |'])
+          for name in ('Base','Recency Weighted','Stats'):
+              values=backtest['holdout'][name].get('lineProbabilities',{})
+              spread,total=values.get('spread',{}),values.get('total',{})
+              lines.append(f"| {name} | {spread.get('games','—')} | {spread.get('brier','—')} | {spread.get('logLoss','—')} | {total.get('games','—')} | {total.get('brier','—')} | {total.get('logLoss','—')} |")
+          lines.extend(['', 'A no-information reference is Brier 0.2500 and log loss 0.6931. Lower is better. Calibration uses only the immediately prior season; holdout games remain untouched. Whole-number pushes are excluded.', '', backtest['lineProbabilityNote'], '', backtest['marketNote'], '', backtest['weatherNote'], '', backtest['quarterbackNote'], '',
                         'Candidate weights remain an artifact for review; this workflow never updates production `nfl_weights.json`.'])
           lines.extend(['', '## Independent Elo Win Probability Benchmark', '', elo['marketNote'], '',
                         '| Calibration season | Holdout season | N | Elo Brier | Elo log loss | Elo accuracy | Closing ML Brier | Closing ML log loss | Closing ML accuracy |',

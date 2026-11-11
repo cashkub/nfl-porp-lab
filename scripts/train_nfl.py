@@ -126,6 +126,94 @@ def prediction_metrics(pred, rows, win_scale=None):
     return result
 
 
+def _normal_over_probability(mean, line, sigma):
+    """P(X > line) for a Normal(mean, sigma) predictive approximation."""
+    if sigma <= 0:
+        return 1.0 if mean > line else 0.0 if mean < line else 0.5
+    return 0.5 * (1.0 + math.erf((mean - line) / (sigma * math.sqrt(2.0))))
+
+
+def _paired_line_outcomes(pred, rows, market_scores):
+    """Build pregame spread and total outcomes from paired away/home records.
+
+    `market_scores` must be the paired score implied by the historical closing
+    spread and total; it is used only as a retrospective line benchmark.
+    """
+    if len(pred) != len(rows) or len(pred) % 2 or len(market_scores) != len(pred):
+        raise ValueError('Line-probability evaluation needs paired away/home forecasts.')
+    result=[]
+    for i in range(0,len(pred),2):
+        away,home=float(pred[i]),float(pred[i+1])
+        actual_away,actual_home=float(rows[i][4]),float(rows[i+1][4])
+        market_away,market_home=float(market_scores[i]),float(market_scores[i+1])
+        result.append({
+            'marginMean':home-away,
+            'marginLine':market_home-market_away,
+            'marginActual':actual_home-actual_away,
+            'totalMean':home+away,
+            'totalLine':market_home+market_away,
+            'totalActual':actual_home+actual_away,
+        })
+    return result
+
+
+def _fit_normal_sigma(pairs, mean_key, line_key, actual_key):
+    """Choose predictive spread on a calibration season by outcome log loss."""
+    decided=[row for row in pairs if row[actual_key] != row[line_key]]
+    if not decided:
+        return None
+    best_sigma,best_loss=None,float('inf')
+    for step in range(40,401):
+        sigma=step/10
+        loss=0.0
+        for row in decided:
+            over=_normal_over_probability(row[mean_key],row[line_key],sigma)
+            probability=over if row[actual_key]>row[line_key] else 1-over
+            loss-=math.log(max(1e-9,min(1-1e-9,probability)))
+        if loss < best_loss:
+            best_sigma,best_loss=sigma,loss
+    return best_sigma
+
+
+def line_probability_metrics(pred, rows, market_scores, calibration_sigmas=None):
+    """Score calibrated spread-cover and game-total probabilities.
+
+    Lines come from the historical closing spread/total and are explicitly
+    retrospective. Sigma must be selected using a prior calibration season.
+    """
+    pairs=_paired_line_outcomes(pred,rows,market_scores)
+    calibration_sigmas=calibration_sigmas or {}
+    output={}
+    for label,mean,line,actual in (
+        ('spread','marginMean','marginLine','marginActual'),
+        ('total','totalMean','totalLine','totalActual'),
+    ):
+        sigma=calibration_sigmas.get(label)
+        if sigma is None:
+            sigma=_fit_normal_sigma(pairs,mean,line,actual)
+        decided=[row for row in pairs if row[actual] != row[line]]
+        if sigma is None or not decided:
+            output[label]={'games':len(decided),'sigma':sigma,'brier':None,'logLoss':None}
+            continue
+        probabilities=[_normal_over_probability(row[mean],row[line],sigma) for row in decided]
+        outcomes=[1.0 if row[actual]>row[line] else 0.0 for row in decided]
+        output[label]={'games':len(decided),'sigma':sigma,
+                       'brier':round(sum((p-y)**2 for p,y in zip(probabilities,outcomes))/len(decided),4),
+                       'logLoss':round(-sum(y*math.log(max(1e-9,min(1-1e-9,p)))+
+                                            (1-y)*math.log(max(1e-9,min(1-1e-9,1-p)))
+                                            for p,y in zip(probabilities,outcomes))/len(decided),4)}
+    return output
+
+
+def fit_line_sigmas(pred, rows, market_scores):
+    """Fit margin and total uncertainty from the designated prior calibration set."""
+    pairs=_paired_line_outcomes(pred,rows,market_scores)
+    return {
+        'spread':_fit_normal_sigma(pairs,'marginMean','marginLine','marginActual'),
+        'total':_fit_normal_sigma(pairs,'totalMean','totalLine','totalActual'),
+    }
+
+
 def fit_feature_model(rows, keys):
     features=[[r[1][key] for key in keys] for r in rows]
     residuals=[r[4]-r[2] for r in rows]
@@ -165,18 +253,27 @@ def evaluate_fold(records, keys, train_through, calibration_season, holdout_seas
             'Stats':calibrate_win_scale(calibration_stats,calibration),
             'Closing Market Benchmark':calibrate_win_scale(market,calibration),
             'Market Blend':calibrate_win_scale(calibration_blend,calibration)}
+    line_sigmas={
+        'Base':fit_line_sigmas(calibration_base,calibration,market),
+        'Recency Weighted':fit_line_sigmas(calibration_recent,calibration,market),
+        'Stats':fit_line_sigmas(calibration_stats,calibration,market),
+    }
 
     def evaluate(rows):
         base,recent,actual,market,stats=project_records(rows,keys,model)
         blend=[s*(1-market_weight)+m*market_weight for s,m in zip(stats,market)]
-        return {'Base':prediction_metrics(base,rows,scales['Base']),
+        output={'Base':prediction_metrics(base,rows,scales['Base']),
                 'Recency Weighted':prediction_metrics(recent,rows,scales['Recency Weighted']),
                 'Stats':prediction_metrics(stats,rows,scales['Stats']),
                 'Closing Market Benchmark':prediction_metrics(market,rows,scales['Closing Market Benchmark']),
                 'Market Blend':prediction_metrics(blend,rows,scales['Market Blend'])}
+        for name,predicted in (('Base',base),('Recency Weighted',recent),('Stats',stats)):
+            output[name]['lineProbabilities']=line_probability_metrics(
+                predicted,rows,market,line_sigmas[name])
+        return output
     return {'trainThrough':train_through,'calibrationSeason':calibration_season,
             'holdoutSeason':holdout_season,'marketWeight':market_weight,
-            'model':model,'winProbabilityScales':scales,
+            'model':model,'winProbabilityScales':scales,'lineProbabilitySigmas':line_sigmas,
             'calibration':evaluate(calibration),'holdout':evaluate(holdout)}
 
 
@@ -249,7 +346,7 @@ def fit(directory):
     weight=latest['marketWeight']
     probability_scales=latest['winProbabilityScales']
     holdout_scores=latest['holdout']
-    rolling=[{key:fold[key] for key in ('trainThrough','calibrationSeason','holdoutSeason','marketWeight','calibration','holdout')}
+    rolling=[{key:fold[key] for key in ('trainThrough','calibrationSeason','holdoutSeason','marketWeight','lineProbabilitySigmas','calibration','holdout')}
              for fold in folds]
     # Keep this compact shape for the existing data consumer; detailed diagnostics stay below.
     validation={k:{'scoreMAE':v['scoreMAE'],'marginMAE':v['marginMAE']} for k,v in holdout_scores.items()}
@@ -261,6 +358,7 @@ def fit(directory):
                 validation=validation,
                 backtest={'protocol':'Expanding chronological folds: fit features on earlier seasons, calibrate market blending and win probability on the next season, then score a later untouched season.',
                           'marketNote':'The historical spread and total columns are closing-line benchmarks, not timestamped odds available at the forecast time.',
+                          'lineProbabilityNote':'Spread-cover and total probabilities use a Normal residual approximation. Its spread is fit on the immediately prior calibration season only; whole-number pushes are excluded. Treat these as candidates until multi-season calibration supports production use.',
                           'weatherNote':'Historical observed weather is excluded because archived pregame forecasts are not available.',
                           'quarterbackNote':'Quarterback strength uses only player workload recorded before each game; the retrospectively listed starter is excluded.',
                           'calibrationSeason':calibration_season,'holdoutSeason':holdout_season,
