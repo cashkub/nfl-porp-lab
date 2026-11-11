@@ -1,4 +1,4 @@
-"""Cache one DraftKings pregame prop snapshot per NFL event."""
+"""Cache Wednesday and Sunday DraftKings snapshots for the current NFL slate."""
 import json
 import os
 from datetime import datetime, timezone
@@ -68,14 +68,14 @@ def anytime_prices(event, checked):
 
 
 EASTERN = ZoneInfo('America/New_York')
-# Days ahead to include, counted using local game dates (Wednesday, Saturday, Sunday).
-SLATE_OFFSETS = {2: (0, 1, 2), 5: (0, 1), 6: (1,)}
+# The NFL week ends Tuesday night in Eastern time.
+DAYS_THROUGH_TUESDAY = {2: 6, 6: 2}
 
 
 def in_scheduled_slate(now, kickoff):
     today = now.astimezone(EASTERN).date()
     days_ahead = (kickoff.astimezone(EASTERN).date() - today).days
-    return kickoff > now and days_ahead in SLATE_OFFSETS.get(today.weekday(), ())
+    return kickoff > now and 0 <= days_ahead <= DAYS_THROUGH_TUESDAY.get(today.weekday(), -1)
 
 
 def main():
@@ -84,33 +84,32 @@ def main():
     now = datetime.now(timezone.utc)
     games = {g['id']: g for g in json.loads(CACHE.read_text())['games']
              if datetime.fromisoformat(g['kickoff']) > now}
-    if now.astimezone(EASTERN).weekday() not in SLATE_OFFSETS:
+    snapshot_date = now.astimezone(EASTERN).date()
+    if snapshot_date.weekday() not in DAYS_THROUGH_TUESDAY:
         return
     events, remaining = request('')
     for event in sorted(events, key=lambda e: e['commence_time']):
         kickoff = datetime.fromisoformat(event['commence_time'])
         previous = games.get(event['id'], {})
-        if previous.get('version', 0) >= 4 or not in_scheduled_slate(now, kickoff):
+        if previous.get('snapshotDate') == snapshot_date.isoformat() or not in_scheduled_slate(now, kickoff):
             continue
         home = TEAMS.get(event['home_team'].split()[-1])
         away = TEAMS.get(event['away_team'].split()[-1])
         if not home or not away:
             continue
-        version = previous.get('version', 0)
-        markets = list(MARKETS if version < 2 else TD_MARKETS if version == 2 else ['player_tds'])
-        markets.append('player_anytime_td')
+        markets = [*MARKETS, 'player_anytime_td']
         if remaining < len(markets):
+            print(f"Insufficient quota for the next game: {remaining} credits remaining.")
             break
         details, remaining = request('/' + event['id'] + '/odds', bookmakers='draftkings',
                                      markets=','.join(markets), oddsFormat='american')
         checked = now.isoformat()
         lines = extract_lines(details, checked)
         prices = anytime_prices(details, checked)
-        if previous or lines or prices:
-            replaced = {(r['metric'], r['player'], r['point']) for r in lines}
-            retained = [r for r in previous.get('lines', []) if (r['metric'], r['player'], r['point']) not in replaced]
-            games[event['id']] = {'version': 4, 'id': event['id'], 'home': home, 'away': away,
-                                  'kickoff': event['commence_time'], 'lines': retained + lines, 'anytime': prices}
+        games[event['id']] = {'version': 5, 'snapshotDate': snapshot_date.isoformat(),
+                              'id': event['id'], 'home': home, 'away': away,
+                              'kickoff': event['commence_time'], 'lines': lines, 'anytime': prices}
+        print(f'{away} at {home}: {len(lines)} props, {len(prices)} anytime TD prices')
     CACHE.write_text(json.dumps({'games':list(games.values())}, separators=(',', ':')) + '\n')
 
 
