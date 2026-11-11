@@ -1,3 +1,5 @@
+import {useArchive} from './TrackedPicks.jsx';
+import {publishedLook} from '../lib/publishedLooks.js';
 import TeamLogo from './TeamLogo.jsx';
 import React,{useEffect,useMemo,useState} from 'react';
 import {ChevronDown,Activity,Info} from 'lucide-react';
@@ -35,7 +37,16 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
     if(value)url.searchParams.set('topSelection',value);else url.searchParams.delete('topSelection');
     window.history.replaceState(window.history.state,'',url);
   },[mode,value,type]);
-  const livePicks=useMemo(()=>buildTopLooks({players,slate,books,season,type}),[slate,players,season,books,type]);
+  const archive=useArchive('nfl-picks.json');
+  const livePicks=useMemo(()=>{
+    const dates=[...new Set(slate.map(g=>dayKey(g.kickoff)))];
+    return dates.flatMap(date=>{
+      const fixtures=slate.filter(g=>dayKey(g.kickoff)===date);
+      const locked=(archive.rows||[]).filter(r=>r.model==='2026.11.v2'&&r.look&&r.date===date&&r.kind===(type==='props'?'prop':'touchdown'));
+      if(locked.length)return locked.filter(r=>fixtures.some(g=>g.id===r.gameId)).sort((a,b)=>a.rank-b.rank).map(r=>publishedLook(r,players,fixtures));
+      return buildTopLooks({players,slate:fixtures,books,season,type});
+    });
+  },[slate,players,season,books,type,archive.rows]);
   const picks=isReplay?replayPicks:livePicks;
   const markets=Object.fromEntries(Object.entries(METRICS).map(([key,market])=>[key,market.label]));
   const kickDate=value&&mode==='day'?dayLabel(value):value?'Week '+value:'Upcoming';
@@ -58,14 +69,14 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
       <details className="model-guide"><summary aria-label="What The Model Considers" title="What The Model Considers"><Info size={17}/></summary><div className="model-guide-panel"><b>WHAT TOP LOOKS CONSIDERS</b><p>Picks with real sportsbook lines come first. Within the real-line and average-line groups, picks sort by comparative model score; averages from unpriced games fill the remaining places after the sportsbook picks.</p><div className="model-guide-grid"><section><strong>38% · MARKET EDGE</strong><span>Estimated chance compared with available sportsbook odds after removing two-way vig. Anytime touchdown Yes prices are shown as listed, before removing margin.</span></section><section><strong>22% · SHARED PROJECTION</strong><span>Uses the same point projection shown in the Game tab: recent and season workload multiplied by a shrinkage-adjusted league efficiency, compared with the selected line.</span></section><section><strong>12% · DEFENSE MATCHUP</strong><span>Whether the defense allows more or fewer of that position’s selected stat. Color reflects the bet direction.</span></section><section><strong>{type==='anytime'?'12%':'18%'} · WORKLOAD</strong><span>{type==='anytime'?'Attempts, carries, targets, touches, and team share, alongside red-zone scoring opportunities.':'Volume and team share are matched to the selected prop: pass attempts for passing props, carries for rushing props, and targets for receiving props.'}</span></section><section><strong>6% · WEATHER</strong><span>Wind, rain, and cold are used only when the forecast is available and relevant to the market.</span></section>{type==='anytime'&&<section><strong>6% · RED-ZONE USAGE</strong><span>Red-zone target share for receivers, carry share for runners and quarterbacks; running backs can benefit from either. Scoring-area volume is included when play-by-play data exists.</span></section>}<section className="guide-injuries"><strong>4% · INJURY EFFECTS FOR {type==='anytime'?'ANYTIME TOUCHDOWNS':'PLAYER PROPS'}</strong><span>{type==='anytime'?'Checks the selected player’s availability and meaningful absences among players who share scoring work, such as a lead running back or primary red-zone target. Red-zone opportunity data helps identify whether the injured player’s role overlaps.':'Checks the selected player’s availability and high-impact teammates whose absence could change this prop’s workload: QB1 for passing and receiving markets, or a leading same-position player for targets or carries. Only an estimated top role and a relevant injury status qualify.'} The effect is signed to the pick: an absence that supports this side can help it; one that creates risk can lower it. If no relevant injury is reported, or the player’s role cannot be estimated, the injury factor is neutral and the pick is unchanged.</span></section></div><small>The score is for comparing picks, not a win probability. Missing lines and odds are labeled. A date appears only when at least one future game is scheduled.</small></div></details>
     </section>
     {isReplay&&<aside className="top-replay-notice" role="note"><strong>HISTORICAL V2 REPLAY · WEEK 9</strong><p>{replayData.disclaimer}</p><small>{replayData.coverageNote} Replay selections and outcomes stay outside the official Model Record.</small></aside>}
-    {loading||error?<p>{error||'Loading Top Looks…'}</p>:isReplay&&!replayData?<p>Loading Week 9 replay…</p>:picks.length?
+    {loading||error||(!isReplay&&!archive.rows)?<p>{error||(archive.error?'Published picks unavailable.':'Loading Top Looks…')}</p>:isReplay&&!replayData?<p>Loading Week 9 replay…</p>:picks.length?
       <section className={'top-pick-list'+(isReplay?' is-replay':'')}>{picks.map((pick,index)=>{
         const context=gameContext(pick.game,pick);
         const recentLabel=pick.recent.length?'last '+pick.recent.length:'recent';
         const shareLabel=pick.usageKey==='targets'?'Target Share':pick.usageKey==='carries'?'Carry Share':pick.usageKey==='attempts'?'Attempt Share':'Touch Share';
         const pickKey=pick.game.id+'|'+pick.player.id+'|'+pick.metric+'|'+pick.side;
         const whyId='pick-why-'+index;
-        const displayRank=pick.replayRank||index+1;
+        const displayRank=pick.replayRank||pick.publishedRank||index+1;
         const displayCount=pick.replayCount||picks.length;
         const startsReplayDay=isReplay&&(index===0||picks[index-1]?.replayDayDate!==pick.replayDayDate);
         const whyOpen=openWhy===pickKey;
@@ -73,7 +84,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
           <div className="pick-rank"><b>{String(displayRank).padStart(2,'0')}</b><small title="Comparative Model Score, Not A Percentage">{pick.rankScore} SCORE</small></div>
           <PlayerPhoto id={pick.player.id} name={pick.player.name} url={pick.player.photo}/>
           <div className="top-pick-main">
-            <div className="top-matchup"><TeamLogo team={pick.player.team}/>{pick.player.team} · <TeamLogo team={pick.game.opponent}/>{pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
+            <div className="top-matchup">{!isReplay&&<>{pick.publishedRank?'Published pick':'Pregame preview'} · </>}<TeamLogo team={pick.player.team}/>{pick.player.team} · <TeamLogo team={pick.game.opponent}/>{pick.game.opponent} · {new Date(pick.game.kickoff).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET</div>
             <h2>{pick.player.name}</h2><p>{pick.quote.anytime?(pick.side==='over'?'ANYTIME TD · YES':'ANYTIME TD · NO'):pick.side.toUpperCase()+' '+pick.line+' '+markets[pick.metric]}</p>
             <div className="pick-meta-row"><small className={'line-origin '+(pick.quote.isBookLine?'sportsbook':'average')}>{pick.quote.anytime?(pick.quote.isBookLine?'DRAFTKINGS ANYTIME TD ODDS':'MODEL ESTIMATE · NO ODDS'):pick.quote.isBookLine?'DRAFTKINGS LINE':'PLAYER AVERAGE LINE'}</small><button className="why-toggle" type="button" aria-expanded={whyOpen} aria-controls={whyId} onClick={()=>setOpenWhy(whyOpen?'':pickKey)}><Info size={14}/>{whyOpen?'Hide Why':'Why This Pick'}<ChevronDown size={14}/></button></div>
           </div>

@@ -233,17 +233,20 @@ if(sport==='nfl'){
 }
 if(sport==='nfl'){
   const data=read('stats.json'),season=Math.max(...data.seasons),books=read('lines.json').games;
-  const locked=new Set(archive.filter(row=>row.model==='2026.11.v2').map(row=>nflDayKey(row.kickoff)+'|'+(row.kind==='touchdown'?'anytime':'props')));
   const slates=new Map();
   for(const game of data.schedule||[]){
-    if(!game.id||!upcoming(game))continue;
+    if(!game.id||game.timeKnown===false)continue;
     const date=nflDayKey(game.kickoff);
     if(!slates.has(date))slates.set(date,[]);
     slates.get(date).push(game);
   }
   for(const [date,games] of slates)for(const type of ['props','anytime']){
-    if(locked.has(date+'|'+(type==='anytime'?'anytime':'props')))continue;
+    if(!games.some(upcoming)||games.some(g=>Date.parse(g.kickoff)<=now)||games.length<(nflGamesPerDate.get(date)||0))continue;
+    const kind=type==='anytime'?'touchdown':'prop';
+    const previous=archive.filter(r=>r.model==='2026.11.v2'&&r.date===date&&r.kind===kind);
+    if(previous.some(r=>r.result||Date.parse(r.kickoff)<=now))continue;
     const picks=buildTopLooks({players:data.players,slate:games,books,season,type});
+    for(const row of previous)archive.splice(archive.indexOf(row),1);
     picks.forEach((pick,index)=>{
       const {player,game,quote}=pick;
       const kind=type==='anytime'?'touchdown':'prop';
@@ -266,10 +269,11 @@ if(sport==='nfl'){
         role:roleDetail,usageKey:pick.usageKey,usageShare:pick.share,usageTrend:pick.usageTrend,
         scoring:pick.scoring||null,chances,weather:pick.weather||null,injuries:pick.injury.notes,
         favoriteReason:{label:pick.favoriteReason.label,detail:pick.favoriteReason.detail},context:pick.favoriteReason.detail,
+        look:{recentHits:pick.recentHits,recent:pick.recent,matchup:pick.matchup,matchupTone:pick.matchupTone,
+          defense:pick.defense,volumeSignal:pick.volumeSignal,fairSide:pick.fairSide,quote:pick.quote},
         snapshotVersion:2,model:'2026.11.v2',saved
       });
     });
-    if(picks.length)locked.add(date+'|'+(type==='anytime'?'anytime':'props'));
   }
 }else{
   const used=new Map();
