@@ -129,7 +129,7 @@ export default function NflGames({schedule,books,players,validation,season,now,o
     </div>
   </section>;
 
-  return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> LIVE SCHEDULE · ROSTER · INJURIES</span></header>
+  return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> SCHEDULE · ROSTER · INJURY FEEDS</span></header>
     {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><label>Matchup<FilterMenu aria-label="Matchup" value={selectedGameId} onChange={e=>{setSelected(e.target.value);requestAnimationFrame(()=>analysisRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));}}>{matchupOptions.map(g=>{const id=g.id||g.kickoff+g.home;return <option key={id} value={id}>{g.away} @ {g.home}</option>})}</FilterMenu></label><p>Schedule data refreshed {updated} · game price fields have no per-matchup timestamp in this feed.</p></div>
       <div className="nfl-games-list" aria-label="Upcoming NFL matchups">{games.map(g=>{
         const id=g.id||g.kickoff+g.home,active=(selected?.id||selected?.kickoff+selected?.home)===id;

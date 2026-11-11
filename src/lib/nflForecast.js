@@ -47,7 +47,7 @@ function injuryWorkloadAdjustment({players,player,game,usageKey}){
     const absent=players.find(candidate=>String(candidate.id)===String(report.id));
     if(!absent||currentTeam(absent)!==team||roleGroup(absent.position,usageKey)!==group)continue;
     const absentRank=Number(absent.depthChartRank);
-    if(player.depthChartSlot&&absent.depthChartSlot&&player.depthChartSlot!==absent.depthChartSlot)continue;
+    if(!player.depthChartSlot||!absent.depthChartSlot||player.depthChartSlot!==absent.depthChartSlot)continue;
     // The injury must affect a higher-ranked teammate. Current chart rank 1 is
     // the objective evidence that this player has moved into the lead role.
     if(!Number.isFinite(absentRank)||absentRank<1||absentRank+1!==rank)continue;

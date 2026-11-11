@@ -50,8 +50,8 @@ test('canonical player forecast filters out games from the matchup week and carr
 
 test('current out report and next depth-chart role add a conservative exploratory workload bump',()=>{
   const games=(volume,statKey)=>[1,2,3,4].map(week=>({season:2026,week,team:'AAA',usage:{carries:volume},stats:{[statKey]:volume}}));
-  const starter={id:'starter',name:'Starter',position:'RB',team:'AAA',currentTeam:'AAA',depthChartRank:1,rosterActive:false,games:games(10,'rushingAttempts')};
-  const backup={id:'backup',name:'Backup',position:'RB',team:'AAA',currentTeam:'AAA',depthChartRank:2,rosterActive:true,games:games(5,'rushingAttempts')};
+  const starter={id:'starter',name:'Starter',position:'RB',team:'AAA',currentTeam:'AAA',depthChartRank:1,depthChartSlot:'HB',rosterActive:false,games:games(10,'rushingAttempts')};
+  const backup={id:'backup',name:'Backup',position:'RB',team:'AAA',currentTeam:'AAA',depthChartRank:2,depthChartSlot:'HB',rosterActive:true,games:games(5,'rushingAttempts')};
   const game={id:'g2',season:2026,week:5,home:'AAA',away:'BBB',injuries:{AAA:[{id:'starter',name:'Starter',position:'RB',gameStatus:'Out'}]}};
   const forecast=buildPlayerForecast({players:[starter,backup],player:backup,game,market:'rushingAttempts',line:8.5,side:'over'});
   assert.equal(forecast.projectedUsage,8.5);
