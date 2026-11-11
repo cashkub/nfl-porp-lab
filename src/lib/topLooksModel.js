@@ -2,6 +2,7 @@ import {availableStats} from './availableStats.js';
 import {bookLine,playerKey} from './bookLine.js';
 import {defenseTable} from './matchup.js';
 import {getPlayerGames,formatRate,isHit,estimateModelHitRate,METRICS} from './stats.js';
+import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection} from './playerProjection.js';
 
 const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
 // `value` is an Eastern calendar date (YYYY-MM-DD), not a UTC instant.
@@ -166,11 +167,11 @@ function injuryAssessment(game,player,metric,side,roleRanks){
   return {signal:clamp(signal,-.8,.8),notes:notes.slice(0,4),ownStatus,ownRole};
 }
 
-function makePick(player,game,metric,market,quote,history,defense,side,teamVolumes,scoringVolumes,roleRanks) {
+function makePick(player,game,metric,market,quote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,projection) {
   const line=quote.point;
   const values=history.map(g=>Number(g.stats[metric]??0));
   const recent=values.slice(-5),average=mean(values),recentAverage=mean(recent);
-  const projection=average*.55+recentAverage*.45;
+  const projectionValue=Number.isFinite(projection)?projection:average*.55+recentAverage*.45;
   const variance=values.reduce((sum,n)=>sum+(n-average)**2,0)/Math.max(1,values.length-1);
   const sd=Math.sqrt(variance);
   const hits=values.filter(n=>isHit(n,line,side)).length;
@@ -201,7 +202,7 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
   const primaryShare=favoriteRedZoneTarget?scoring?.targetShare:scoring?.carryShare;
   const chance=estimateModelHitRate(history,metric,line,side,{marketProbability:fairSide,weatherSignal:weather?.signal||0,redZoneSignal,injurySignal:injury.signal,injuryPenalty}).rate;
   const edge=chance-(fairSide??.5);
-  const projectionSignal=clamp((side==='over'?projection-line:line-projection)/(sd||Math.max(1,Math.abs(line)*.2)),-1,1);
+  const projectionSignal=clamp((side==='over'?projectionValue-line:line-projectionValue)/(sd||Math.max(1,Math.abs(line)*.2)),-1,1);
   const usageSignal=usageTrend==null?0:clamp(usageTrend/Math.max(1,Math.abs(average)*.12),-1,1)*(side==='over'?1:-1);
   const shareSignal=share.trend==null?0:clamp(share.trend*5,-1,1)*(side==='over'?1:-1);
   const shareLevel=share.recent==null||usageKey==='attempts'?0:share.recent>=.2?clamp((share.recent-.2)/.2,0,1):share.recent<=.08?-.5:0;
@@ -217,7 +218,7 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
   const supportCount=[recentHits/Math.max(1,recent.length)>=.6,volumeSignal>.12,defensiveEdge>.15,weatherSupports,redZoneSignal>.15,injury.signal>.15,marketSupports].filter(Boolean).length;
   const reasons=[
     {weight:.38,value:edge,label:'Market Edge',detail:fairSide==null?'The estimated edge comes from results and projection because market odds are unavailable.':`Model estimate ${(chance*100).toFixed(0)}% versus ${quote.anytime?'the listed Yes price at '+quote.over:side+' market odds'} (${(fairSide*100).toFixed(0)}% implied).`},
-    {weight:.22,value:projectionSignal,label:'Projection',detail:`The projection is ${projection.toFixed(1)} against the ${line} line.`},
+    {weight:.22,value:projectionSignal,label:'Projection',detail:`The shared opportunity model projects ${projectionValue.toFixed(1)} against the ${line} line.`},
     {weight:.12,value:defensiveEdge,label:'Matchup',detail:matchup||'Defense rank unavailable.'},
     {weight:workloadWeight,value:volumeSignal,label:'Workload',detail:usageTrend!=null?`Recent ${usageKey} volume changed ${usageTrend>0?'+':''}${usageTrend.toFixed(1)} per game.`:`Recent share of team ${usageKey}: ${fmtShare(share.recent)}.`},
     {weight:redZoneWeight,value:redZoneSignal,label:'Red-Zone Usage',detail:primaryShare!=null?`${favoriteRedZoneTarget?'Red-zone target':'Red-zone carry'} share is ${fmtShare(primaryShare)}.`:'Red-zone play-by-play share is unavailable.'},
@@ -225,7 +226,7 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
     {weight:.04,value:injury.signal,label:'Key Injuries',detail:injury.notes.length?injury.notes[0].impact:'No relevant key-injury signal.'}
   ].filter(reason=>reason.value>0).sort((a,b)=>b.weight*b.value-a.weight*a.value);
   const favoriteReason=reasons[0]||{label:'Recent Results',detail:`The player hit ${hits} of ${history.length} games at this line.`};
-  return {player,game,metric,market,line,quote,history,defense,side,projection,values,recent,hits,recentHits,chance,fairSide,edge,score,rankScore,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,matchupTone,weather,injury,scoring,redZoneSignal,supportCount,projectionSignal,defensiveEdge,favoriteReason};
+  return {player,game,metric,market,line,quote,history,defense,side,projection:projectionValue,values,recent,hits,recentHits,chance,fairSide,edge,score,rankScore,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,matchupTone,weather,injury,scoring,redZoneSignal,supportCount,projectionSignal,defensiveEdge,favoriteReason};
 }
 
 function fmtShare(value){return Number.isFinite(value)?(value*100).toFixed(1)+'%':'—';}
@@ -251,10 +252,13 @@ export function buildTopLooks({players,slate,books,season,type}) {
   const candidates=[],cache=new Map();
   for(const game of slate){
     const roleRanks=buildRoleRanks(players,season,game);
+    const efficiencyPriors=buildOpportunityEfficiencyPriors(players,game);
     for(const player of players){
       if(player.team!==game.home&&player.team!==game.away)continue;
       const opponent=player.team===game.home?game.away:game.home;
-      const history=getPlayerGames(player,season).filter(row=>Number(row.week)<Number(game.week)).slice(-10);
+      const seasonHistory=getPlayerGames(player,season).filter(row=>Number(row.week)<Number(game.week));
+      const history=getPlayerGames(player,'ALL').filter(row=>Number(row.season)<Number(game.season)||
+        (Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week))).slice(-10);
       if(history.length<5)continue;
       for(const metric of availableStats(METRICS,history)){
         const isAnytime=metric==='scoredTDs';
@@ -264,6 +268,18 @@ export function buildTopLooks({players,slate,books,season,type}) {
         if(!Number.isFinite(quote?.point)&&average<=0)continue;
         const line=Number.isFinite(quote?.point)?quote.point:(type==='anytime'?0.5:Number(average.toFixed(1)));
         const selectedQuote=quote?{...quote,isBookLine:true}:{point:line,over:null,under:null,isBookLine:false,anytime:type==='anytime'};
+        let pointProjection;
+        if(isAnytime){
+          const values=history.map(row=>Number(row.stats[metric]??0)),recent=values.slice(-5);
+          pointProjection=mean(values)*.55+mean(recent)*.45;
+        }else{
+          const projectionHistory=seasonHistory.length?getPlayerGames(player,'ALL').filter(row=>Number(row.season)<Number(game.season)||
+            (Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week))):history;
+          const estimate=estimateOpportunityProjection({history:projectionHistory,position:player.position,market:metric,
+            season:game.season,priorEfficiency:efficiencyPriors[player.position+':'+metric]??null});
+          if(!estimate)continue;
+          pointProjection=estimate.projection;
+        }
         const market={label:type==='anytime'?'Anytime Touchdown':METRICS[metric].label,unit:METRICS[metric].unit,short:metric};
         const posMetric=player.position+'|'+metric+'|'+game.week;
         if(!cache.has(posMetric))cache.set(posMetric,defenseTable(players,season,player.position,metric,game.week));
@@ -271,7 +287,7 @@ export function buildTopLooks({players,slate,books,season,type}) {
         const availability=playerInjuryStatus(game,player);
         if(availability==='out'||availability==='doubtful')continue;
         const sides=type==='anytime'?['over']:['over','under'];
-        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks));
+        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,pointProjection));
       }
     }
   }
