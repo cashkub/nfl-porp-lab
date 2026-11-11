@@ -19,12 +19,16 @@ class PlayerBaselineTests(unittest.TestCase):
 
     def test_probability_metrics_compare_to_coin_flip_and_report_calibration(self):
         metrics=score_probability_predictions([
-            {'probability':.75,'outcome':1}, {'probability':.25,'outcome':0},
-            {'probability':.6,'outcome':1}, {'probability':.4,'outcome':0},
+            {'probability':.75,'priorRateProbability':.5,'outcome':1},
+            {'probability':.25,'priorRateProbability':.5,'outcome':0},
+            {'probability':.6,'priorRateProbability':.5,'outcome':1},
+            {'probability':.4,'priorRateProbability':.5,'outcome':0},
         ])
         self.assertEqual(metrics['games'],4)
         self.assertLess(metrics['brier'],metrics['coinFlipBrier'])
         self.assertLess(metrics['logLoss'],metrics['coinFlipLogLoss'])
+        self.assertEqual(metrics['priorRateBrier'],.25)
+        self.assertEqual(metrics['priorRateLogLoss'],metrics['coinFlipLogLoss'])
         self.assertEqual(metrics['calibrationGap'],0)
 
     def test_efficiency_projection_combines_role_and_smoothed_production_rate(self):

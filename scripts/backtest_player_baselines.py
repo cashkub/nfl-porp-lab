@@ -106,13 +106,17 @@ def score_probability_predictions(predictions):
     if not predictions:return {'games':0,'brier':None,'logLoss':None,'averageProbability':None,'observedOver':None}
     probabilities=[min(1-1e-9,max(1e-9,p['probability'])) for p in predictions]
     outcomes=[float(p['outcome']) for p in predictions]
+    benchmark=[min(1-1e-9,max(1e-9,p['priorRateProbability'])) for p in predictions]
     brier=sum((p-y)**2 for p,y in zip(probabilities,outcomes))/len(predictions)
     logloss=-sum(y*math.log(p)+(1-y)*math.log(1-p) for p,y in zip(probabilities,outcomes))/len(predictions)
+    prior_brier=sum((p-y)**2 for p,y in zip(benchmark,outcomes))/len(predictions)
+    prior_logloss=-sum(y*math.log(p)+(1-y)*math.log(1-p) for p,y in zip(benchmark,outcomes))/len(predictions)
     observed=sum(outcomes)/len(outcomes)
     return {'games':len(predictions),'brier':round(brier,4),'logLoss':round(logloss,4),
             'averageProbability':round(mean(probabilities),4),'observedOver':round(observed,4),
             'calibrationGap':round(mean(probabilities)-observed,4),'coinFlipBrier':0.25,
-            'coinFlipLogLoss':round(math.log(2),4)}
+            'coinFlipLogLoss':round(math.log(2),4),'priorRateBrier':round(prior_brier,4),
+            'priorRateLogLoss':round(prior_logloss,4)}
 
 
 def backtest(directory):
@@ -123,6 +127,7 @@ def backtest(directory):
     prior_usage=defaultdict(float)
     predictions=defaultdict(lambda:defaultdict(list))
     residual_history=defaultdict(list)
+    over_rate_history=defaultdict(lambda:[0,0])
     probability_predictions=defaultdict(lambda:defaultdict(list))
     weeks=defaultdict(list)
     for row in rows:weeks[row['season'],row['week']].append(row)
@@ -130,6 +135,7 @@ def backtest(directory):
         batch=weeks[season,week]
         # Every forecast in a week uses data from completed prior weeks only.
         batch_errors=[]
+        batch_over_outcomes=[]
         sorted_residuals={}
         for row in batch:
             pid,position=row['player'],row['position']
@@ -153,8 +159,12 @@ def backtest(directory):
                         probability=probability_over_from_sorted_errors(
                             sorted_residuals[distribution_key],value,book_like_line)
                         if probability is not None and actual!=book_like_line:
+                            prior_successes,prior_count=over_rate_history[distribution_key]
+                            prior_rate=(prior_successes+1)/(prior_count+2)
+                            outcome=float(actual>book_like_line)
                             probability_predictions[season][position+' · '+market+' · '+model].append({
-                                'probability':probability,'outcome':float(actual>book_like_line)})
+                                'probability':probability,'priorRateProbability':prior_rate,'outcome':outcome})
+                            batch_over_outcomes.append((distribution_key,outcome))
                         # Add after the entire week is forecast so teammates from
                         # the same game slate cannot contribute their outcomes.
                         batch_errors.append((distribution_key,actual-value))
@@ -168,6 +178,9 @@ def backtest(directory):
                     prior_usage[key]+=float(row['usage'].get(usage_key,0) or 0)
         for key,error in batch_errors:
             residual_history[key].append(error)
+        for key,outcome in batch_over_outcomes:
+            over_rate_history[key][0]+=int(outcome)
+            over_rate_history[key][1]+=1
     report={'protocol':'For each completed regular-season week, each player forecast uses only that player’s earlier completed game logs. All forecasts for the same week are generated before any game from that week is added.','source':'nflverse weekly player stats and games.csv; public data, no odds or injury snapshots used.','completedGames':len(completed),'eligiblePlayerGames':len(rows),'seasons':{}}
     seasons=sorted(predictions)
     for season in seasons:
@@ -192,6 +205,7 @@ def backtest(directory):
         'line':'Standard half-point threshold immediately above the model forecast floor.',
         'minimumPriorForecasts':100,
         'smoothing':'Laplace +1/+2; probabilities require at least 100 prior out-of-sample forecast errors.',
+        'baseline':'Prior-rate benchmark is the smoothed Over frequency at the same model-centered half-point threshold, learned only from earlier forecast outcomes.',
         'limitation':'Historical sportsbook player-prop lines and prices are unavailable; these scores test calibration at the model-centered half-point threshold, not betting ROI or market-line performance.'}
     report['probabilityBySeason']=probability_by_season
     report['probabilityAggregate']={key:score_probability_predictions(items)
@@ -201,10 +215,13 @@ def backtest(directory):
         for key,metrics in market_rows.items():
             if metrics['games']<50:continue
             row=probability_consistency.setdefault(key,{'eligibleSeasons':0,'beatsCoinFlipBrier':0,
-                                                        'beatsCoinFlipLogLoss':0})
+                                                        'beatsCoinFlipLogLoss':0,'beatsPriorRateBrier':0,
+                                                        'beatsPriorRateLogLoss':0})
             row['eligibleSeasons']+=1
             row['beatsCoinFlipBrier']+=int(metrics['brier']<metrics['coinFlipBrier'])
             row['beatsCoinFlipLogLoss']+=int(metrics['logLoss']<metrics['coinFlipLogLoss'])
+            row['beatsPriorRateBrier']+=int(metrics['brier']<metrics['priorRateBrier'])
+            row['beatsPriorRateLogLoss']+=int(metrics['logLoss']<metrics['priorRateLogLoss'])
     report['probabilitySeasonConsistency']=probability_consistency
     consistency={}
     for season in seasons:
