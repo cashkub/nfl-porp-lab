@@ -103,7 +103,17 @@ jobs:
                         '| --- | ---: | ---: | ---: |'])
           for key,metrics in player['seasonConsistency'].items():
               lines.append(f"| {key} | {metrics['eligibleSeasons']} | {metrics['beatsSeasonAverage']} | {metrics['beatsRecentAverage']} |")
-          lines.extend(['', 'These are historical benchmark baselines, not production projections or betting probabilities. The report artifact includes results by season.'])
+          lines.extend(['', '**Opportunity model: half-point Over probability diagnostic**', '',
+                        player['probabilityMethod']['distribution'],
+                        player['probabilityMethod']['limitation'], '',
+                        '| Position / market | Holdout N | Brier | Log loss | Mean predicted | Observed Over | Brier wins / seasons | Log-loss wins / seasons |',
+                        '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'])
+          for key,metrics in player['probabilityAggregate'].items():
+              if not key.endswith(' · opportunity'): continue
+              consistency=player['probabilitySeasonConsistency'].get(key,{})
+              short=key.rsplit(' · ',1)[0]
+              lines.append(f"| {short} | {metrics['games']} | {metrics['brier']} | {metrics['logLoss']} | {metrics['averageProbability']} | {metrics['observedOver']} | {consistency.get('beatsCoinFlipBrier',0)}/{consistency.get('eligibleSeasons',0)} | {consistency.get('beatsCoinFlipLogLoss',0)}/{consistency.get('eligibleSeasons',0)} |")
+          lines.extend(['', 'A coin flip reference is Brier 0.2500 and log loss 0.6931. Probabilities are fitted from prior out-of-sample player forecast residuals and are still research candidates. No historical sportsbook player-prop prices are available, so this does not establish betting value.', '', 'These are historical benchmark baselines, not production projections or betting recommendations. The report artifact includes results by season.'])
           Path('/tmp/nfl-model-summary.md').write_text('\n'.join(lines)+'\n')
           print('\n'.join(lines))
           with open(__import__('os').environ['GITHUB_STEP_SUMMARY'],'a') as f:

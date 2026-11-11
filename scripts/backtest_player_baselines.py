@@ -85,6 +85,28 @@ def score_predictions(predictions):
             'rmse':round(math.sqrt(sum(e*e for e in errors)/len(errors)),3)}
 
 
+def probability_over_from_errors(errors, projection, line, minimum_samples=100):
+    """Empirical residual probability using only errors available before kickoff."""
+    if len(errors)<minimum_samples or not math.isfinite(projection) or not math.isfinite(line):
+        return None
+    over=sum(error>line-projection for error in errors)
+    # Laplace smoothing keeps sparse tails away from exact 0% and 100%.
+    return (over+1)/(len(errors)+2)
+
+
+def score_probability_predictions(predictions):
+    if not predictions:return {'games':0,'brier':None,'logLoss':None,'averageProbability':None,'observedOver':None}
+    probabilities=[min(1-1e-9,max(1e-9,p['probability'])) for p in predictions]
+    outcomes=[float(p['outcome']) for p in predictions]
+    brier=sum((p-y)**2 for p,y in zip(probabilities,outcomes))/len(predictions)
+    logloss=-sum(y*math.log(p)+(1-y)*math.log(1-p) for p,y in zip(probabilities,outcomes))/len(predictions)
+    observed=sum(outcomes)/len(outcomes)
+    return {'games':len(predictions),'brier':round(brier,4),'logLoss':round(logloss,4),
+            'averageProbability':round(mean(probabilities),4),'observedOver':round(observed,4),
+            'calibrationGap':round(mean(probabilities)-observed,4),'coinFlipBrier':0.25,
+            'coinFlipLogLoss':round(math.log(2),4)}
+
+
 def backtest(directory):
     completed=load_completed_ids(directory)
     rows=load_player_games(directory,completed)
@@ -92,11 +114,14 @@ def backtest(directory):
     prior_sum=defaultdict(float)
     prior_usage=defaultdict(float)
     predictions=defaultdict(lambda:defaultdict(list))
+    residual_history=defaultdict(list)
+    probability_predictions=defaultdict(lambda:defaultdict(list))
     weeks=defaultdict(list)
     for row in rows:weeks[row['season'],row['week']].append(row)
     for season,week in sorted(weeks):
         batch=weeks[season,week]
         # Every forecast in a week uses data from completed prior weeks only.
+        batch_errors=[]
         for row in batch:
             pid,position=row['player'],row['position']
             for market,usage_key in MARKETS[position]:
@@ -112,6 +137,16 @@ def backtest(directory):
                     value=forecast.get(model)
                     if value is not None:
                         predictions[season][position+' · '+market+' · '+model].append({'actual':actual,'predicted':value})
+                        distribution_key=(position,market,model)
+                        book_like_line=math.floor(value)+0.5
+                        probability=probability_over_from_errors(
+                            residual_history[distribution_key],value,book_like_line)
+                        if probability is not None and actual!=book_like_line:
+                            probability_predictions[season][position+' · '+market+' · '+model].append({
+                                'probability':probability,'outcome':float(actual>book_like_line)})
+                        # Add after the entire week is forecast so teammates from
+                        # the same game slate cannot contribute their outcomes.
+                        batch_errors.append((distribution_key,actual-value))
         for row in batch:
             history[row['player']].append(row)
             for position,markets in MARKETS.items():
@@ -120,6 +155,8 @@ def backtest(directory):
                     key=(position,market)
                     prior_sum[key]+=float(row['stats'].get(market,0) or 0)
                     prior_usage[key]+=float(row['usage'].get(usage_key,0) or 0)
+        for key,error in batch_errors:
+            residual_history[key].append(error)
     report={'protocol':'For each completed regular-season week, each player forecast uses only that player’s earlier completed game logs. All forecasts for the same week are generated before any game from that week is added.','source':'nflverse weekly player stats and games.csv; public data, no odds or injury snapshots used.','completedGames':len(completed),'eligiblePlayerGames':len(rows),'seasons':{}}
     seasons=sorted(predictions)
     for season in seasons:
@@ -133,6 +170,31 @@ def backtest(directory):
     for season in seasons:
         for key,items in predictions[season].items():aggregate[key].extend(items)
     report['aggregate']={key:score_predictions(items) for key,items in sorted(aggregate.items())}
+    probability_aggregate=defaultdict(list)
+    probability_by_season={}
+    for year,market_rows in probability_predictions.items():
+        probability_by_season[str(year)]={key:score_probability_predictions(items)
+                                          for key,items in sorted(market_rows.items())}
+        for key,items in market_rows.items():probability_aggregate[key].extend(items)
+    report['probabilityMethod']={
+        'distribution':'Empirical position/market/model forecast residuals, collected only after each prior week has completed.',
+        'line':'Standard half-point threshold immediately above the model forecast floor.',
+        'minimumPriorForecasts':100,
+        'smoothing':'Laplace +1/+2; probabilities require at least 100 prior out-of-sample forecast errors.',
+        'limitation':'Historical sportsbook player-prop lines and prices are unavailable; these scores test calibration at the model-centered half-point threshold, not betting ROI or market-line performance.'}
+    report['probabilityBySeason']=probability_by_season
+    report['probabilityAggregate']={key:score_probability_predictions(items)
+                                    for key,items in sorted(probability_aggregate.items())}
+    probability_consistency={}
+    for year,market_rows in probability_by_season.items():
+        for key,metrics in market_rows.items():
+            if metrics['games']<50:continue
+            row=probability_consistency.setdefault(key,{'eligibleSeasons':0,'beatsCoinFlipBrier':0,
+                                                        'beatsCoinFlipLogLoss':0})
+            row['eligibleSeasons']+=1
+            row['beatsCoinFlipBrier']+=int(metrics['brier']<metrics['coinFlipBrier'])
+            row['beatsCoinFlipLogLoss']+=int(metrics['logLoss']<metrics['coinFlipLogLoss'])
+    report['probabilitySeasonConsistency']=probability_consistency
     consistency={}
     for season in seasons:
         for market,models in report['seasons'][str(season)]['markets'].items():
