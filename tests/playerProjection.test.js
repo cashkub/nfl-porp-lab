@@ -54,6 +54,7 @@ test('Top Looks and Game player projections share one pregame efficiency prior',
     ]}
   ];
   const priors=buildOpportunityEfficiencyPriors(players,matchup);
+  assert.strictEqual(buildOpportunityEfficiencyPriors(players,matchup),priors);
   assert.equal(priors['WR:receivingYards'],86/18);
   const history=players[0].games.filter(g=>g.season<matchup.season||g.week<matchup.week);
   const gameProjection=estimateOpportunityProjection({history,position:'WR',market:'receivingYards',season:matchup.season,
