@@ -174,3 +174,10 @@
   .nfl-games .prop-list-row dl {padding:0 .65rem}
   .prop-list-row .nfl-chart-link {margin:0 .65rem .6rem}
 }
+.nfl-player-toolbar {flex-wrap:wrap}
+.nfl-player-toolbar .board-controls {max-width:100%}
+.prop-sort-note {margin:.3rem 0; color:var(--muted); font-size:.75rem}
+@media(max-width:680px) {
+  .nfl-player-toolbar .board-controls .prop-sort-field {grid-column:1/-1; display:flex; flex-direction:row; align-items:center; gap:.6rem}
+  .prop-sort-field .filter-trigger {flex:1}
+}
