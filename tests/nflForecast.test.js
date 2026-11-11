@@ -20,6 +20,13 @@ test('distribution is withheld until the minimum chronological sample is met',()
   assert.equal(probabilitiesFromResiduals({projection:10,line:10.5,residuals:residuals.slice(0,99)}),null);
 });
 
+test('compact residual histograms preserve the empirical probabilities',()=>{
+  const direct=probabilitiesFromResiduals({projection:10,line:10.5,residuals});
+  const compact=probabilitiesFromResiduals({projection:10,line:10.5,
+    residualHistogram:[[-2,20],[-1,20],[0,20],[1,20],[2,20]]});
+  assert.deepEqual(compact,direct);
+});
+
 test('canonical player forecast filters out games from the matchup week and carries shared identity',()=>{
   const player={id:'p1',name:'Player',team:'AAA',position:'WR',games:[
     {gameId:'old',season:2025,week:17,stats:{receivingYards:50},usage:{targets:5}},
