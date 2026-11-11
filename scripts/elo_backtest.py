@@ -53,6 +53,28 @@ def market_probability(row):
     return hp/(hp+ap)
 
 
+def scaled_elo_probability(home_rating, away_rating, scale=1.0, neutral=False, home_edge=55):
+    """Apply a calibration scale fitted on an earlier season to an Elo forecast."""
+    probability=elo_probability(home_rating,away_rating,neutral,home_edge)
+    probability=_actual_probability(probability)
+    logit=math.log(probability/(1-probability))*float(scale)
+    return 1/(1+math.exp(-max(-30,min(30,logit))))
+
+
+def _update_ratings(ratings, game, k_factor, home_edge, carryover=None):
+    """Update both team ratings after a completed game."""
+    home,away=game['home'],game['away']
+    home_rating,away_rating=ratings.get(home,1500),ratings.get(away,1500)
+    expected=elo_probability(home_rating,away_rating,game['neutral'],home_edge)
+    margin=game['margin']
+    actual=1.0 if margin>0 else 0.5 if margin==0 else 0.0
+    gap=home_rating-away_rating+(0 if game['neutral'] else home_edge)
+    movement=math.log(abs(margin)+1)*2.2/(2.2+0.001*abs(gap)) if margin else 0.0
+    change=k_factor*movement*(actual-expected)
+    ratings[home]=home_rating+change
+    ratings[away]=away_rating-change
+
+
 def prediction_metrics(rows, scale=1.0, key='eloProbability'):
     decided=[r for r in rows if r['homeOutcome'] is not None and r.get(key) is not None]
     if not decided:
@@ -99,22 +121,78 @@ def build_predictions(schedule_rows, k_factor=20, home_edge=55, carryover=0.75):
         # Predictions for all games in a week use ratings from before that week's results.
         predictions.extend(current)
         for game in current:
-            home,away=game['home'],game['away']
-            home_rating,away_rating=ratings.get(home,1500),ratings.get(away,1500)
-            expected=game['eloProbability']
-            margin=game['margin']
-            actual=1.0 if margin>0 else 0.5 if margin==0 else 0.0
-            gap=home_rating-away_rating+(0 if game['neutral'] else home_edge)
-            movement=math.log(abs(margin)+1)*2.2/(2.2+0.001*abs(gap)) if margin else 0.0
-            change=k_factor*movement*(actual-expected)
-            ratings[home]=home_rating+change
-            ratings[away]=away_rating-change
+            _update_ratings(ratings,game,k_factor,home_edge)
     return predictions
+
+
+def upcoming_forecasts(schedule_rows, current_season=None, k_factor=20, home_edge=55, carryover=0.75):
+    """Forecast upcoming regular-season games from prior completed games only.
+
+    Elo ratings are updated after each completed week. Every matchup in a week
+    is forecast from the same pre-week ratings, preventing a result elsewhere in
+    that week from changing another matchup's forecast. Probability calibration
+    uses the most recent earlier season with completed results.
+    """
+    regular=[r for r in schedule_rows if r.get('game_type')=='REG']
+    completed=lambda row:number(row.get('home_score')) is not None and number(row.get('away_score')) is not None
+    future=[r for r in regular if not completed(r)]
+    if current_season is None:
+        if not future:return {}
+        current_season=max(int(r['season']) for r in future)
+    current_season=int(current_season)
+    calibration_seasons=sorted({int(r['season']) for r in regular
+                                 if int(r['season'])<current_season and completed(r)})
+    if not calibration_seasons:
+        return {}
+    calibration_season=calibration_seasons[-1]
+    prior_predictions=build_predictions([r for r in regular if int(r['season'])<=calibration_season],
+                                        k_factor,home_edge,carryover)
+    calibration=[r for r in prior_predictions if r['season']==calibration_season]
+    if not calibration:
+        return {}
+    scale=calibrate_scale(calibration)
+    by_season_week=defaultdict(list)
+    for row in regular:
+        season=int(row['season'])
+        if season<=current_season:
+            by_season_week[season,int(row['week'])].append(row)
+    ratings={}
+    previous_season=None
+    output={}
+    for (season,week),games in sorted(by_season_week.items()):
+        if season!=previous_season:
+            if previous_season is not None:
+                ratings={team:1500+(rating-1500)*carryover for team,rating in ratings.items()}
+            previous_season=season
+        completed_week=[]
+        for row in games:
+            home,away=row['home_team'],row['away_team']
+            neutral=row.get('location')=='Neutral'
+            home_rating,away_rating=ratings.get(home,1500),ratings.get(away,1500)
+            if season==current_season and not completed(row):
+                game_id=row.get('game_id')
+                if game_id:
+                    p_home=scaled_elo_probability(home_rating,away_rating,scale,neutral,home_edge)
+                    output[game_id]={'homeProbability':p_home,'awayProbability':1-p_home,
+                                     'homeRating':round(home_rating,1),'awayRating':round(away_rating,1),
+                                     'calibrationSeason':calibration_season,'scale':round(scale,4),
+                                     'asOfWeek':max(0,week-1)}
+            elif completed(row):
+                home_score,away_score=float(row['home_score']),float(row['away_score'])
+                completed_week.append({'home':home,'away':away,'neutral':neutral,
+                                       'margin':home_score-away_score})
+        for game in completed_week:
+            _update_ratings(ratings,game,k_factor,home_edge)
+    return output
 
 
 def evaluate_csv(path):
     with open(path,encoding='utf-8-sig',newline='') as source:
         rows=list(csv.DictReader(source))
+    return evaluate_rows(rows)
+
+
+def evaluate_rows(rows):
     predictions=build_predictions(rows)
     seasons=sorted({r['season'] for r in predictions})
     folds=[]
