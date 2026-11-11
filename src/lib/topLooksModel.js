@@ -2,7 +2,7 @@ import {availableStats} from './availableStats.js';
 import {bookLine,playerKey} from './bookLine.js';
 import {defenseTable} from './matchup.js';
 import {getPlayerGames,formatRate,isHit,estimateModelHitRate,METRICS} from './stats.js';
-import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection} from './playerProjection.js';
+import {buildPlayerForecast} from './nflForecast.js';
 
 const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
 // `value` is an Eastern calendar date (YYYY-MM-DD), not a UTC instant.
@@ -167,11 +167,11 @@ function injuryAssessment(game,player,metric,side,roleRanks){
   return {signal:clamp(signal,-.8,.8),notes:notes.slice(0,4),ownStatus,ownRole};
 }
 
-function makePick(player,game,metric,market,quote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,projection) {
+function makePick(player,game,metric,market,quote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,forecast,distributions) {
   const line=quote.point;
   const values=history.map(g=>Number(g.stats[metric]??0));
   const recent=values.slice(-5),average=mean(values),recentAverage=mean(recent);
-  const projectionValue=Number.isFinite(projection)?projection:average*.55+recentAverage*.45;
+  const projectionValue=forecast.projection;
   const variance=values.reduce((sum,n)=>sum+(n-average)**2,0)/Math.max(1,values.length-1);
   const sd=Math.sqrt(variance);
   const hits=values.filter(n=>isHit(n,line,side)).length;
@@ -200,7 +200,9 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
     : 0;
   const favoriteRedZoneTarget=receiver||(['RB','FB'].includes(player.position)&&targetSignal>carrySignal);
   const primaryShare=favoriteRedZoneTarget?scoring?.targetShare:scoring?.carryShare;
-  const chance=estimateModelHitRate(history,metric,line,side,{marketProbability:fairSide,weatherSignal:weather?.signal||0,redZoneSignal,injurySignal:injury.signal,injuryPenalty}).rate;
+  const estimate=estimateModelHitRate(history,metric,line,side,{marketProbability:fairSide,weatherSignal:weather?.signal||0,redZoneSignal,injurySignal:injury.signal,injuryPenalty,
+    position:player.position,projection:projectionValue,distributionModels:distributions});
+  const chance=estimate.rate;
   const edge=chance-(fairSide??.5);
   const projectionSignal=clamp((side==='over'?projectionValue-line:line-projectionValue)/(sd||Math.max(1,Math.abs(line)*.2)),-1,1);
   const usageSignal=usageTrend==null?0:clamp(usageTrend/Math.max(1,Math.abs(average)*.12),-1,1)*(side==='over'?1:-1);
@@ -226,7 +228,7 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
     {weight:.04,value:injury.signal,label:'Key Injuries',detail:injury.notes.length?injury.notes[0].impact:'No relevant key-injury signal.'}
   ].filter(reason=>reason.value>0).sort((a,b)=>b.weight*b.value-a.weight*a.value);
   const favoriteReason=reasons[0]||{label:'Recent Results',detail:`The player hit ${hits} of ${history.length} games at this line.`};
-  return {player,game,metric,market,line,quote,history,defense,side,projection:projectionValue,values,recent,hits,recentHits,chance,fairSide,edge,score,rankScore,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,matchupTone,weather,injury,scoring,redZoneSignal,supportCount,projectionSignal,defensiveEdge,favoriteReason};
+  return {player,game,metric,market,line,quote,history,defense,side,projection:projectionValue,forecast,probabilityModel:estimate,values,recent,hits,recentHits,chance,fairSide,edge,score,rankScore,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,matchupTone,weather,injury,scoring,redZoneSignal,supportCount,projectionSignal,defensiveEdge,favoriteReason};
 }
 
 function fmtShare(value){return Number.isFinite(value)?(value*100).toFixed(1)+'%':'—';}
@@ -246,17 +248,15 @@ function anytimeLine(books,game,name){
   return prop?.point===.5?{...prop,isBookLine:true,anytime:true}:null;
 }
 
-export function buildTopLooks({players,slate,books,season,type}) {
+export function buildTopLooks({players,slate,books,season,type,distributions=null}) {
   const teamVolumes=makeTeamVolumes(players,season);
   const scoringVolumes=makeScoringVolumes(players,season);
   const candidates=[],cache=new Map();
   for(const game of slate){
     const roleRanks=buildRoleRanks(players,season,game);
-    const efficiencyPriors=buildOpportunityEfficiencyPriors(players,game);
     for(const player of players){
       if(player.team!==game.home&&player.team!==game.away)continue;
       const opponent=player.team===game.home?game.away:game.home;
-      const seasonHistory=getPlayerGames(player,season).filter(row=>Number(row.week)<Number(game.week));
       const history=getPlayerGames(player,'ALL').filter(row=>Number(row.season)<Number(game.season)||
         (Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week))).slice(-10);
       if(history.length<5)continue;
@@ -268,18 +268,8 @@ export function buildTopLooks({players,slate,books,season,type}) {
         if(!Number.isFinite(quote?.point)&&average<=0)continue;
         const line=Number.isFinite(quote?.point)?quote.point:(type==='anytime'?0.5:Number(average.toFixed(1)));
         const selectedQuote=quote?{...quote,isBookLine:true}:{point:line,over:null,under:null,isBookLine:false,anytime:type==='anytime'};
-        let pointProjection;
-        if(isAnytime){
-          const values=history.map(row=>Number(row.stats[metric]??0)),recent=values.slice(-5);
-          pointProjection=mean(values)*.55+mean(recent)*.45;
-        }else{
-          const projectionHistory=seasonHistory.length?getPlayerGames(player,'ALL').filter(row=>Number(row.season)<Number(game.season)||
-            (Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week))):history;
-          const estimate=estimateOpportunityProjection({history:projectionHistory,position:player.position,market:metric,
-            season:game.season,priorEfficiency:efficiencyPriors[player.position+':'+metric]??null});
-          if(!estimate)continue;
-          pointProjection=estimate.projection;
-        }
+        const forecast=buildPlayerForecast({players,player,game,market:metric,line,side:'over',distributions});
+        if(!forecast)continue;
         const market={label:type==='anytime'?'Anytime Touchdown':METRICS[metric].label,unit:METRICS[metric].unit,short:metric};
         const posMetric=player.position+'|'+metric+'|'+game.week;
         if(!cache.has(posMetric))cache.set(posMetric,defenseTable(players,season,player.position,metric,game.week));
@@ -287,7 +277,7 @@ export function buildTopLooks({players,slate,books,season,type}) {
         const availability=playerInjuryStatus(game,player);
         if(availability==='out'||availability==='doubtful')continue;
         const sides=type==='anytime'?['over']:['over','under'];
-        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,pointProjection));
+        for(const side of sides)candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,forecast,distributions));
       }
     }
   }
