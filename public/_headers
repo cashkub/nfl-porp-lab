@@ -1,6 +1,15 @@
 /data/*
   Cache-Control: public, max-age=300
 
+/
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/preview/*
+  Cache-Control: no-store, max-age=0, must-revalidate
+
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
