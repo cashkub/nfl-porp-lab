@@ -7,6 +7,7 @@ import {getPlayerGames,formatRate,isHit,summarize,estimateModelHitRate} from '..
 import {teamColor} from '../lib/teamColors.js';
 import {nextGame} from '../lib/schedule.js';
 import {buildPlayerForecast} from '../lib/nflForecast.js';
+import {hasMeaningfulProjectionRole} from '../lib/playerProjection.js';
 import {WeekAndMatchup,TeamFilter,useChartSlate} from './ChartSlate.jsx';
 import {rateStyle,DefenseRank} from './HitRate.jsx';
 import SortableTable from './SortableTable.jsx';
@@ -56,12 +57,17 @@ export default function NflPropList({players,roster,schedule,season,books,market
         const average=recent.reduce((n,g)=>n+(g.stats[metric]??0),0)/recent.length;
         if(!quote && average<=0)continue;
         const point=quote?.point??Number(average.toFixed(1));
+        const forecast=buildPlayerForecast({players,player,game,market:metric,line:point,side,distributions});
+        const expectedStarter=player.position==='QB'&&[
+          game.context?.home?.qbId,game.context?.away?.qbId
+        ].some(id=>String(id||'')===String(player.id));
+        if(!forecast||!hasMeaningfulProjectionRole({position:player.position,market:metric,
+          projectedUsage:forecast.projectedUsage,historyGames:forecast.sampleGames,expectedStarter}))continue;
         const key=player.position+'|'+metric;
         if(!ranks.has(key))ranks.set(key,defenseTable(players,season,player.position,metric,game.week));
         const table=ranks.get(key);
         const opponent=({LAR:'LA',WAS:'WSH',JAX:'JAC'})[game.opponent];
         const defense=table.find(d=>d.team===game.opponent)??table.find(d=>d.team===opponent);
-        const forecast=buildPlayerForecast({players,player,game,market:metric,line:point,side,distributions});
         const modelEstimate=estimateModelHitRate(recent,metric,point,side,{marketProbability:fairSideProbability(quote,side,point),
           position:player.position,projection:forecast?.projection,distributionModels:distributions});
         result.push({player,game,metric,point,quote,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),forecast,modelEstimate,rank:defense?.rank,teams:table.length});
