@@ -50,7 +50,7 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 | Closing market 2026 reference | N=88; score MAE 6.84, margin MAE 8.98, total MAE 10.32, winner accuracy .701, win Brier .2073, log loss .6059 | Retrospective benchmark only; not used as an independent prediction input. |
 | Elo 2026 holdout | N=135; Brier .2211, log loss .6320, winner accuracy .659 | Trails closing moneyline reference (.2152 / .6223 / .681). |
 | Candidate spread/total probabilities | 2026 holdout spread Brier .2510; total Brier .2579 | Weak/near no-information. Do not present as validated probabilities. |
-| JavaScript suite | 32 tests pass in the bundled Node test runner | The desktop shell lacks `node`/`npm`; a branch CI workflow now runs the standard `npm test`, production build, and Python suite. |
+| JavaScript suite | 33 tests pass in the bundled Node test runner | The desktop shell lacks `node`/`npm`; branch CI runs `npm test`, the production build, and the Python suite. |
 | Forecast profile artifact | Generated from data through 2026 Week 9; 17 position-market residual profiles, 5 pass validation gate; 1.19 MB | The artifact is atomically rebuilt after weekly nflverse refresh. It is not copied into the repo from ignored research data; the workflow will publish it after the review branch is merged by the user. |
 
 ## Phases
@@ -75,7 +75,7 @@ Data: local nflverse-derived `games.csv`, play-by-play `.gz`, and weekly player 
 - Added a dedicated GitHub Actions validation workflow for JavaScript tests, frontend build, and Python tests on the development branch / pull request.
 - Updated V3 pick locking to preserve the shared forecast ID, calibrated/exploratory probability metadata, profile freshness, and Model Record visibility. Existing V2 locks remain immutable and visible alongside V3.
 - Python suite: 41 tests passed. JavaScript suite: 33 tests passed after compact histogram support was added. Python modules compile successfully. The empirical distribution builder completed on local nflverse data through 2026 Week 9: 17 position-market profiles generated, five passed the validation gate. The 38 KB public artifact includes exact two-decimal residual histograms only for validated profiles; other profiles retain summary/uncertainty metadata without unsupported probability distributions.
-- GitHub Actions run 5 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite before the compact histogram packaging update. A fresh CI run is pending for the final artifact/package changes. Changes remain on the review branch only; no merge or deployment has occurred.
+- GitHub Actions run 23 passed dependency installation, the JavaScript suite, the production frontend build, and the Python test suite after the compact histogram asset/package update. Changes remain on the review branch only; no merge or deployment has occurred.
 
 ## Outstanding Work / Limitations
 
