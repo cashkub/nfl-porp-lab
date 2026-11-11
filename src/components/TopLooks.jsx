@@ -9,7 +9,7 @@ import FilterMenu from './FilterMenu.jsx';
 import './TopLooks.css';
 
 import {buildTopLooks,dayKey,dayLabel,fmtShare,averageLineLabel,projectionReason,gameContext} from '../lib/topLooksModel.js';
-export default function TopLooks({players,schedule,books,season,now,loading,error,onOpen}) {
+export default function TopLooks({players,schedule,books,season,now,loading,error,onOpen,distributions=null}) {
   const future=schedule.filter(game=>Date.parse(game.kickoff)>now);
   const days=[...new Set(future.map(game=>dayKey(game.kickoff)))].sort();
   const weeks=[...new Set(future.map(game=>String(game.week)))].sort((a,b)=>Number(a)-Number(b));
@@ -34,7 +34,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
     if(value)url.searchParams.set('topSelection',value);else url.searchParams.delete('topSelection');
     window.history.replaceState(window.history.state,'',url);
   },[mode,value,type]);
-  const livePicks=useMemo(()=>buildTopLooks({players,slate,books,season,type}),[slate,players,season,books,type]);
+  const livePicks=useMemo(()=>buildTopLooks({players,slate,books,season,type,distributions}),[slate,players,season,books,type,distributions]);
   const picks=isReplay?replayPicks:livePicks;
   const markets=Object.fromEntries(Object.entries(METRICS).map(([key,market])=>[key,market.label]));
   const kickDate=value&&mode==='day'?dayLabel(value):value?'Week '+value:'Upcoming';
@@ -77,7 +77,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
             <div className="pick-meta-row"><small className={'line-origin '+(pick.quote.isBookLine?'sportsbook':'average')}>{pick.quote.anytime?(pick.quote.isBookLine?'DRAFTKINGS ANYTIME TD ODDS':'MODEL ESTIMATE · NO ODDS'):pick.quote.isBookLine?'DRAFTKINGS LINE':'PLAYER AVERAGE LINE'}</small><button className="why-toggle" type="button" aria-expanded={whyOpen} aria-controls={whyId} onClick={()=>setOpenWhy(whyOpen?'':pickKey)}><Info size={14}/>{whyOpen?'Hide Why':'Why This Pick'}<ChevronDown size={14}/></button></div>
           </div>
           <div className="top-pick-stat projection-stat"><small>PROJECTION</small><b>{pick.projection.toFixed(1)}</b><small>vs. {pick.line} Line</small></div>
-          <div className="top-pick-stat chance-stat"><small title="The model's predicted chance that this prop hits, based on the available data.">MODEL PREDICTED HIT RATE</small><b style={rateStyle(pick.chance)}>{formatRate(pick.chance)}</b><small>{pick.hits}/{pick.history.length} PRIOR · <span style={rateStyle(pick.hits/pick.history.length)}>{formatRate(pick.hits/pick.history.length)} PRIOR RATE</span></small></div>
+          <div className="top-pick-stat chance-stat"><small title={pick.probabilityModel.calibrated?`Chronological out-of-sample residual model · ${pick.probabilityModel.distributionSample.toLocaleString()} prior forecasts`:'Out-of-sample probability calibration has not been established for this market.'}>{pick.probabilityModel.calibrated?'MODEL PREDICTED HIT RATE':'EXPLORATORY ESTIMATE · NOT CALIBRATED'}</small><b style={rateStyle(pick.chance)}>{formatRate(pick.chance)}</b><small>{pick.hits}/{pick.history.length} PRIOR · <span style={rateStyle(pick.hits/pick.history.length)}>{formatRate(pick.hits/pick.history.length)} PRIOR RATE</span></small></div>
           <div className="top-pick-stat defense-stat"><small>TOP REASON</small><b data-fit={pick.favoriteReason.label==='Matchup'?pick.matchupTone:undefined} style={pick.favoriteReason.label==='Matchup'?defenseRankStyle(pick.defense?.rank,32,pick.side):undefined}>{pick.favoriteReason.label}</b><small className="top-reason-detail">{pick.favoriteReason.label==='Matchup'?pick.matchup:pick.favoriteReason.detail}</small><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
           <div className="top-pick-actions">
             <button type="button" onClick={()=>onOpen(pick.player,{metric:pick.metric,point:pick.line,source:pick.quote.anytime?(pick.quote.isBookLine?'DraftKings Anytime TD Odds':'Model Estimate'):(pick.quote.isBookLine?'DraftKings':'Player Average')},pick.side,pick.game)}><Activity size={15}/>Charts</button>
