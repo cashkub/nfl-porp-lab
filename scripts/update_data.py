@@ -330,14 +330,14 @@ def attach_injury_roles(schedule, season, rows, ids):
         rates = [market_number(row.get(field)) for field in ("offense_pct", "defense_pct")]
         if not player_id or not week or all(rate is None for rate in rates):
             continue
-        key = (normalize_team(row["team"]), player_id)
+        key = player_id
         history.setdefault(key, []).append((week, *rates))
     for game in schedule:
         if game["season"] != season:
             continue
         for team, reports in game.get("injuries", {}).items():
             for report in reports:
-                before = [r for r in history.get((normalize_team(team), report.get("id")), [])
+                before = [r for r in history.get(report.get("id"), [])
                           if r[0] < int(game["week"])]
                 sample = sorted(before, key=lambda r: r[0])[-3:]
                 for index, field in ((1, "offenseSnapShare"), (2, "defenseSnapShare")):
@@ -346,7 +346,7 @@ def attach_injury_roles(schedule, season, rows, ids):
                         report[field] = round(sum(values) / len(values), 3)
 
 
-def add_offensive_snaps(payload, previous):
+def add_offensive_snaps(payload, previous, player_directory):
     base = "https://github.com/nflverse/nflverse-data/releases/download"
     def rows(path):
         with urllib.request.urlopen(f"{base}/{path}", timeout=45) as response:
@@ -359,7 +359,7 @@ def add_offensive_snaps(payload, previous):
              for p in previous.get("players", []) for g in p["games"]
              if "offenseSnapRate" in g.get("usage", {})}
     try:
-        ids = {r["pfr_id"]: r["gsis_id"] for r in rows("players/players.csv")
+        ids = {r["pfr_id"]: r["gsis_id"] for r in player_directory
                if r["pfr_id"] and r["gsis_id"]}
         for season in payload["seasons"]:
             try:
@@ -443,23 +443,56 @@ def main() -> int:
                         "injury":row.get("report_primary_injury") or row.get("practice_primary_injury")}
                 if item["date"] >= reports[key].get(name, {}).get("date", ""):
                     reports[key][name] = item
-        usage_by_week = {}
         for game in payload.get("schedule", []):
             if game["season"] == season:
-                game["injuries"] = {team:list(reports[(team, game["week"])].values())
+                game["injuries"] = {team:list(reports[(team, str(game["week"]))].values())
                                     for team in (game["home"],game["away"])}
-                for team, players in game["injuries"].items():
-                    for item in players:
-                        if (item["gameStatus"] or "").lower() != "out":
-                            continue
-                        week = int(game["week"])
-                        if week not in usage_by_week:
-                            usage_by_week[week] = recent_usage_shares(payload["players"], season, week)
-                        shares = usage_by_week[week].get((team,item["id"]), {})
-                        item["deduction"] = round(3*shares.get("attempts",0) + shares.get("carries",0)
-                                                  + shares.get("targets",0), 2)
     except (OSError, ValueError) as exc:
         print(f"Injury reports unavailable: {exc}", file=sys.stderr)
+    try:
+        with urllib.request.urlopen("https://github.com/nflverse/nflverse-data/releases/download/players/players.csv", timeout=45) as response:
+            player_directory = list(csv.DictReader(io.TextIOWrapper(response, encoding="utf-8-sig")))
+    except (OSError, ValueError) as exc:
+        print(f"Player directory unavailable: {exc}", file=sys.stderr)
+        player_directory = []
+    from nfl_injuries import FEED, merge_current_injuries
+    last_played = {}
+    for row in csv.DictReader(io.StringIO(schedule_text or "")):
+        if row.get("result") not in (None, "", "NA"):
+            for team in (row["home_team"], row["away_team"]):
+                code = normalize_team(team)
+                last_played[code] = max(last_played.get(code, ""), row["gameday"])
+    try:
+        with urllib.request.urlopen(FEED, timeout=30) as response:
+            feed = json.load(response)
+        ids = {r["espn_id"]: r["gsis_id"] for r in player_directory if r.get("espn_id") and r.get("gsis_id")}
+        merge_current_injuries(payload.get("schedule", []), feed, ids, last_played, datetime.now(timezone.utc))
+    except (OSError, KeyError, ValueError) as exc:
+        # Reuse recent supplemental entries only for the identical fixture.
+        print(f"Supplemental injury refresh failed: {exc}", file=sys.stderr)
+        previous = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
+        snapshots = {(g["kickoff"], g["home"], g["away"]): g for g in previous.get("schedule", [])}
+        for game in payload.get("schedule", []):
+            old = snapshots.get((game["kickoff"], game["home"], game["away"]), {})
+            stamp = old.get("injurySnapshotAt")
+            if not stamp or (datetime.now(timezone.utc) - datetime.fromisoformat(stamp.replace("Z", "+00:00"))).total_seconds() > 86400:
+                continue
+            for team, records in old.get("injuries", {}).items():
+                current = game.setdefault("injuries", {}).setdefault(team, [])
+                names = {r["name"].casefold() for r in current}
+                current.extend(r for r in records if r.get("source") and r["name"].casefold() not in names)
+            game["injurySnapshotAt"] = stamp
+    usage_by_week = {}
+    for game in payload.get("schedule", []):
+        for team, records in game.get("injuries", {}).items():
+            for item in records:
+                if str(item.get("gameStatus") or "").lower() not in ("out","injured reserve"):
+                    continue
+                week = int(game["week"])
+                if week not in usage_by_week:
+                    usage_by_week[week] = recent_usage_shares(payload["players"], season, week)
+                shares = usage_by_week[week].get((team,item.get("id")), {})
+                item["deduction"] = round(3*shares.get("attempts",0) + shares.get("carries",0) + shares.get("targets",0), 2)
     if schedule_text:
         from nfl_context import enrich
         finals = enrich(payload,schedule_text)
@@ -469,7 +502,7 @@ def main() -> int:
             for item in records:
                 if item["id"] in finals: item["final"]=finals[item["id"]]
             record_path.write_text(json.dumps(records,separators=(",",":"))+"\n")
-    add_offensive_snaps(payload, json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {})
+    add_offensive_snaps(payload, json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}, player_directory)
     save_if_changed(payload)
     return 0
 
