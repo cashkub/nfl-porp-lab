@@ -1,8 +1,9 @@
 """Cache one DraftKings pregame prop snapshot per NFL event."""
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -66,18 +67,30 @@ def anytime_prices(event, checked):
     return prices
 
 
+EASTERN = ZoneInfo('America/New_York')
+# Days ahead to include, counted using local game dates (Wednesday, Saturday, Sunday).
+SLATE_OFFSETS = {2: (0, 1, 2), 5: (0, 1), 6: (1,)}
+
+
+def in_scheduled_slate(now, kickoff):
+    today = now.astimezone(EASTERN).date()
+    days_ahead = (kickoff.astimezone(EASTERN).date() - today).days
+    return kickoff > now and days_ahead in SLATE_OFFSETS.get(today.weekday(), ())
+
+
 def main():
     if not os.environ.get('ODDS_API_KEY'):
-        print('Add ODDS_API_KEY to enable sportsbook imports.')
-        return
+        raise SystemExit('Add ODDS_API_KEY to enable sportsbook imports.')
     now = datetime.now(timezone.utc)
     games = {g['id']: g for g in json.loads(CACHE.read_text())['games']
              if datetime.fromisoformat(g['kickoff']) > now}
+    if now.astimezone(EASTERN).weekday() not in SLATE_OFFSETS:
+        return
     events, remaining = request('')
     for event in sorted(events, key=lambda e: e['commence_time']):
         kickoff = datetime.fromisoformat(event['commence_time'])
         previous = games.get(event['id'], {})
-        if previous.get('version', 0) >= 4 or not now < kickoff <= now + timedelta(hours=24):
+        if previous.get('version', 0) >= 4 or not in_scheduled_slate(now, kickoff):
             continue
         home = TEAMS.get(event['home_team'].split()[-1])
         away = TEAMS.get(event['away_team'].split()[-1])
