@@ -132,7 +132,7 @@ export default function NflGames({schedule,books,players,season,now,onOpen,updat
       <div id={'nfl-view-'+tab} role="tabpanel" aria-labelledby={'nfl-tab-'+tab} tabIndex={0} className="nfl-tab-panel">
         {tab==='game'&&<GamePredictions game={selected} model={breakdown}/>}
         {tab==='players'&&<PlayerResearch game={selected} rows={rows} position={position} setPosition={setPosition} market={market} setMarket={setMarket} onOpen={onOpen} books={books} players={players} season={season} now={now}/>}
-        {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame}/>}
+        {tab==='breakdown'&&<ModelBreakdown game={selected} model={breakdown} bookGame={bookGame} players={players}/>}
       </div>
     </section>}
   </section>;
@@ -164,8 +164,42 @@ function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,
   </div>;
 }
 
-function ModelBreakdown({game,model,bookGame}){
+function teamWorkload(players,team,game){
+  const byGame=new Map();
+  const pregame=row=>Number(row.season)<Number(game.season)||(Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week));
+  for(const player of players||[])for(const row of player.games||[]){
+    if(row.team!==team||!pregame(row)||!['QB','RB','FB','WR','TE'].includes(player.position))continue;
+    const key=row.gameId||`${row.season}:${row.week}`;
+    if(!key)continue;
+    let bucket=byGame.get(key);
+    if(!bucket)byGame.set(key,bucket={season:Number(row.season),week:Number(row.week),passAttempts:0,passYards:0,carries:0,targets:0,qbRows:[],rushLeaders:new Map(),targetLeaders:new Map()});
+    if(player.position==='QB'){
+      const attempts=Number(row.usage?.attempts)||0;
+      bucket.passAttempts+=attempts;
+      bucket.passYards+=Number(row.stats?.passingYards)||0;
+      if(attempts>0)bucket.qbRows.push({name:player.name,attempts,yards:Number(row.stats?.passingYards)||0});
+    }
+    const carries=Number(row.usage?.carries)||0,targets=Number(row.usage?.targets)||0;
+    bucket.carries+=carries;bucket.targets+=targets;
+    if(carries)bucket.rushLeaders.set(player.name,(bucket.rushLeaders.get(player.name)||0)+carries);
+    if(targets)bucket.targetLeaders.set(player.name,(bucket.targetLeaders.get(player.name)||0)+targets);
+  }
+  let games=[...byGame.values()].sort((a,b)=>a.season-b.season||a.week-b.week);
+  const thisSeason=games.filter(row=>row.season===Number(game.season));
+  if(thisSeason.length)games=thisSeason;
+  const recent=games.slice(-5);
+  if(!recent.length)return null;
+  const avg=key=>recent.reduce((sum,row)=>sum+row[key],0)/recent.length;
+  const passingAttempts=recent.reduce((sum,row)=>sum+row.passAttempts,0),passingYards=recent.reduce((sum,row)=>sum+row.passYards,0);
+  const rushTotals=new Map(),targetTotals=new Map();
+  for(const row of recent){for(const [name,count] of row.rushLeaders)rushTotals.set(name,(rushTotals.get(name)||0)+count);for(const [name,count] of row.targetLeaders)targetTotals.set(name,(targetTotals.get(name)||0)+count)}
+  const leader=map=>[...map].sort((a,b)=>b[1]-a[1])[0];
+  return {games:recent.length,source:thisSeason.length?'SELECTED SEASON':'CAREER FALLBACK',passAttempts:avg('passAttempts'),carries:avg('carries'),targets:avg('targets'),yardsPerAttempt:passingAttempts?passingYards/passingAttempts:null,rushLeader:leader(rushTotals),targetLeader:leader(targetTotals)};
+}
+
+function ModelBreakdown({game,model,bookGame,players}){
   const weather=game.context?.weather;
+  const workload=useMemo(()=>({away:teamWorkload(players,game.away,game),home:teamWorkload(players,game.home,game)}),[players,game]);
   const lines=[['Opponent-adjusted scoring',`${game.away} ${game.awayRating?.offense?.toFixed(1)??'—'} PPG · ${game.home} ${game.homeRating?.offense?.toFixed(1)??'—'} PPG`],
     ['Opponent-adjusted points allowed',`${game.away} ${game.awayRating?.defense?.toFixed(1)??'—'} · ${game.home} ${game.homeRating?.defense?.toFixed(1)??'—'}`],
     ['Games in team-rating sample',`${game.away} ${game.awayRating?.games??'—'} · ${game.home} ${game.homeRating?.games??'—'}`],
@@ -176,6 +210,7 @@ function ModelBreakdown({game,model,bookGame}){
   const significant=[game.away,game.home].flatMap(team=>(game.injuries?.[team]||[]).filter(p=>['QB','RB','WR','TE','LT','RT','CB','EDGE','DE'].includes(p.position)&&['OUT','DOUBTFUL'].includes(String(p.gameStatus||p.status).toUpperCase())).map(p=>({...p,team})));
   return <div className="nfl-view-panel"><div className="nfl-breakdown-intro"><div><small>MODEL INPUT AUDIT</small><h3>What Is In This Matchup</h3></div><span>RAW INPUTS · NO HIDDEN FACTORS</span></div>
     <div className="nfl-breakdown-list">{lines.map(([label,value])=><div key={label}><span>{label}</span><b>{value}</b></div>)}</div>
+    <section className="nfl-workload-panel"><header><div><h4>TEAM WORKLOAD &amp; QB SNAPSHOT</h4><p>Recent completed games before this matchup · selected-season sample when available</p></div><span>HISTORICAL CONTEXT</span></header><div className="nfl-workload-grid">{[[game.away,workload.away],[game.home,workload.home]].map(([team,profile])=><article key={team} style={{'--club':teamColor(team)}}><h5><i/>{team}</h5>{profile?<><small>{profile.source} · {profile.games} G</small><dl><div><dt>QB PASS ATT / G</dt><dd>{format(profile.passAttempts)}</dd></div><div><dt>TEAM CARRIES / G</dt><dd>{format(profile.carries)}</dd></div><div><dt>TEAM TARGETS / G</dt><dd>{format(profile.targets)}</dd></div><div><dt>QB PASS YDS / ATT</dt><dd>{profile.yardsPerAttempt==null?'—':profile.yardsPerAttempt.toFixed(2)}</dd></div></dl><p>{profile.rushLeader?`CARRY LEADER · ${profile.rushLeader[0]} (${format(profile.rushLeader[1]/profile.games)} / G)`:''}{profile.targetLeader?`${profile.rushLeader?' · ':''}TARGET LEADER · ${profile.targetLeader[0]} (${format(profile.targetLeader[1]/profile.games)} / G)`:''}</p></>:<p className="nfl-workload-empty">No completed player usage rows are available before this matchup.</p>}</article>)}</div><p className="nfl-workload-note">These are descriptive team/player history summaries, not opponent-adjusted inputs to the independent score estimate. Targets can differ slightly from pass attempts because sacks, scrambles, and data coverage affect the totals.</p></section>
     <section className="nfl-injury-panel"><h4><Shield size={16}/> HIGH-IMPACT INJURY FLAGS</h4>{significant.length?significant.map((p,i)=><p key={p.id||p.name+i}><b>{p.team} · {p.position}</b> {p.name} · {p.gameStatus||p.status}{p.injury?' · '+p.injury:''}</p>):<p>No QB1 or major skill-position injury is currently marked out or doubtful in the available report.</p>}</section>
     {model&&<p className="nfl-model-disclosure">Current independent score estimate: {game.away} {model.a.score.toFixed(1)} – {model.h.score.toFixed(1)} {game.home}. Existing data ratings are a baseline, not a validated probability model. Candidate tests have not shown a consistent improvement over the closing market; those candidate weights remain separate from production.</p>}
     <details className="nfl-methodology"><summary>Model Methodology &amp; Limits</summary><p>Team scores use opponent-adjusted points scored and allowed, a four-game league-average shrinkage, a fixed home edge, and the currently available contextual adjustments. Historical results include single-season and rolling walk-forward comparisons against base ratings and closing market benchmarks. Historical weather observations and retrospective quarterback labels are excluded where they would introduce leakage. Advanced play-level or player-level projections, calibrated probability distributions, live team odds, and quantified uncertainty are not yet validated in production.</p></details>
