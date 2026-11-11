@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 from backtest_player_baselines import (backtest,make_projection,
                                       probability_over_from_errors,
+                                      probability_delta_intervals,
                                       score_probability_predictions)
 
 
@@ -30,6 +31,14 @@ class PlayerBaselineTests(unittest.TestCase):
         self.assertEqual(metrics['priorRateBrier'],.25)
         self.assertEqual(metrics['priorRateLogLoss'],metrics['coinFlipLogLoss'])
         self.assertEqual(metrics['calibrationGap'],0)
+
+    def test_probability_gain_uses_paired_game_cluster_intervals(self):
+        rows=[{'probability':.75 if i%2==0 else .25,'priorRateProbability':.5,
+               'outcome':1 if i%2==0 else 0,'cluster':f'game-{i}'} for i in range(24)]
+        intervals=probability_delta_intervals(rows,resamples=100)
+        self.assertEqual(intervals['clusterGames'],24)
+        self.assertLess(intervals['priorRateBrierDelta95CI'][1],0)
+        self.assertLess(intervals['priorRateLogLossDelta95CI'][1],0)
 
     def test_efficiency_projection_combines_role_and_smoothed_production_rate(self):
         history=[
@@ -80,6 +89,7 @@ class PlayerBaselineTests(unittest.TestCase):
             metrics=report["probabilityAggregate"]["WR · receptions · opportunity"]
             self.assertEqual(metrics["games"],35)
             self.assertEqual(report["probabilityMethod"]["minimumPriorForecasts"],100)
+            self.assertIn("priorRateBrierDelta95CI",report["probabilityAggregate"]["WR · receptions · opportunity"])
 
 
 if __name__=="__main__":unittest.main()

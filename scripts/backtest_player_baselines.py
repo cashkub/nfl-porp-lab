@@ -5,6 +5,7 @@ This is research only. It never writes to production player projections.
 import csv
 import json
 import math
+import random
 import sys
 from bisect import bisect_right
 from collections import defaultdict
@@ -102,6 +103,46 @@ def probability_over_from_sorted_errors(errors, projection, line, minimum_sample
     return (over+1)/(len(errors)+2)
 
 
+def probability_delta_intervals(predictions, resamples=500):
+    """Paired game-cluster bootstrap CIs for candidate minus prior-rate loss."""
+    clusters=defaultdict(lambda:[0.0,0.0,0.0])
+    for row in predictions:
+        if not row.get('cluster'):
+            return {}
+        probability=min(1-1e-9,max(1e-9,row['probability']))
+        prior=min(1-1e-9,max(1e-9,row['priorRateProbability']))
+        outcome=float(row['outcome'])
+        candidate_brier=(probability-outcome)**2
+        prior_brier=(prior-outcome)**2
+        candidate_log=-(outcome*math.log(probability)+(1-outcome)*math.log(1-probability))
+        prior_log=-(outcome*math.log(prior)+(1-outcome)*math.log(1-prior))
+        bucket=clusters[row['cluster']]
+        bucket[0]+=candidate_brier-prior_brier
+        bucket[1]+=candidate_log-prior_log
+        bucket[2]+=1
+    values=list(clusters.values())
+    if len(values)<20:
+        return {}
+    rng=random.Random(202611)
+    brier_deltas=[]
+    log_deltas=[]
+    for _ in range(resamples):
+        brier_sum=log_sum=count=0.0
+        for _ in values:
+            brier,logloss,n=values[rng.randrange(len(values))]
+            brier_sum+=brier
+            log_sum+=logloss
+            count+=n
+        brier_deltas.append(brier_sum/count)
+        log_deltas.append(log_sum/count)
+    def interval(samples):
+        samples.sort()
+        return [round(samples[int((len(samples)-1)*.025)],4),
+                round(samples[int((len(samples)-1)*.975)],4)]
+    return {'clusterGames':len(values),'priorRateBrierDelta95CI':interval(brier_deltas),
+            'priorRateLogLossDelta95CI':interval(log_deltas)}
+
+
 def score_probability_predictions(predictions):
     if not predictions:return {'games':0,'brier':None,'logLoss':None,'averageProbability':None,'observedOver':None}
     probabilities=[min(1-1e-9,max(1e-9,p['probability'])) for p in predictions]
@@ -116,7 +157,7 @@ def score_probability_predictions(predictions):
             'averageProbability':round(mean(probabilities),4),'observedOver':round(observed,4),
             'calibrationGap':round(mean(probabilities)-observed,4),'coinFlipBrier':0.25,
             'coinFlipLogLoss':round(math.log(2),4),'priorRateBrier':round(prior_brier,4),
-            'priorRateLogLoss':round(prior_logloss,4)}
+            'priorRateLogLoss':round(prior_logloss,4),**probability_delta_intervals(predictions)}
 
 
 def backtest(directory):
@@ -163,7 +204,8 @@ def backtest(directory):
                             prior_rate=(prior_successes+1)/(prior_count+2)
                             outcome=float(actual>book_like_line)
                             probability_predictions[season][position+' · '+market+' · '+model].append({
-                                'probability':probability,'priorRateProbability':prior_rate,'outcome':outcome})
+                                'probability':probability,'priorRateProbability':prior_rate,
+                                'outcome':outcome,'cluster':row['gameId']})
                             batch_over_outcomes.append((distribution_key,outcome))
                         # Add after the entire week is forecast so teammates from
                         # the same game slate cannot contribute their outcomes.
