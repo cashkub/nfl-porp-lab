@@ -153,3 +153,24 @@
 }
 .prop-defense.favorable b {color:#a7edc4}
 .prop-defense.tough b {color:#ffb8be}
+
+@media(max-width:760px) {
+  .nfl-games .matchup-props-mobile {gap:0; border:1px solid #483e50; border-radius:.55rem; overflow:hidden}
+  .prop-list-head, .nfl-games .prop-list-row summary {
+    display:grid; grid-template-columns:minmax(0,1fr) 4.3rem 4.1rem;
+    align-items:center; column-gap:.35rem; padding:.4rem .55rem;
+  }
+  .prop-list-head {background:#29232e; color:#cbbdd4; font-size:.73rem}
+  .nfl-games .prop-list-row {margin:0; padding:0; border:0; border-top:1px solid #403646}
+  .nfl-games .prop-list-row summary {box-sizing:border-box; min-height:44px; font-size:.86rem; list-style:none}
+  .prop-list-row summary::-webkit-details-marker {display:none}
+  .prop-list-head span:nth-child(n+2), .prop-list-row summary > span:nth-child(n+2) {text-align:right; font-variant-numeric:tabular-nums}
+  .prop-list-head span:last-child {padding-right:.75rem}
+  .prop-list-row summary > span:last-child {color:#e1bef7}
+  .prop-list-name {min-width:0; overflow-wrap:anywhere}
+  .prop-list-name small {font-size:.71rem; line-height:1.2; font-weight:400}
+  .prop-list-row summary i {margin-left:.2rem; font-style:normal}
+  .prop-list-row[open] {background:#242029}
+  .nfl-games .prop-list-row dl {padding:0 .65rem}
+  .prop-list-row .nfl-chart-link {margin:0 .65rem .6rem}
+}

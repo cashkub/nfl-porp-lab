@@ -380,6 +380,36 @@ def add_offensive_snaps(payload, previous, player_directory):
                 game["usage"]["offenseSnapRate"] = rate
 
 
+def add_team_td_rates(schedule, previous, season):
+    old = {g.get("id"): g.get("dstChances") for g in previous if g.get("dstChances")}
+    games = [g for g in schedule if g.get("season") == season]
+    if not games:
+        return
+    for game in games:
+        if game.get("id") in old:
+            game["dstChances"] = old[game["id"]]
+    url = f"https://github.com/nflverse/nflverse-data/releases/download/stats_team/stats_team_week_{season}.csv"
+    try:
+        with urllib.request.urlopen(url, timeout=45) as response:
+            rows = list(csv.DictReader(io.StringIO(response.read().decode("utf-8-sig"))))
+        results = [(int(r["week"]), normalize_team(r["team"]),
+                    int(r["def_tds"]) + int(r["special_teams_tds"]) > 0)
+                   for r in rows if r["season_type"] == "REG" and int(r["season"]) == season]
+    except (OSError, ValueError, KeyError) as error:
+        print(f"Team touchdown update unavailable: {error}", file=sys.stderr)
+        return
+    for game in games:
+        prior = [(team, hit) for week, team, hit in results if week < int(game["week"])]
+        if not prior:
+            continue
+        league_rate = sum(hit for _, hit in prior) / len(prior)
+        chances = {}
+        for team in (game["away"], game["home"]):
+            sample = [hit for code, hit in prior if code == team]
+            chances[team] = (sum(sample) + 8 * league_rate) / (len(sample) + 8)
+        game["dstChances"] = chances
+
+
 def keep_wednesday_injuries(schedule, previous, now):
     old = {g.get("id"): g for g in previous if g.get("id")}
     local = now.astimezone(ZoneInfo("America/New_York"))
@@ -520,6 +550,7 @@ def main() -> int:
             record_path.write_text(json.dumps(records,separators=(",",":"))+"\n")
     previous = json.loads(OUTPUT.read_text()) if OUTPUT.exists() else {}
     add_offensive_snaps(payload, previous, player_directory)
+    add_team_td_rates(payload.get("schedule", []), previous.get("schedule", []), current_nfl_season())
     keep_wednesday_injuries(payload.get("schedule", []), previous.get("schedule", []), datetime.now(timezone.utc))
     save_if_changed(payload)
     return 0
