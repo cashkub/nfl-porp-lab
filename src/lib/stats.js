@@ -51,12 +51,12 @@ export const summarize = (games, key, line, direction = 'over') => {
 // Line-specific probability estimate for chart and prop-list views. It combines
 // a small-sample-smoothed historical rate with a season/recent projection.
 // Context signals are optional and included only when the caller has a matching source.
-export function estimateModelHitRate(games,key,line,direction='over',{marketProbability=null,weatherSignal=0,redZoneSignal=0,injurySignal=0,injuryPenalty=0,position=null,projection:sharedProjection=null,distributionModels=null}={}){
+export function estimateModelHitRate(games,key,line,direction='over',{marketProbability=null,weatherSignal=0,redZoneSignal=0,injurySignal=0,injuryPenalty=0,position=null,projection:sharedProjection=null,distributionModels=null,forceExploratory=false}={}){
   const sample=(games||[]).map(game=>Number(game.stats?.[key]??0)).filter(Number.isFinite);
   if(!sample.length||line==null||!Number.isFinite(Number(line)))return {rate:null,sample:sample.length,hits:0,pushes:0,observed:null,projection:null,marketProbability:null};
   const profile=position&&distributionModels?.markets?.[position+':'+key+':opportunity'];
   const forecastMean=sharedProjection!=null&&Number.isFinite(Number(sharedProjection))?Number(sharedProjection):null;
-  const calibrated=profile?.validation?.calibrated===true&&forecastMean!=null?probabilitiesFromResiduals({
+  const calibrated=!forceExploratory&&profile?.validation?.calibrated===true&&forecastMean!=null?probabilitiesFromResiduals({
     projection:forecastMean,line,residuals:profile.residuals,residualHistogram:profile.residualHistogram,
     minimumSamples:Math.max(100,Number(distributionModels.minimumSamples)||0)
   }):null;
@@ -78,7 +78,7 @@ export function estimateModelHitRate(games,key,line,direction='over',{marketProb
   const posterior=(hits+2)/(sample.length+4);
   const recent=sample.slice(-5),average=sample.reduce((sum,value)=>sum+value,0)/sample.length;
   const recentAverage=recent.reduce((sum,value)=>sum+value,0)/recent.length;
-  const projection=average*.55+recentAverage*.45;
+  const projection=forecastMean??(average*.55+recentAverage*.45);
   const variance=sample.reduce((sum,value)=>sum+(value-average)**2,0)/Math.max(1,sample.length-1);
   const sd=Math.sqrt(variance);
   const signedDistance=sd?(direction==='over'?projection-Number(line):Number(line)-projection)/sd:0;

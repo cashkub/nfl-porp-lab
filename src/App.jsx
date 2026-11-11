@@ -10,7 +10,7 @@ import SortableTable from './components/SortableTable.jsx';
 import PlayerPhoto from './components/PlayerPhoto.jsx';
 import {ManualLeague} from './components/ManualLeague.jsx';
 import {teamColor} from './lib/teamColors.js';
-import {NFL_PLAYER_MODEL_VERSION} from './lib/nflForecast.js';
+import {NFL_PLAYER_MODEL_VERSION,buildPlayerForecast} from './lib/nflForecast.js';
 import TrackedPicks from './components/TrackedPicks.jsx';
 import StatCard from './components/StatCard.jsx';
 import {availableStats} from './lib/availableStats.js';
@@ -26,7 +26,7 @@ import {
 import { defenseTable } from './lib/matchup.js';
 import initialSchedule from './lib/initialSchedule.json';
 import { nextGame } from './lib/schedule.js';
-import { hasRelevantPlayerRole } from './lib/playerProjection.js';
+import { hasRelevantPlayerRole,hasMeaningfulProjectionRole,PLAYER_PROJECTION_MARKETS } from './lib/playerProjection.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { bookLine, priceText, usageFor } from './lib/bookLine.js';
 import {CbbGames,Moneylines,UsageTrends} from './components/Research.jsx';
@@ -266,19 +266,26 @@ export default function App() {
   const multi = season === 'ALL';
   const seasonLabel = multi ? 'All Seasons' : String(season);
   const seasonPlayers = useMemo(() => players.flatMap(p => {
+    if(p.currentRoster===false)return [];
     const history=getPlayerGames(p,season);
     if(!availableStats(METRICS,history).length)return [];
     const currentSeason=Math.max(...seasons);
     const currentHistory=getPlayerGames(p,currentSeason);
-    const currentTeam=currentHistory.at(-1)?.team||p.team;
+    const currentTeam=p.currentTeam||p.team||currentHistory.at(-1)?.team;
     const nextFixture=(data.schedule??initialSchedule).filter(g=>g.season===currentSeason&&Date.parse(g.kickoff)>Date.now())
       .find(g=>g.home===currentTeam||g.away===currentTeam);
     const expectedStarter=Boolean(p.position==='QB'&&nextFixture&&[
       nextFixture.context?.home?.qbId,nextFixture.context?.away?.qbId
     ].some(id=>String(id||'')===String(p.id)));
-    if(!hasRelevantPlayerRole(p,currentHistory,{expectedStarter}))return [];
-    const latest=currentHistory.at(-1)||history.at(-1);
-    return [{...p,team:latest.team || currentTeam}];
+    const hasEstablishedRole=hasRelevantPlayerRole(p,currentHistory,{expectedStarter});
+    const injuryPromotion=Boolean(nextFixture&&!hasEstablishedRole&&
+      (PLAYER_PROJECTION_MARKETS[p.position]||[]).some(([market])=>{
+        const forecast=buildPlayerForecast({players,player:p,game:nextFixture,market});
+        return Boolean(forecast?.injuryAdjustment&&hasMeaningfulProjectionRole({position:p.position,market,
+          projectedUsage:forecast.projectedUsage,historyGames:forecast.sampleGames}));
+      }));
+    if(!hasEstablishedRole&&!injuryPromotion)return [];
+    return [{...p,team:currentTeam||currentHistory.at(-1)?.team||history.at(-1)?.team}];
   }), [players, season, seasons, data.schedule]);
   const slateSeason = multi || page!=='analyzer' ? Math.max(...seasons) : season;
   const nflSchedule = useMemo(()=>(data.schedule ?? initialSchedule).filter(g=>g.season===slateSeason),[data.schedule,slateSeason]);

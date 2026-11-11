@@ -47,3 +47,22 @@ test('canonical player forecast filters out games from the matchup week and carr
   assert.equal(result.uncertainty.calibrated,true);
   assert.equal(result.selectedProbability,result.probabilities.over);
 });
+
+test('current out report and next depth-chart role add a conservative exploratory workload bump',()=>{
+  const games=(volume,statKey)=>[1,2,3,4].map(week=>({season:2026,week,team:'AAA',usage:{carries:volume},stats:{[statKey]:volume}}));
+  const starter={id:'starter',name:'Starter',position:'RB',team:'AAA',currentTeam:'AAA',depthChartRank:1,rosterActive:false,games:games(10,'rushingAttempts')};
+  const backup={id:'backup',name:'Backup',position:'RB',team:'AAA',currentTeam:'AAA',depthChartRank:2,rosterActive:true,games:games(5,'rushingAttempts')};
+  const game={id:'g2',season:2026,week:5,home:'AAA',away:'BBB',injuries:{AAA:[{id:'starter',name:'Starter',position:'RB',gameStatus:'Out'}]}};
+  const forecast=buildPlayerForecast({players:[starter,backup],player:backup,game,market:'rushingAttempts',line:8.5,side:'over'});
+  assert.equal(forecast.projectedUsage,8.5);
+  assert.equal(forecast.projection,8.5);
+  assert.equal(forecast.injuryAdjustment.added,3.5);
+  assert.equal(forecast.injuryAdjustment.calibrated,false);
+  assert.equal(forecast.probabilities,null);
+});
+
+test('unavailable selected players are omitted from forecasts',()=>{
+  const player={id:'p1',name:'Player',position:'RB',team:'AAA',games:[1,2,3].map(week=>({season:2026,week,team:'AAA',stats:{rushingAttempts:5},usage:{carries:5}}))};
+  const game={season:2026,week:4,home:'AAA',away:'BBB',injuries:{AAA:[{id:'p1',gameStatus:'Doubtful'}]}};
+  assert.equal(buildPlayerForecast({players:[player],player,game,market:'rushingAttempts'}),null);
+});

@@ -9,8 +9,8 @@ on:
       - 'scripts/update_data.py'
       - 'update-stats.yml'
   schedule:
-    # 11:25 UTC daily. nflverse usually updates after games overnight.
-    - cron: '25 11 * * *'
+    # Keep current roster, depth-chart and injury context fresh around the clock.
+    - cron: '25 3,9,15,21 * * *'
   workflow_dispatch:
 
 permissions:

@@ -42,11 +42,12 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
   const rows = useMemo(()=>{
     const names = new Map(), rankCache = new Map();
     for (const p of players) {
+      if(p.currentRoster===false)continue;
       const history = getPlayerGames(p,season);
       if (!history.length) continue;
       const key = playerKey(p.name);
       if (!names.has(key)) names.set(key,[]);
-      names.get(key).push({p,team:teamCode(history.at(-1).team || p.team),history});
+      names.get(key).push({p,team:teamCode(p.currentTeam || p.team || history.at(-1).team),history});
     }
     return slate.flatMap(g=>{
       const lines=[...g.lines];
@@ -85,7 +86,7 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
         const history=entry?.history.slice(-10)||[];
         const forecast=entry?buildPlayerForecast({players,player:entry.p,game:g,market:line.metric,line:line.point,side:pick,distributions}):null;
         const modelEstimate=entry?estimateModelHitRate(history,line.metric,line.point,pick,{marketProbability:fairSideProbability(line,pick,line.point),
-          position:entry.p.position,projection:forecast?.projection,distributionModels:distributions}):null;
+          position:entry.p.position,projection:forecast?.projection,distributionModels:distributions,forceExploratory:Boolean(forecast?.injuryAdjustment)}):null;
         return {g,line,entry,rank,rankCount,pick,forecast,modelEstimate,summary:entry ? summarize(history,line.metric,line.point,pick) : null};
       });
     });});

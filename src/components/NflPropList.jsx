@@ -69,7 +69,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
         const opponent=({LAR:'LA',WAS:'WSH',JAX:'JAC'})[game.opponent];
         const defense=table.find(d=>d.team===game.opponent)??table.find(d=>d.team===opponent);
         const modelEstimate=estimateModelHitRate(recent,metric,point,side,{marketProbability:fairSideProbability(quote,side,point),
-          position:player.position,projection:forecast?.projection,distributionModels:distributions});
+          position:player.position,projection:forecast?.projection,distributionModels:distributions,forceExploratory:Boolean(forecast?.injuryAdjustment)});
         result.push({player,game,metric,point,quote,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),forecast,modelEstimate,rank:defense?.rank,teams:table.length});
       }
     }

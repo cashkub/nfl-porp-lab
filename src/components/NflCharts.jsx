@@ -303,7 +303,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const sharedForecast=useMemo(()=>upcoming?buildPlayerForecast({players,player,game:upcoming,market:metric,line,side:direction,distributions}):null,
     [players,player,upcoming,metric,line,direction,distributions]);
   const modelRate=estimateModelHitRate(displayed,metric,line,direction,{marketProbability,position:player?.position,
-    projection:sharedForecast?.projection,distributionModels:distributions});
+    projection:sharedForecast?.projection,distributionModels:distributions,forceExploratory:Boolean(sharedForecast?.injuryAdjustment)});
   const pushes=displayed.filter(g=>g.stats[metric]===line).length;
   const usage=metric==='scrimmageYards'?{key:'opportunities',label:'Carries + targets'}:usageFor(metric);
   const observedUsage=displayed.map(g=>g.usage?.[usage.key]).filter(Number.isFinite);

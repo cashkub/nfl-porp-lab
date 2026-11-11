@@ -202,7 +202,7 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
   const favoriteRedZoneTarget=receiver||(['RB','FB'].includes(player.position)&&targetSignal>carrySignal);
   const primaryShare=favoriteRedZoneTarget?scoring?.targetShare:scoring?.carryShare;
   const estimate=estimateModelHitRate(history,metric,line,side,{marketProbability:fairSide,weatherSignal:weather?.signal||0,redZoneSignal,injurySignal:injury.signal,injuryPenalty,
-    position:player.position,projection:projectionValue,distributionModels:distributions});
+    position:player.position,projection:projectionValue,distributionModels:distributions,forceExploratory:Boolean(forecast.injuryAdjustment)});
   const chance=estimate.rate;
   const edge=chance-(fairSide??.5);
   const projectionSignal=clamp((side==='over'?projectionValue-line:line-projectionValue)/(sd||Math.max(1,Math.abs(line)*.2)),-1,1);
@@ -226,7 +226,8 @@ function makePick(player,game,metric,market,quote,history,defense,side,teamVolum
     {weight:workloadWeight,value:volumeSignal,label:'Workload',detail:usageTrend!=null?`Recent ${usageKey} volume changed ${usageTrend>0?'+':''}${usageTrend.toFixed(1)} per game.`:`Recent share of team ${usageKey}: ${fmtShare(share.recent)}.`},
     {weight:redZoneWeight,value:redZoneSignal,label:'Red-Zone Usage',detail:primaryShare!=null?`${favoriteRedZoneTarget?'Red-zone target':'Red-zone carry'} share is ${fmtShare(primaryShare)}.`:'Red-zone play-by-play share is unavailable.'},
     {weight:.06,value:weather?.signal||0,label:'Weather',detail:weather?.interpretation||'Forecast data unavailable.'},
-    {weight:.04,value:injury.signal,label:'Key Injuries',detail:injury.notes.length?injury.notes[0].impact:'No relevant key-injury signal.'}
+    {weight:.04,value:injury.signal,label:'Key Injuries',detail:injury.notes.length?injury.notes[0].impact:'No relevant key-injury signal.'},
+    ...(forecast.injuryAdjustment?[{weight:.04,value:side==='over'?.35:-.35,label:'Replacement Workload',detail:`Current depth chart lists ${player.name} directly behind ${forecast.injuryAdjustment.reasons.map(row=>row.name).join(', ')}. The model adds ${forecast.injuryAdjustment.added.toFixed(1)} ${usageKey} per game from the reported absence; this is an exploratory role adjustment.`}]:[])
   ].filter(reason=>reason.value>0).sort((a,b)=>b.weight*b.value-a.weight*a.value);
   const favoriteReason=reasons[0]||{label:'Recent Results',detail:`The player hit ${hits} of ${history.length} games at this line.`};
   return {player,game,metric,market,line,quote,history,defense,side,projection:projectionValue,forecast,probabilityModel:estimate,values,recent,hits,recentHits,chance,fairSide,edge,score,rankScore,usageKey,usageTrend,share,volumeSignal,average,recentAverage,matchup,matchupTone,weather,injury,scoring,redZoneSignal,supportCount,projectionSignal,defensiveEdge,favoriteReason};
@@ -256,11 +257,12 @@ export function buildTopLooks({players,slate,books,season,type,distributions=nul
   for(const game of slate){
     const roleRanks=buildRoleRanks(players,season,game);
     for(const player of players){
+      if(player.currentRoster===false)continue;
       if(player.team!==game.home&&player.team!==game.away)continue;
       const opponent=player.team===game.home?game.away:game.home;
       const history=getPlayerGames(player,'ALL').filter(row=>Number(row.season)<Number(game.season)||
         (Number(row.season)===Number(game.season)&&Number(row.week)<Number(game.week))).slice(-10);
-      if(history.length<5)continue;
+      if(history.length<3)continue;
       for(const metric of availableStats(METRICS,history)){
         const isAnytime=metric==='scoredTDs';
         if((type==='props'&&isAnytime)||(type==='anytime'&&!isAnytime))continue;
@@ -271,6 +273,7 @@ export function buildTopLooks({players,slate,books,season,type,distributions=nul
         const selectedQuote=quote?{...quote,isBookLine:true}:{point:line,over:null,under:null,isBookLine:false,anytime:type==='anytime'};
         const forecast=buildPlayerForecast({players,player,game,market:metric,line,side:'over',distributions});
         if(!forecast)continue;
+        if(history.length<5&&!forecast.injuryAdjustment)continue;
         const expectedStarter=player.position==='QB'&&[
           game.context?.home?.qbId,game.context?.away?.qbId
         ].some(id=>String(id||'')===String(player.id));
