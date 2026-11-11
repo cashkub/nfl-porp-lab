@@ -156,11 +156,12 @@ export default function NflGames({schedule,books,players,validation,season,now,o
 function GamePredictions({game,model,validation}){
   const away=model?.a,home=model?.h;
   const margin=away&&home?home.score-away.score:null;
+  const elo=game.context?.elo;
   return <div className="nfl-view-panel">
-    <div className="nfl-projection-banner"><div><small>INDEPENDENT TEAM DATA PROJECTION</small><strong>{margin==null?'Projection Pending':Math.abs(margin)<.05?'Near Pick’em':(margin>0?game.home:game.away)+' BY '+Math.abs(margin).toFixed(1)}</strong><p>Built from the current opponent-adjusted scoring ratings and available matchup context.</p></div><span className="nfl-confidence-state">PROBABILITIES IN VALIDATION</span></div>
+    <div className="nfl-projection-banner"><div><small>INDEPENDENT TEAM DATA PROJECTION</small><strong>{margin==null?'Projection Pending':Math.abs(margin)<.05?'Near Pick’em':(margin>0?game.home:game.away)+' BY '+Math.abs(margin).toFixed(1)}</strong><p>Built from the current opponent-adjusted scoring ratings and available matchup context.</p></div><span className="nfl-confidence-state">{elo?'ELO WIN PROBABILITY · RESEARCH':'PROBABILITIES IN VALIDATION'}</span></div>
     <div className="nfl-score-grid">{[away,home].filter(Boolean).map((side,i)=><article key={side.team} style={{'--club':teamColor(side.team)}}><small>{i===0?'AWAY':'HOME'} · {side.team}</small><b>{side.score.toFixed(1)}</b><span>Projected Points</span><i/></article>)}</div>
-    <div className="nfl-market-grid"><MarketTile label="MONEYLINE" value={`${game.away} ${priceText(game.awayPrice)} · ${game.home} ${priceText(game.homePrice)}`}/><MarketTile label="SPREAD" value={Number.isFinite(game.homeSpread)?`${game.home} ${game.homeSpread>0?'+':''}${game.homeSpread}`:'Unavailable'}/><MarketTile label="TOTAL" value={Number.isFinite(game.totalLine)?`${game.totalLine} · O ${priceText(game.overPrice)} / U ${priceText(game.underPrice)}`:'Unavailable'} /></div>
-    <div className="nfl-probability-honesty"><Info size={17}/><span>Win, cover, Over/Under, fair odds, expected value, and confidence intervals are withheld until the underlying probabilities pass out-of-sample calibration. Any game prices shown come from the schedule data and are not verified live odds because this feed does not attach per-matchup timestamps.</span></div>
+    <div className="nfl-market-grid"><MarketTile label="MONEYLINE" value={`${game.away} ${priceText(game.awayPrice)} · ${game.home} ${priceText(game.homePrice)}`}/><MarketTile label="SPREAD" value={Number.isFinite(game.homeSpread)?`${game.home} ${game.homeSpread>0?'+':''}${game.homeSpread}`:'Unavailable'}/><MarketTile label="TOTAL" value={Number.isFinite(game.totalLine)?`${game.totalLine} · O ${priceText(game.overPrice)} / U ${priceText(game.underPrice)}`:'Unavailable'} />{elo&&<WinProbabilityTile game={game} elo={elo}/>}</div>
+    <div className="nfl-probability-honesty"><Info size={17}/><span>{elo?`Win percentages are from an independently tested Elo model, calibrated using ${elo.calibrationSeason} only and updated with completed games through Week ${elo.asOfWeek}. The latest walk-forward holdout is shown below; it trails the closing-market reference, so this is a research forecast and does not indicate betting value. `:'No calibrated Elo forecast is available for this matchup. '}Spread, Over/Under, fair odds, expected value, and confidence intervals are withheld. Schedule prices are not verified live odds because this feed does not attach per-matchup timestamps.</span></div>
     <ModelEvidence validation={validation}/>
     <p className="nfl-market-footnote">A predicted score difference is not itself a win or bet probability. The schedule snapshot and independent team-data estimate are shown separately.</p>
   </div>;
@@ -168,12 +169,19 @@ function GamePredictions({game,model,validation}){
 
 function MarketTile({label,value}){return <article className="nfl-market-tile"><small>{label}</small><b>{value}</b></article>}
 
+function WinProbabilityTile({game,elo}){
+  const home=Number(elo.homeProbability),away=Number(elo.awayProbability);
+  if(!Number.isFinite(home)||!Number.isFinite(away))return null;
+  return <article className="nfl-market-tile nfl-elo-tile"><small>MODEL WIN PROBABILITY</small><div className="nfl-elo-probabilities"><b style={{'--club':teamColor(game.away)}}><span>{game.away}</span>{(away*100).toFixed(1)}%</b><i>VS</i><b style={{'--club':teamColor(game.home)}}><span>{game.home}</span>{(home*100).toFixed(1)}%</b></div><small>CALIBRATED ELO · {elo.calibrationSeason} HOLDOUT</small></article>;
+}
+
 function ModelEvidence({validation}){
   const results=validation?.results;
-  if(!results)return null;
-  const entries=[['BASELINE','Base'],['PLAY-BY-PLAY CANDIDATE','Stats'],['CLOSING-MARKET BENCHMARK','Market'],['MARKET BLEND','Blend']].filter(([,key])=>results[key]);
+  if(!results&&!validation?.elo?.latest)return null;
+  const entries=[['BASELINE','Base'],['PLAY-BY-PLAY CANDIDATE','Stats'],['CLOSING-MARKET BENCHMARK','Market'],['MARKET BLEND','Blend']].filter(([,key])=>(results||{})[key]);
   const value=(key,metric)=>Number.isFinite(results[key]?.[metric])?results[key][metric].toFixed(2):'—';
-  return <section className="nfl-model-evidence"><header><div><small>HISTORICAL MODEL CHECK</small><h3>WALK-FORWARD SCORE ERROR</h3></div><span>{validation.games||0} GAMES</span></header><div className="nfl-evidence-table-wrap"><table><thead><tr><th>FORECAST</th><th>SCORE MAE</th><th>MARGIN MAE</th></tr></thead><tbody>{entries.map(([label,key])=><tr key={key}><th>{label}</th><td>{value(key,'scoreMAE')}</td><td>{value(key,'marginMAE')}</td></tr>)}</tbody></table></div><p>Lower error is better. The market benchmark uses historical closing prices; it is a reference, not a timestamped price guaranteed to have been available when a pick was made. MAE measures point accuracy, not probability calibration or betting returns.</p></section>;
+  const elo=validation?.elo?.latest;
+  return <section className="nfl-model-evidence"><header><div><small>HISTORICAL MODEL CHECK</small><h3>WALK-FORWARD SCORE ERROR</h3></div><span>{validation.games||0} GAMES</span></header>{entries.length>0&&<><div className="nfl-evidence-table-wrap"><table><thead><tr><th>FORECAST</th><th>SCORE MAE</th><th>MARGIN MAE</th></tr></thead><tbody>{entries.map(([label,key])=><tr key={key}><th>{label}</th><td>{value(key,'scoreMAE')}</td><td>{value(key,'marginMAE')}</td></tr>)}</tbody></table></div><p>Lower error is better. The market benchmark uses historical closing prices; it is a reference, not a timestamped price guaranteed to have been available when a pick was made. MAE measures point accuracy, not probability calibration or betting returns.</p></>}{elo&&<div className="nfl-elo-evidence"><h4>ELO WIN PROBABILITY · {elo.holdoutSeason} HOLDOUT</h4><div><span>{elo.elo?.games??0} GAMES</span><span>BRIER <b>{elo.elo?.brier?.toFixed(3)??'—'}</b></span><span>LOG LOSS <b>{elo.elo?.logLoss?.toFixed(3)??'—'}</b></span><span>ACCURACY <b>{Number.isFinite(elo.elo?.winnerAccuracy)?`${(elo.elo.winnerAccuracy*100).toFixed(1)}%`:'—'}</b></span></div><p>Closing market reference: Brier {elo.closingMoneyline?.brier?.toFixed(3)??'—'} · log loss {elo.closingMoneyline?.logLoss?.toFixed(3)??'—'} ({elo.closingMoneyline?.games??0} games). Elo is shown as a probability forecast for transparency; the market comparison remains stronger.</p></div>}</section>;
 }
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
