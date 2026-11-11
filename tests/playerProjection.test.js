@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole} from '../src/lib/playerProjection.js';
+import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection,getUsageMetric,hasMeaningfulProjectionRole,hasRelevantPlayerRole} from '../src/lib/playerProjection.js';
 
 test('opportunity projection uses the market-specific workload key',()=>{
   assert.equal(getUsageMetric('RB','receivingYards'),'targets');
@@ -36,9 +36,19 @@ test('projection withholds markets without enough historical information',()=>{
 
 test('matchup table excludes thin-sample and low-workload player markets',()=>{
   assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:.8,historyGames:8}),false);
-  assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:2,historyGames:8}),true);
+  assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:2,historyGames:8}),false);
+  assert.equal(hasMeaningfulProjectionRole({position:'WR',market:'receptions',projectedUsage:3,historyGames:8}),true);
   assert.equal(hasMeaningfulProjectionRole({position:'RB',market:'rushingAttempts',projectedUsage:8,historyGames:1}),false);
   assert.equal(hasMeaningfulProjectionRole({position:'QB',market:'passingYards',projectedUsage:5,historyGames:2,expectedStarter:true}),true);
+});
+
+test('general player selectors hide fringe roles but keep demonstrated workload growth',()=>{
+  const fringe={position:'WR'},replacement={position:'WR'};
+  const history=[1,1,1,5,8].map((targets,index)=>({season:2026,week:index+1,usage:{targets}}));
+  assert.equal(hasRelevantPlayerRole(fringe,[...history.slice(0,3)]),false);
+  assert.equal(hasRelevantPlayerRole(replacement,history),true);
+  assert.equal(hasRelevantPlayerRole(replacement,[...history.slice(0,3)]),false);
+  assert.equal(hasRelevantPlayerRole({position:'QB'},[],{expectedStarter:true}),true);
 });
 
 test('Top Looks and Game player projections share one pregame efficiency prior',()=>{
