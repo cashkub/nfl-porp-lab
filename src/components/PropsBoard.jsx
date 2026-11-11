@@ -6,7 +6,7 @@ import {teamColor} from '../lib/teamColors.js';
 import {availableStats} from '../lib/availableStats.js';
 import HitRate, {DefenseRank} from './HitRate.jsx';
 import React, {useMemo, useState} from 'react';
-import {fairSideProbability,playerKey, priceText} from '../lib/bookLine.js';
+import {postedLines,fairSideProbability,playerKey, priceText} from '../lib/bookLine.js';
 import {METRICS, getPlayerGames, summarize,estimateModelHitRate} from '../lib/stats.js';
 import {defenseTable} from '../lib/matchup.js';
 
@@ -47,8 +47,8 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
       names.get(key).push({p,team:teamCode(history.at(-1).team || p.team),history});
     }
     return slate.flatMap(g=>{
-      const lines=[...g.lines];
-      if(touchdown){
+      const lines=postedLines(g);
+      if(touchdown&&!lines.length){
         const priced=new Set(lines.filter(l=>l.metric===stat).map(l=>playerKey(l.player)));
         for(const [key,entries] of names){
           if(priced.has(key))continue;
@@ -71,7 +71,7 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
         rank=rankCache.get(key).find(r=>teamCode(r.team)===opp)?.rank;
 
       }
-      const sides = side === 'both' ? ['over','under'] : [side];
+      const sides = line.anytime ? (side==='under'?[]:['over']) : side === 'both' ? ['over','under'] : [side];
       return sides.map(pick => {
         const history=entry?.history.slice(-10)||[];
         const modelEstimate=entry?estimateModelHitRate(history,line.metric,line.point,pick,{marketProbability:fairSideProbability(line,pick,line.point)}):null;
@@ -122,7 +122,7 @@ export default function PropsBoard({gameFilter,fixedGame,title = fixedGame ? 'Ma
       <button className="outline-button" type="button" onClick={()=>changeSort(sort)}>{ascending ? '↑ Ascending' : '↓ Descending'}</button>
     </div>
     <div className="board-scroll"><table className="game-log"><thead><tr>{[['player','Player / Game'],['line','Prop'],['over','Over'],['under','Under'],['rate','Last 10'],['modelRate','Model Estimate'],['rank','DEF Rank']].map(([key,t])=><th key={key} aria-sort={sort===key ? (ascending?'ascending':'descending') : undefined}><button type="button" onClick={()=>changeSort(key)}>{t} {sort===key && (ascending?'↑':'↓')}</button></th>)}</tr></thead>
-    <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,rankCount,summary,modelEstimate,pick})=><tr key={[g.id,line.player,line.metric,line.point,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
+    <tbody>{filtered.slice(0,limit).map(({g,line,entry,rank,rankCount,summary,modelEstimate,pick})=><tr key={[g.id,line.player,line.metric,line.point,line.anytime,pick].join(':')} className={entry ? "open-prop" : undefined} onClick={entry ? ()=>onOpen(entry.p,line,pick,g) : undefined}>
       <td className="team-edge" style={{'--team-color':teamColor(entry?.team)}}><button type="button" className="board-player" disabled={!entry} title={entry?'Open player chart':'Player history unavailable'} onClick={e=>{e.stopPropagation();onOpen(entry.p,line,pick,g);}}>{entry && <PlayerPhoto id={entry.p.id} name={line.player} url={entry.p.photo}/>} {line.player}</button><small>{g.away} at {g.home} · {gameTime(g.kickoff)}</small></td>
       <td><strong>{pick==='over' ? 'Over ' : 'Under '}{line.point}</strong> {METRICS[line.metric]?.label}{touchdown && <small>{line.preset?'Research Preset':'DraftKings'}</small>}</td><td>{priceText(line.over)}</td><td>{priceText(line.under)}</td>
       <td>{summary ? <><b><HitRate rate={summary.rate}/></b> ({summary.hits}/{summary.total})</> : '—'}</td><td>{modelEstimate?<span className="model-rate-cell"><HitRate rate={modelEstimate.rate}/><small>MODEL · {modelEstimate.sample} G</small></span>:'—'}</td><td><DefenseRank rank={rank} total={rankCount} side={pick}/></td>

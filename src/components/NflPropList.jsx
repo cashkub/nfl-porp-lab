@@ -1,7 +1,7 @@
 import NflToolHeader from './NflToolHeader.jsx';
 import React,{useMemo,useState} from 'react';
 import {availableStats} from '../lib/availableStats.js';
-import {bookLine,fairSideProbability,priceText} from '../lib/bookLine.js';
+import {quotedPlayers,matchupBook,fairSideProbability,priceText} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
 import {getPlayerGames,formatRate,isHit,summarize,estimateModelHitRate} from '../lib/stats.js';
 import {teamColor} from '../lib/teamColors.js';
@@ -35,24 +35,29 @@ export default function NflPropList({players,roster,schedule,season,books,market
   const [source,setSource]=useState('ALL');
   const [search,setSearch]=useState('');
   const [playerId,setPlayerId]=useState('');
-  const [minimum,setMinimum]=useState('1');
+  const [minimum,setMinimum]=useState('0');
   const [sort,setSort]=useState(null);
   const [limit,setLimit]=useState(24);
   const rows=useMemo(()=>{
     const result=[],ranks=new Map();
     const games=slate.game?[slate.game]:slate.games;
-    for(const player of roster){
-      const game=nextGame(games,player.team,season,now);
-      if(!game)continue;
-      const team=game.opponent===game.home?game.away:game.home;
-      if(slate.team && slate.team!==team)continue;
-      const recent=getPlayerGames(player,season,'ALL',venue).filter(g=>Number(g.week)<Number(game.week)).slice(-10);
-      if(!recent.length)continue;
-      for(const metric of availableStats(markets,recent)){
-        if(market!=='ALL' && metric!==market)continue;
-        const saved=bookLine(books,game,player.name,metric);
-        const quote=Number.isFinite(saved?.point)?saved:null;
-        const average=recent.reduce((n,g)=>n+(g.stats[metric]??0),0)/recent.length;
+    for(const fixture of games){
+      const quotes=quotedPlayers(matchupBook(books,fixture),fixture,players);
+      const entries=quotes.length ? quotes.map(({line,player,status})=>({
+        player:player||{id:'book-'+line.player,name:line.player,team:'',position:'',games:[]},
+        metric:line.metric,quote:line,status
+      })) : roster.flatMap(player=>{
+        if(!nextGame([fixture],player.team,season,now))return [];
+        const history=getPlayerGames(player,season,'ALL',venue).filter(g=>Number(g.week)<Number(fixture.week)).slice(-10);
+        return availableStats(markets,history).map(metric=>({player,metric,quote:null}));
+      });
+      for(const {player,metric,quote,status} of entries){
+        if(!markets[metric] || (market!=='ALL'&&metric!==market) || (quote?.anytime&&side==='under'))continue;
+        const game=nextGame([fixture],player.team,season,now)||fixture;
+        const team=game.opponent===game.home?game.away:game.opponent===game.away?game.home:null;
+        if(slate.team && slate.team!==team)continue;
+        const recent=getPlayerGames(player,season,'ALL',venue).filter(g=>Number(g.week)<Number(game.week)).slice(-10);
+        const average=recent.length?recent.reduce((n,g)=>n+(g.stats[metric]??0),0)/recent.length:0;
         if(!quote && average<=0)continue;
         const point=quote?.point??Number(average.toFixed(1));
         const key=player.position+'|'+metric;
@@ -61,7 +66,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
         const opponent=({LAR:'LA',WAS:'WSH',JAX:'JAC'})[game.opponent];
         const defense=table.find(d=>d.team===game.opponent)??table.find(d=>d.team===opponent);
         const modelEstimate=estimateModelHitRate(recent,metric,point,side,{marketProbability:fairSideProbability(quote,side,point)});
-        result.push({player,game,metric,point,quote,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),modelEstimate,rank:defense?.rank,teams:table.length});
+        result.push({player,game,metric,point,quote,status,lastFive:recent.slice(-5),summary:summarize(recent,metric,point,side),modelEstimate,rank:defense?.rank,teams:table.length});
       }
     }
     return result.sort((a,b)=>Number(!!b.quote)-Number(!!a.quote) || b.summary.rate-a.summary.rate || b.summary.total-a.summary.total || a.player.name.localeCompare(b.player.name));
@@ -72,10 +77,10 @@ export default function NflPropList({players,roster,schedule,season,books,market
   const filtered=activeId?matches.filter(r=>r.player.id===activeId):matches;
   const columns=[
     {label:'Player',value:r=>r.player.name,render:r=><button type="button" className="prop-chart-link"
-      aria-label={'Open Charts for '+r.player.name+', '+side+' '+r.point+' '+markets[r.metric].label} onClick={()=>onOpen(r,side,venue)}>
-      <PlayerPhoto id={r.player.id} name={r.player.name} url={r.player.photo}/><b>{r.player.name}</b><span className="prop-charts-tag">Charts</span></button>},
-    {label:'Market',value:r=>markets[r.metric].label},
-    {label:'Line',value:r=>r.point,render:r=><strong className="prop-point">{side} {r.point}</strong>},
+      disabled={!r.player.games?.length} aria-label={'Open Charts for '+r.player.name+', '+side+' '+r.point+' '+markets[r.metric].label} onClick={()=>onOpen(r,side,venue)}>
+      <PlayerPhoto id={r.player.id} name={r.player.name} url={r.player.photo}/><b>{r.player.name}{r.status?` · ${r.status}`:''}</b><span className="prop-charts-tag">Charts</span></button>},
+    {label:'Market',value:r=>r.quote?.anytime?'Anytime TD':markets[r.metric].label},
+    {label:'Line',value:r=>r.point,render:r=><strong className="prop-point">{r.quote?.anytime?'Yes':side} {r.quote?.anytime?'':r.point}</strong>},
     {label:'Historical Hit Rate',value:r=>r.summary.rate,highFirst:true,render:r=><b style={rateStyle(r.summary.rate)}>{formatRate(r.summary.rate)}</b>},
     {label:'Model Estimate',value:r=>r.modelEstimate.rate,highFirst:true,render:r=><span className="model-rate-cell"><b style={rateStyle(r.modelEstimate.rate)}>{formatRate(r.modelEstimate.rate)}</b><small>MODEL · {r.modelEstimate.sample} G</small></span>},
     {label:'Last 5',value:r=>summarize(r.lastFive,r.metric,r.point,side).rate,highFirst:true,render:r=><LastFive row={r} side={side}/>},
@@ -98,13 +103,13 @@ export default function NflPropList({players,roster,schedule,season,books,market
           onSelect={id=>{setPlayerId(id);setSearch('')}}/>
       </div>
       <details className="prop-advanced">
-        <summary className="chart-disclosure"><b>Filters</b><span>{slate.team || 'All Teams'} · {market==='ALL'?'All Markets':markets[market].label} · {venueLabel} · {side==='over'?'Over':'Under'}{source!=='ALL' && ' · '+(source==='book'?'DraftKings':'Player Average')}{minimum!=='1' && ' · '+minimum+'+ Games'}</span></summary>
+        <summary className="chart-disclosure"><b>Filters</b><span>{slate.team || 'All Teams'} · {market==='ALL'?'All Markets':markets[market].label} · {venueLabel} · {side==='over'?'Over':'Under'}{source!=='ALL' && ' · '+(source==='book'?'DraftKings':'Player Average')}{minimum!=='0' && ' · '+minimum+'+ Games'}</span></summary>
         <div className="prop-list-filters">
         <TeamFilter slate={slate}/>
         <ChartSelect label="Game History" value={venue} onChange={setVenue}><option value="ALL">All Games</option><option value="H">Home Games</option><option value="A">Away Games</option></ChartSelect>
         <ChartSelect label="Market" value={market} onChange={setMarket}><option value="ALL">All Markets</option>{Object.entries(markets).map(([k,m])=><option key={k} value={k}>{m.label}</option>)}</ChartSelect>
         <ChartSelect label="Line Source" value={source} onChange={setSource}><option value="ALL">All Lines</option><option value="book">DraftKings</option><option value="average">Player Average</option></ChartSelect>
-        <ChartSelect label="Minimum Games" value={minimum} onChange={setMinimum}>{[1,3,5,10].map(n=><option key={n} value={n}>{n}+</option>)}</ChartSelect>
+        <ChartSelect label="Minimum Games" value={minimum} onChange={setMinimum}>{[0,1,3,5,10].map(n=><option key={n} value={n}>{n}+</option>)}</ChartSelect>
         <ChartSelect label="Side" value={side} onChange={setSide}><option value="over">Over</option><option value="under">Under</option></ChartSelect>
       </div>
       </details>
@@ -113,7 +118,7 @@ export default function NflPropList({players,roster,schedule,season,books,market
         <SortableTable quietSort className="prop-research-table" headers={columns.map(c=>c.label)} rows={filtered} limit={limit}
           values={r=>columns.map(c=>c.value(r))} sort={sort} onSort={setSort}
           descending={columns.flatMap((c,i)=>c.highFirst?[i]:[])}
-          renderRow={r=><tr key={r.game.id+r.player.id+r.metric} style={{'--club':teamColor(r.player.team)??'#9073a8'}}>
+          renderRow={r=><tr key={[r.game.id,r.player.id,r.metric,r.point,r.quote?.anytime].join(':')} style={{'--club':teamColor(r.player.team)??'#9073a8'}}>
             {columns.map(c=><td key={c.label}>{c.render?c.render(r):c.value(r)}</td>)}
           </tr>}/>
       </div>}
