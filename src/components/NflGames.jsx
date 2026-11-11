@@ -108,7 +108,7 @@ export default function NflGames({schedule,books,players,validation,season,now,o
         const league=leagueUsage[p.position+':'+metric];
         const estimated=estimateOpportunityProjection({history,position:p.position,market:metric,season:selected.season,
           priorEfficiency:league?.opportunities?league.stats/league.opportunities:null});
-        const expectedQuarterback=String(game.context?.away?.qbId||'')===String(p.id)||String(game.context?.home?.qbId||'')===String(p.id);
+        const expectedQuarterback=String(selected.context?.away?.qbId||'')===String(p.id)||String(selected.context?.home?.qbId||'')===String(p.id);
         if(!estimated||!hasMeaningfulProjectionRole({position:p.position,market:metric,
           projectedUsage:estimated.projectedUsage,historyGames:history.length,expectedStarter:expectedQuarterback}))continue;
         const opponent=team===selected.home?selected.away:selected.home;
