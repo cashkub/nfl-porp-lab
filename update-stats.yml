@@ -1,6 +1,13 @@
 name: Update NFL Data
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/elo_backtest.py'
+      - 'scripts/nfl_context.py'
+      - 'scripts/update_data.py'
+      - 'update-stats.yml'
   schedule:
     # 11:25 UTC daily. nflverse usually updates after games overnight.
     - cron: '25 11 * * *'
