@@ -12,14 +12,14 @@ function urgency(p){
   const i=priorities.indexOf((p.gameStatus || p.status || '').toLowerCase());
   return i<0?priorities.length:i;
 }
-function InjuryReport({game}){
-  return <details className="report-fold"><summary>Injury Report</summary>
+export function InjuryReport({game}){
+  return <details className="report-fold"><summary>Full injury report</summary>
     {[game.away,game.home].map(team=>{
       const players=[...(game.injuries?.[team] || [])].sort((a,b)=>urgency(a)-urgency(b)||a.name.localeCompare(b.name));
       return <section className="report-team" key={team}><h4>{team} <small>· {players.length} Listed</small></h4>
         {players.length?<ul>{players.map(p=><li key={p.id || p.name}><div><b>{p.name}</b> <small>{p.position}</small>
           {p.injury && <small className="report-sub">{p.injury}</small>}{p.gameStatus && p.practice && <small className="report-sub">{p.practice}</small>}</div>
-          <div className="report-status"><span data-status={urgency(p)}>{p.gameStatus || p.status}</span>{p.deduction>0 && <small className="report-sub">−{p.deduction.toFixed(2)} pts</small>}</div></li>)}</ul>:<p>No weekly entries available.</p>}</section>;
+          <div className="report-status"><span data-status={urgency(p)}>{p.gameStatus || p.status}</span>{p.date && <small className="report-sub">{String(p.date).slice(0,10)}</small>}{p.source && <small className="report-sub">{p.source.startsWith('https://')?'Team announcement':p.source}</small>}{p.deduction>0 && <small className="report-sub">−{p.deduction.toFixed(2)} pts</small>}</div></li>)}</ul>:<p>No weekly entries available.</p>}</section>;
     })}<a href="https://www.nfl.com/injuries/">Official NFL Injury Report ↗</a></details>;
 }
 

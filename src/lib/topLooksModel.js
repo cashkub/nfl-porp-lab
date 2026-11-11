@@ -288,7 +288,7 @@ export function buildTopLooks({players,slate,books,season,type}) {
         if(!cache.has(posMetric))cache.set(posMetric,defenseTable(players,season,player.position,metric,game.week));
         const defense=cache.get(posMetric).find(row=>row.team===opponent);
         const availability=playerInjuryStatus(game,player);
-        if(['out','doubtful','inactive','ir','injured reserve','suspended','pup'].includes(availability))continue;
+        if(['out','doubtful','inactive','ir','injured reserve','suspended','pup','physically unable to perform'].includes(availability))continue;
         const sides=type==='anytime'?['over']:['over','under'];
         for(const side of sides.filter(s=>!quote||Number.isFinite(quote[s])))candidates.push(makePick(player,{...game,opponent},metric,market,selectedQuote,history,defense,side,teamVolumes,scoringVolumes,roleRanks,pointProjection));
       }

@@ -11,7 +11,7 @@ import {teamColor} from '../lib/teamColors.js';
 import PlayerPhoto from './PlayerPhoto.jsx';
 import FilterMenu from './FilterMenu.jsx';
 import PropsBoard from './PropsBoard.jsx';
-import {MatchReport} from './MatchReport.jsx';
+import {InjuryReport,MatchReport} from './MatchReport.jsx';
 import './NflGames.css';
 
 const kickoff=new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'});
@@ -89,7 +89,7 @@ export default function NflGames({schedule,books,players,validation,season,now,o
       const observed=currentSeason;
       if(!observed.length)continue;
       const report=(selected.injuries?.[team]||[]).find(r=>r.id?r.id===p.id:r.name?.toLowerCase()===p.name?.toLowerCase());
-      if([report?.gameStatus,report?.status].some(s=>/^(out|doubtful|inactive|ir|injured reserve|suspended|pup)$/i.test(s?.trim())))continue;
+      if([report?.gameStatus,report?.status].some(s=>/^(out|doubtful|inactive|ir|injured reserve|suspended|pup|physically unable to perform)$/i.test(s?.trim())))continue;
       const qb=selected.context?.[team===selected.home?'home':'away'];
       if(p.position==='QB'&&qb?.listed&&qb.qbId&&qb.qbId!==p.id)continue;
       const recentTeamGames=observed.filter(g=>normalizeTeamCode(g.team)===normalizedPlayerTeam&&recentWeeks.get(normalizedPlayerTeam).has(Number(g.week)));
@@ -234,7 +234,8 @@ function InjuryFlags({game,workload}){
       const share=defense?r.defenseSnapShare:r.offenseSnapShare;
       return <p key={r.team+(r.id||r.name)}><b>{r.team} · {r.position}</b> {r.name} · {r.gameStatus||r.status}
         {r.injury?' · '+r.injury:''}{share>0?` · ${Math.round(share*100)}% of ${defense?'defensive':'offensive'} snaps in recent appearances`:''}</p>;
-    }):<p>No qualifying injury flags in the available reports.</p>}
+    }):<p>No key-player flags in the available reports.</p>}
+    <InjuryReport game={game}/>
   </section>;
 }
 

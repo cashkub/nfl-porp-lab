@@ -148,7 +148,7 @@ def enrich(payload,schedule_text):
                 qb_row={**r,side+'_qb_id':news['expected']['id'],side+'_qb_name':news['expected']['name']}
             unavailable={p.get('id') for p in reports
                          if (p.get('gameStatus') or p.get('status') or '').strip().lower()
-                         in ('out','doubtful','inactive','ir','injured reserve','suspended','pup')}
+                         in ('out','doubtful','inactive','ir','injured reserve','suspended','pup','physically unable to perform')}
             for report in reports:
                 if report.get('id') and report['id']==r.get(side+'_qb_id') and report['id'] in unavailable:
                     report['wasListedStarter']=True
