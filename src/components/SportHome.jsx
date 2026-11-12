@@ -1,15 +1,10 @@
-import {useCbbFile} from './CbbAnalyzer.jsx';
+import {useCbbFile} from './useCbbFile.js';
 import {sportNames} from '../lib/manualSports.js';
 import React from 'react';
 import {ArrowUpRight, ChevronRight, SlidersHorizontal, ListFilter, Trophy, Star, CalendarDays} from 'lucide-react';
 
-export const toolsBySport = {
-  nfl:[['Analyzer','analyzer'],['Props Board','props'],['Top Looks','top-eight'],['Moneylines','moneylines'],['Model Record','model-record']],
-  cbb:[['Analyzer','cbb'],['Props Board','cbb-props'],['Top Props','cbb-top-eight'],['Games','cbb-games'],['Model Record','cbb-record']]
-};
-for(const sport of ['nba','cfb']){
-  toolsBySport[sport]=toolsBySport.cbb.map(([label,path])=>[label,path.replace('cbb',sport)]);
-}
+import {toolsBySport} from '../lib/leagueTools.js';
+
 const icons=[SlidersHorizontal,ListFilter,Star,CalendarDays,Trophy];
 
 export default function SportHome({sport}) {

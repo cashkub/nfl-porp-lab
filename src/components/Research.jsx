@@ -9,7 +9,7 @@ import {nflColors,teamColor} from '../lib/teamColors.js';
 import {MatchReport} from './MatchReport.jsx';
 import {collegeRatings,projection} from '../lib/projection.js';
 import React,{useMemo,useState,useSyncExternalStore} from 'react';
-import {useCbbFile} from './CbbAnalyzer.jsx';
+import {useCbbFile} from './useCbbFile.js';
 
 const dayFormatter = new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
 const etDay = value => dayFormatter.format(new Date(value));

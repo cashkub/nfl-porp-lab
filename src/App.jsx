@@ -28,9 +28,7 @@ import { nextGame } from './lib/schedule.js';
 import VenueSplits from './components/VenueSplits.jsx';
 import { playerAverageLine, matchupBook, postedLines, playerKey, bookLine, priceText, usageFor } from './lib/bookLine.js';
 import {CbbGames,Moneylines,UsageTrends} from './components/Research.jsx';
-import SportHome,{toolsBySport} from './components/SportHome.jsx';
-import CbbBoard from './components/CbbBoard.jsx';
-import CbbAnalyzer from './components/CbbAnalyzer.jsx';
+import {toolsBySport} from './lib/leagueTools.js';
 import PropsBoard from './components/PropsBoard.jsx';
 import LineSelect from './components/LineSelect.jsx';
 import Matchup from './components/Matchup.jsx';
@@ -40,6 +38,10 @@ import {
   METRICS, preferredMetric, isHit, summarize,
   getPlayerGames, getDistinctOpponents, filteredWindow
 } from './lib/stats.js';
+
+const SportHome=React.lazy(()=>import('./components/SportHome.jsx'));
+const CbbBoard=React.lazy(()=>import('./components/CbbBoard.jsx'));
+const CbbAnalyzer=React.lazy(()=>import('./components/CbbAnalyzer.jsx'));
 
 function PlayerSearch({ players, selected, season, onSelect, showRoster }) {
   const [query, setQuery] = useState('');
@@ -415,6 +417,7 @@ export default function App() {
       </div>
     </header>
     <main className={page==='analyzer'||page===sport?'shell analyzer-shell':'shell'} id="analyzer">
+      <React.Suspense fallback={<p role="status">Loading league tools…</p>}>
       {launch ? <SportHome sport={page==='home'?null:sport}/> :
        manualLeague && page===sport ? <CbbAnalyzer key={sport} initial={initialCbb.sport===sport?initialCbb:{}}/> :
        (page==='model-record'||page===sport+'-record') ? <ModelRecord key={page} sport={sport} validation={manualLeague?null:data.modelValidation}/> :
@@ -489,7 +492,7 @@ export default function App() {
       </section>
       <Matchup key={`${player?.team}-${season}`} upcomingOpponent={upcoming?.opponent} rows={defenseRows} player={player} season={season} metric={metric} line={line} direction={direction} />
       </>}</div></div>{statOptions.length>0 && <div className="analyzer-bottom"><section className="panel log-panel" data-multi-season={multi} id="game-log" aria-labelledby="log-title"><div className="log-heading"><div><h2 id="log-title">Game Log</h2><p>All {allGames.length} games matching the filters, newest first.</p></div><button type="button" className="outline-button" aria-expanded={showLog} onClick={()=>setShowLog(x=>!x)}>{showLog ? 'Hide Table' : 'Show Table'} <ChevronDown size={15} className={showLog?'up':''}/></button></div>{showLog && <GameLog multi={multi} games={allGames} metric={metric} line={line} direction={direction} />}</section>
-      </div>}</>}{nflTool && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
+      </div>}</>}</React.Suspense>{nflTool && <footer id="about"><div className="footer-top"><div className="footer-logo"><img className="brand-mark" src={import.meta.env.BASE_URL + "favicon.svg?v=3"} alt="" /><strong>Prop<span>Bets</span></strong></div><div className="footer-status"><ShieldCheck size={16}/>{isDemo ? 'Illustrative demo dataset' : `Data refreshed ${updateLabel}`}</div></div>
         <p>Stats source: <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noreferrer">nflverse-data</a>. Current player stats are sourced from the published weekly player-stat releases and updated by a scheduled GitHub workflow. Regular-season games only. Available DraftKings pregame lines are sourced from The Odds API.</p>
         <p className="footer-disclaimer">Historical Hit Rates are descriptive, not predictions or guarantees. For research and informational use only.</p>
       </footer>}
