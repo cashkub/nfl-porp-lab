@@ -37,3 +37,12 @@
 .cb .slate-pair .cb-team{border-bottom:0;font-size:.88rem}
 .cb .lab-player{margin-top:1rem}
 .cb .lab-player .cb-identity{margin-bottom:.55rem}
+.cb .cb-props .cb-player{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:.5rem;width:100%;min-width:0;text-align:left}
+.cb-player-copy{display:grid;gap:.14rem;overflow-wrap:anywhere}
+.cb .cb-props .cb-face{justify-self:start}
+.cb .cb-record-pick{border-left:4px solid var(--pick-color);background:linear-gradient(110deg,color-mix(in srgb,var(--pick-color) 13%,#201c26),#17161f 65%)}
+.cb-record-match,.cb-record-match>span,.cb-record-selection{display:flex;align-items:center;gap:.4rem}
+.cb-record-match{flex-wrap:wrap;margin-bottom:.3rem}
+.cb-record-match>span{border-bottom:2px solid var(--away-color);font-weight:650}
+.cb-record-match>span:last-child{border-color:var(--home-color)}
+.cb-record-match .team-logo,.cb-record-selection .team-logo{margin:0}
