@@ -1,4 +1,5 @@
 import React,{useState} from 'react';
+import {List, Trophy, ChevronDown} from 'lucide-react';
 import TeamLogo from '../components/TeamLogo.jsx';
 import FilterMenu from '../components/FilterMenu.jsx';
 import './bracket.css';
@@ -11,7 +12,7 @@ function Picker({label,value,options,onChange}){
     {options.map(([id,text])=><option key={id} value={id}>{text}</option>)}</FilterMenu></label>;
 }
 function Club({id,teams}){
-  return <span className="br-club" style={{borderColor:'#'+(teams[id]?.color||'a985c0')}}><TeamLogo team={id} sport="cbb"/>{teams[id]?.name||id}</span>;
+  return <span className="br-club" style={{borderColor:'#'+(teams[id]?.color||'a985c0')}}><span className="br-logo"><TeamLogo team={id} sport="cbb"/></span><span>{teams[id]?.name||id}</span></span>;
 }
 function Region({region,data,teams}){
   const slots=data.regions[region];
@@ -38,13 +39,14 @@ export default function Bracket({meta,useFile}){
   const byId=new Map(prior?.teams.map(t=>[t.id,t])||[]);
   const bubbleIds=new Set([...data.teams.filter(t=>t.seed&&!t.auto).slice(-16),...data.teams.filter(t=>!t.seed).slice(0,8)].map(t=>t.id));
   const rows=data.teams.filter(t=>(group==='All teams'||(group==='Bubble'?bubbleIds.has(t.id):t.seed))&&(teams[t.id]?.name||t.id).toLowerCase().includes(query.toLowerCase()));
-  return <div className="br-page"><div className="br-toolbar"><div className="cb-tabs">{['List','Bracket'].map(v=><button key={v} aria-pressed={v===view} onClick={()=>setView(v)}>{v}</button>)}</div>
+  return <div className="br-page"><div className="br-switch" role="group" aria-label="Projection view">{['List','Bracket'].map(v=><button key={v} aria-pressed={v===view} onClick={()=>setView(v)}>{v==='List'?<List size={16}/>:<Trophy size={16}/>} {v}</button>)}</div>
+    <div className="br-toolbar">
     <Picker label="Projection date" value={date} onChange={setChosen} options={[...dates].reverse().map(d=>[d,formatDate(d)])}/>
-    {view==='Bracket'?<Picker label="Region" value={region} onChange={setRegion} options={regions.map(r=>[r,r])}/>:<Picker label="Show" value={group} onChange={setGroup} options={['Field','Bubble','All teams'].map(g=>[g,g])}/>}</div>
+    {view==='Bracket'?<Picker label="Region" value={region} onChange={setRegion} options={regions.map(r=>[r,r])}/>:<Picker label="Show" value={group} onChange={setGroup} options={['Field','Bubble','All teams'].map(g=>[g,g])}/>}
+    {view==='List'&&<label className="cb-select br-search">Find team<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Team name"/></label>}</div>
     <p className="br-note">Projected field · 32 automatic bids · 44 at-large bids</p>
-    {view==='Bracket'?<Region region={region} data={data} teams={teams}/>:<><label className="cb-select br-search">Find team<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Team name"/></label>
-      <div className="br-list">{rows.map(t=>{const old=byId.get(t.id);const move=old?.seed&&t.seed?old.seed-t.seed:0;
-        return <details key={t.id}><summary><span className="br-seed">{t.seed?'#'+t.seed:'Out'}</span><div><Club id={t.id} teams={teams}/><small>{t.region||'Outside field'} · {t.auto?'Projected auto bid':t.seed?'At-large':'Bubble rank '+(data.teams.indexOf(t)-75)}{t.opening?' · Opening round':''}</small></div><strong>{t.bidPct}%<small>Bid chance</small></strong></summary>
+    {view==='Bracket'?<Region region={region} data={data} teams={teams}/>:<><div className="br-list"><div className="br-columns" aria-hidden="true"><span>Seed</span><span>Team</span><span>Bid chance</span><span/></div>{rows.map(t=>{const old=byId.get(t.id);const move=old?.seed&&t.seed?old.seed-t.seed:0;
+        return <details key={t.id}><summary><span className="br-seed">{t.seed?'#'+t.seed:'Out'}</span><div><Club id={t.id} teams={teams}/><small>{t.region||'Outside field'} · {t.auto?'Projected auto bid':t.seed?'At-large':'Bubble rank '+(data.teams.indexOf(t)-75)}{t.opening?' · Opening round':''}</small></div><strong>{t.bidPct}%<span className="br-sr"> bid chance</span></strong><ChevronDown className="br-chevron" size={14} aria-hidden="true"/></summary>
           <p>D1 record {t.wins}–{t.losses} · Estimated wins above bubble {t.wab} · Adjusted efficiency margin {t.efficiency} · Average opponent margin {t.sos??'—'}</p>
           {old&&<p>{move?(move>0?'Up ':'Down ')+Math.abs(move)+' seed line(s)':old.seed===t.seed?'Same position on the seed line':t.seed?'Entered projected field':'Left projected field'} since {formatDate(previous)}.</p>}</details>;
       })}{!rows.length&&<p>No matching teams.</p>}</div></>}
