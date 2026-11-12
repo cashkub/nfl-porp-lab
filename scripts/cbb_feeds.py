@@ -32,7 +32,8 @@ def instant(value):
 def game_prices(days):
     games={}
     for day in days:
-        data,_=get(ESPN+'scoreboard?'+urlencode(dict(dates=day.replace('-',''),groups=50,limit=500)))
+        try:data,_=get(ESPN+'scoreboard?'+urlencode(dict(dates=day.replace('-',''),groups=50,limit=500)))
+        except (OSError,ValueError):continue
         for event in data['events']:
             if event['status']['type']['state']!='pre':continue
             rows=event['competitions'][0].get('odds',[])
@@ -48,6 +49,31 @@ def game_prices(days):
                     if abs(price)>=100:markets.setdefault(name,{})[side]={'price':price,'line':line}
             games[event['id']]=markets
     return games
+
+
+def supplement_game_prices(fixtures,names,book):
+    api=os.getenv('ODDS_API_KEY')
+    if not api or all(book.get(g['id']) for g in fixtures):return
+    try:
+        _,headers=get(ODDS+'?'+urlencode({'apiKey':api}))
+        if int(headers.get('x-requests-remaining','0'))<int(os.getenv('CBB_ODDS_RESERVE','300'))+3:return
+        events,_=get(ODDS.rsplit('/',1)[0]+'/odds?'+urlencode(dict(apiKey=api,bookmakers='draftkings',markets='h2h,spreads,totals',oddsFormat='american')))
+    except (ValueError,OSError):
+        print('CBB supplementary game feed unavailable.')
+        return
+    for e in events:
+        possible=[g for g in fixtures if abs((instant(g['time'])-instant(e['commence_time'])).total_seconds())<=1800 and
+                  all(SequenceMatcher(None,key(e[s+'_team']),key(names[g[s]]['name'])).ratio()>=.75 for s in ('home','away'))]
+        if len(possible)!=1:continue
+        markets=book.setdefault(possible[0]['id'],{})
+        for vendor in e.get('bookmakers',[]):
+            if vendor['key']!='draftkings':continue
+            for m in vendor['markets']:
+                market={'h2h':'Moneyline','spreads':'Spread','totals':'Total'}.get(m['key'])
+                if not market or markets.get(market):continue
+                for o in m['outcomes']:
+                    side={e['home_team']:'home',e['away_team']:'away','Over':'over','Under':'under'}.get(o['name'])
+                    if side and abs(o['price'])>=100:markets.setdefault(market,{})[side]=dict(price=o['price'],line=o.get('point',0))
 
 
 def injuries():

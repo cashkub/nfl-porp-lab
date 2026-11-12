@@ -8,7 +8,7 @@ from statistics import mean
 from urllib.request import urlopen
 from zoneinfo import ZoneInfo
 from cbb_model import Teams,Players,MARKETS,FIELDS,combine,outcomes
-from cbb_feeds import game_prices,injuries,props,key,instant
+from cbb_feeds import game_prices,supplement_game_prices,injuries,props,key,instant
 
 ROOT=Path(__file__).resolve().parents[1]/'public/data/cbb-v2'
 CACHE=Path(os.environ.get('CBB_CACHE','/tmp/cbb-cache'))
@@ -114,7 +114,17 @@ def main():
             batch.append((g,h,a,s['status_period'] or 2,teams.forecast(g),[teams.context(g,g[t],g[o]) for t,o in [('home','away'),('away','home')]]))
         for args in batch:teams.update(*args)
     if not players.logs or len(teams.errors)<100:raise ValueError('Incomplete CBB inputs')
-    book=game_prices(days);reports,report_ok=injuries()
+    book=game_prices(days)
+    supplement_game_prices(pending,names,book)
+    observed=datetime.now(timezone.utc).isoformat()
+    saved=read(ROOT/'game-quotes.json',{})
+    for g in pending:
+        bucket=saved.setdefault(g['id'],{})
+        for market,prices in book.get(g['id'],{}).items():
+            bucket[market]=dict(prices=prices,observed=observed)
+    saved={g['id']:saved[g['id']] for g in pending if saved.get(g['id'])}
+    write(ROOT/'game-quotes.json',saved)
+    reports,report_ok=injuries()
     inactive={p for p,r in reports.items() if (r['status'] or '').lower() in ('out','inactive','suspended')}
     ranks={}
     groups=defaultdict(list)
@@ -161,9 +171,10 @@ def main():
         g['homeWin']=round(mean(1 if m>0 else .5 if m==0 else 0 for m in margins),3)
         g['picks']=[]
         matchup=names[a]['name']+' @ '+names[h]['name']
-        for market,sides in book.get(id,{}).items():
+        for market,quote in saved.get(id,{}).items():
+            sides=quote['prices']
             pick=choose(market,sides,totals if market=='Total' else margins,{'home':names[h]['name'],'away':names[a]['name']})
-            if pick:g['picks'].append(pick);live.append(dict(**pick,game=id,time=g['time'],matchup=matchup,saved=now.isoformat()))
+            if pick:pick['quoted']=quote['observed'];g['picks'].append(pick);live.append(dict(**pick,game=id,time=g['time'],matchup=matchup,saved=now.isoformat()))
         roster=[]
         for t,o in [(h,a),(a,h)]:
             v='Neutral' if g['neutral'] else 'Home' if t==h else 'Away'
