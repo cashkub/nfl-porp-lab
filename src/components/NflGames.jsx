@@ -59,7 +59,7 @@ export default function NflGames({schedule,books,players,validation,season,now,o
   const bookGame=(books||[]).find(g=>sameGame(g,selected));
   React.useEffect(()=>{try{sessionStorage.setItem('nfl-games-analysis',JSON.stringify({week,selected:selected?.id||(selected?.kickoff+selected?.home),tab,position,market}))}catch{}},[week,selected,tab,position,market]);
   const rows=useMemo(()=>{
-    if(!selected)return [];
+    if(!selected || tab!=='players')return [];
     const cutoffWeek=Number(selected.week);
     const teamGames={},efficiencyPriors=buildOpportunityEfficiencyPriors(players||[],selected);
     const isPregame=game=>Number(game.season)<Number(selected.season)||
@@ -139,7 +139,7 @@ export default function NflGames({schedule,books,players,validation,season,now,o
       }).sort((a,b)=>a.p.name.localeCompare(b.p.name)||a.label.localeCompare(b.label));
     }
     return output.sort((a,b)=>a.team.localeCompare(b.team)||a.p.name.localeCompare(b.p.name)||a.label.localeCompare(b.label));
-  },[players,selected,bookGame,market]);
+  },[players,selected,bookGame,market,tab]);
   const breakdown=selected?projection(selected,selected.awayRating,selected.homeRating):null;
   const selectedAnalysis=selected&&<section ref={analysisRef} tabIndex={-1} className="nfl-analysis" aria-labelledby="nfl-analysis-title">
     <section className="match-score" aria-labelledby="nfl-analysis-title">
@@ -239,6 +239,7 @@ function ModelEvidence({validation}){
 }
 
 function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,books,players,season,now}){
+  const [fullBoardOpen,setFullBoardOpen]=useState(false);
   const [sortOrder,setSortOrder]=useState(()=>{
     try {
       const stored=sessionStorage.getItem('nfl-games-prop-sort');
@@ -259,7 +260,7 @@ function PlayerResearch({game,rows,position,setPosition,market,setMarket,onOpen,
     {!(books||[]).some(b=>sameGame(b,game)&&postedLines(b).length>0)&&<p className="nfl-empty-state">No DraftKings props in this matchup’s snapshot yet. The full slate is checked Wednesday and upcoming games are refreshed Sunday morning.</p>}
     <MatchupProps key={game.id} rows={visibleRows} order={sortOrder} onSort={changeSort} game={game} onOpen={onOpen}/>
     <div className="nfl-probability-honesty"><Info size={17}/><span>Posted props use pregame workload and efficiency. Anytime TD shows the estimated chance of at least one rushing or receiving touchdown using a Poisson approximation. A new starting QB with only relief appearances uses league starter workload. Limited samples and gaps in recent appearances are flagged. For matchups without posted markets, the research line averages up to 10 prior games this season.</span></div>
-    <details className="nfl-full-props"><summary>OPEN FULL MATCHUP PROP BOARD <ArrowUpRight size={15}/></summary><PropsBoard fixedGame={game} title="Matchup Player Prop Board" games={(books||[]).filter(g=>sameGame(g,game))} schedule={[game]} players={players} season={season} now={now} onOpen={onOpen}/></details>
+    <details className="nfl-full-props" onToggle={event=>setFullBoardOpen(event.currentTarget.open)}><summary>OPEN FULL MATCHUP PROP BOARD <ArrowUpRight size={15}/></summary>{fullBoardOpen&&<PropsBoard fixedGame={game} title="Matchup Player Prop Board" games={(books||[]).filter(g=>sameGame(g,game))} schedule={[game]} players={players} season={season} now={now} onOpen={onOpen}/>}</details>
   </div>;
 }
 

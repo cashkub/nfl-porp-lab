@@ -35,7 +35,7 @@ export default function GameMarketRecord({rows,market}){
       <tbody>{visible.map(r=>{const p=r.markets[market];return <tr key={r.id}>
         <td><TeamLogo team={r.away}/>{r.away} @ <TeamLogo team={r.home}/>{r.home}<small>{kickoff.format(new Date(r.kickoff))}</small></td>
         <td><TeamLogo team={market==='total'?null:p.side}/><b>{p.side}{market!=='moneyline'?' '+(market==='spread'&&p.line>0?'+':'')+p.line:''}</b></td>
-        <td>{priceText(p.price)}</td><td>{r.final?.join(' – ')||'—'}</td><td>{gameResult(r,market)}</td><td>{kickoff.format(new Date(r.saved))}</td>
+        <td>{priceText(p.price)}</td><td>{r.final?.join(' – ')||'—'}</td><td>{gameResult(r,market)}</td><td>{Date.now()>=Date.parse(r.kickoff)?'Locked':'Pregame · updated'} · {kickoff.format(new Date(r.saved))}</td>
       </tr>})}</tbody></table></div>:<p>No pregame {gameMarkets[market].toLowerCase()} picks saved for this selection.</p>}
   </section>;
 }
