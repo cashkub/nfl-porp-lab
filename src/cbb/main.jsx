@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import NflToolHeader from '../components/NflToolHeader.jsx';
+import Bracket from './Bracket.jsx';
 import GameBars from '../components/GameBars.jsx';
 import LineControl,{ControlLabel} from '../components/LineControl.jsx';
 import ChartSelect from '../components/ChartSelect.jsx';
@@ -18,7 +19,7 @@ import '../components/NflCharts.css';
 import './styles.css';
 
 const markets={points:'Points',rebounds:'Rebounds',assists:'Assists',threes:'Made threes',turnovers:'Turnovers',steals:'Steals',blocks:'Blocks',PRA:'Points + rebounds + assists',PR:'Points + rebounds',PA:'Points + assists',RA:'Rebounds + assists'};
-const pages=['charts','props','top','games','record'];
+const pages=['charts','props','top','games','record','bracket'];
 const venueOptions=['All','Home','Away','Neutral'];
 const money=v=>v==null?'—':(v>0?'+':'')+v;
 const pct=v=>v==null?'—':Math.round(v*100)+'%';
@@ -59,7 +60,7 @@ function Shell(){
     const onHash=()=>{const next=current();if(!pages.includes(next)){location.replace('/preview/cbb/');return;}setPage(next);window.scrollTo(0,0);};
     window.addEventListener('hashchange',onHash);return ()=>window.removeEventListener('hashchange',onHash);
   },[]);
-  return <main className={'chart-lab cb '+({props:'prop-list',top:'top-looks',games:'model-record-preview',record:'model-record-preview'}[page]||'')}><NflToolHeader league="CBB" active={page}/>{meta.value?<League page={page} meta={meta.value}/>:<p role="status">{meta.error?'CBB snapshot unavailable.':'Loading college basketball…'}</p>}</main>;
+  return <main className={'chart-lab cb '+({props:'prop-list',top:'top-looks',games:'model-record-preview',record:'model-record-preview'}[page]||'')}><NflToolHeader league="CBB" active={page}/>{meta.value&&page==='bracket'?<Bracket meta={meta.value} useFile={useFile}/>:meta.value?<League page={page} meta={meta.value}/>:<p role="status">{meta.error?'CBB snapshot unavailable.':'Loading college basketball…'}</p>}</main>;
 }
 function League({page,meta}){
   const today=etDay(Date.now());
