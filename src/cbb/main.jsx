@@ -83,7 +83,7 @@ function League({page,meta}){
         <Select label="Conference" value={conference} onChange={c=>{setConference(c);pickGame('');setTarget(null);}}><option value="">All conferences</option>{[...new Set(Object.values(conferences))].sort().map(c=><option key={c}>{c}</option>)}</Select>
       </>}
       {page!=='top'&&<Select label="Matchup · Eastern time" value={game?.id||''} onChange={id=>{pickGame(id);setTarget(null);}}><option value="">All games</option>{games.map(g=><option key={g.id} value={g.id}>{timeFmt.format(new Date(g.time))} · {ranks[g.away]?'#'+ranks[g.away]+' ':''}{teams[g.away].name} @ {ranks[g.home]?'#'+ranks[g.home]+' ':''}{teams[g.home].name}</option>)}</Select>}</div>}
-    {page==='record'||page==='top'?record.value?<Ledger rows={record.value} top={page==='top'} day={day} evaluation={meta.evaluation}/>:<p>{record.error?'Record unavailable.':'Loading picks…'}</p>:
+    {page==='record'||page==='top'?record.value?<Ledger teams={teams} rows={record.value} top={page==='top'} day={day} evaluation={meta.evaluation}/>:<p>{record.error?'Record unavailable.':'Loading picks…'}</p>:
       !slate.value?<p>{slate.error?'Slate unavailable.':'Loading slate…'}</p>:!games.length?<p>No matching games for {labelDay(day)}.</p>:
       page==='games'?game?<Detail game={{...game,roster:filteredPlayers[0].roster,priced:false,lines:[]}} meta={{...meta,teams}} back={()=>pickGame('')} chart={chart}/>:<div className="weekly-slate">{games.map(g=><GameCard key={g.id} game={g} teams={teams} open={()=>pickGame(g.id)}/>)}</div>:
       page==='props'?<PropList games={filteredPlayers} teams={teams} chart={chart}/>:<Charts key={target?.id+':'+(target?.metric||'')+day} games={filteredPlayers} teams={teams} target={target}/>}
@@ -121,7 +121,7 @@ function PropList({games,teams,chart}){
     return dir*(typeof a[k]==='string'?a[k].localeCompare(b[k]):a[k]-b[k]);
   }),[games,market,search,sort]);
   const headers=[['name','Player'],['line','Line'],['proj','Model'],['minutes','Min']];
-  return <section className="cb-panel lab-block"><div className="cb-controls panel"><Select label="Market" value={market} onChange={v=>{setMarket(v);setLimit(40);}}><option value="ALL">All markets</option>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v}</option>)}</Select><label className="cb-select">Find player<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Player name"/></label></div><div className="prop-table-scroll cb-scroll"><table className="cb-props prop-research-table"><thead><tr>{headers.map(([k,v])=><th key={k} aria-sort={sort[0]===k?(sort[1]===1?'ascending':'descending'):'none'}><button className="column-sort" onClick={()=>setSort([k,sort[0]===k?-sort[1]:k==='name'?1:-1])}>{v} {sort[0]===k?(sort[1]>0?'↑':'↓'):'↕'}</button></th>)}</tr></thead><tbody>{rows.slice(0,limit).map((r,i)=><tr key={r.g.id+r.name+r.metric+i}><td style={{'--club':'#'+(teams[r.team]?.color||'aa77cc')}}><button className="cb-player" disabled={!r.pid} onClick={()=>chart(r.g,r.pid,r.metric)}><Headshot id={r.pid} team={r.team}/>{r.name}</button><small>{teams[r.team]?.name} · {markets[r.metric]}</small></td><td>{r.line}<small>{r.book?'DK · O '+money(r.over)+' / U '+money(r.under):'Player avg'}</small></td><td>{r.proj??'—'}</td><td>{r.minutes??'—'}</td></tr>)}</tbody></table></div>{!rows.length&&<p>No players match this selection.</p>}{rows.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more ({rows.length-limit})</button>}</section>;
+  return <section className="cb-panel lab-block"><div className="cb-controls panel"><Select label="Market" value={market} onChange={v=>{setMarket(v);setLimit(40);}}><option value="ALL">All markets</option>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v}</option>)}</Select><label className="cb-select">Find player<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Player name"/></label></div><div className="prop-table-scroll cb-scroll"><table className="cb-props prop-research-table"><thead><tr>{headers.map(([k,v])=><th key={k} aria-sort={sort[0]===k?(sort[1]===1?'ascending':'descending'):'none'}><button className="column-sort" onClick={()=>setSort([k,sort[0]===k?-sort[1]:k==='name'?1:-1])}>{v} {sort[0]===k?(sort[1]>0?'↑':'↓'):'↕'}</button></th>)}</tr></thead><tbody>{rows.slice(0,limit).map((r,i)=><tr key={r.g.id+r.name+r.metric+i}><td style={{'--club':'#'+(teams[r.team]?.color||'aa77cc')}}><button className="cb-player" disabled={!r.pid} onClick={()=>chart(r.g,r.pid,r.metric)}><Headshot id={r.pid} team={r.team}/><span className="cb-player-copy"><b>{r.name}</b><small>{teams[r.team]?.name} · {markets[r.metric]}</small></span></button></td><td>{r.line}<small>{r.book?'DK · O '+money(r.over)+' / U '+money(r.under):'Player avg'}</small></td><td>{r.proj??'—'}</td><td>{r.minutes??'—'}</td></tr>)}</tbody></table></div>{!rows.length&&<p>No players match this selection.</p>}{rows.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more ({rows.length-limit})</button>}</section>;
 }
 function valueOf(g,k){if(k==='PRA')return g.points+g.rebounds+g.assists;if(k==='PR')return g.points+g.rebounds;if(k==='PA')return g.points+g.assists;if(k==='RA')return g.rebounds+g.assists;return g[k];}
 function Charts({games,teams,target}){
@@ -157,15 +157,31 @@ function weekOf(time){
   d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);
   return d.toISOString().slice(0,10);
 }
-function Ledger({rows,top,day,evaluation}){
+function RecordPick({row:r,teams,byName}){
+  const [awayName,homeName]=r.matchup.split(' @ ');
+  const away=r.away||byName.get(awayName),home=r.home||byName.get(homeName);
+  const player=r.market==='Player prop';
+  const picked=player?r.team:r.side==='away'?away:r.side==='home'?home:null;
+  const color=id=>teams[id]?.color?'#'+teams[id].color:'#9f79b7';
+  const description=player?r.side+' '+r.line+' '+markets[r.metric]:r.market==='Moneyline'?'ML':r.line;
+  return <article className="cb-pick cb-record-pick" style={{'--away-color':color(away),'--home-color':color(home),'--pick-color':color(picked)}}>
+    <div className="cb-record-match">{away&&home?<><span><TeamLogo sport="cbb" team={away}/>{awayName}</span><small>@</small><span><TeamLogo sport="cbb" team={home}/>{homeName}</span></>:r.matchup}</div>
+    <small>{dateFmt.format(new Date(r.time))}</small>
+    <h3 className="cb-record-selection">{player?<Headshot id={r.pid} team={picked}/>:picked&&<TeamLogo sport="cbb" team={picked}/>}<span>{r.label} {description}</span></h3>
+    <p>DK {money(r.price)} · {pct(r.prob)} model · {r.result||'Pending'}</p>
+    <small>{Date.parse(r.time)<=Date.now()?'Locked':'Pregame'} · Saved {dateFmt.format(new Date(r.saved))}, {timeFmt.format(new Date(r.saved))}</small>
+  </article>;
+}
+function Ledger({teams,rows,top,day,evaluation}){
   const [market,setMarket]=useState('All'),[date,setDate]=useState('All'),[limit,setLimit]=useState(40);
   const dates=[...new Set(rows.map(r=>weekOf(r.time)))].sort().reverse();
   const show=rows.filter(r=>(top?etDay(r.time)===day&&r.market==='Player prop'&&r.top:date==='All'||weekOf(r.time)===date)&&(top||market==='All'||market===r.market))
     .sort((a,b)=>top?b.ev-a.ev:b.time.localeCompare(a.time));
+  const byName=new Map(Object.entries(teams).map(([id,t])=>[t.name,id]));
   const counts=s=>show.filter(r=>r.result===s).length;
   return <section className="cb-panel lab-block">{top?<><div className="top-looks-heading"><h2>Ranked player props</h2><span className="slate-count">{show.length} qualified</span></div><p>CBB sportsbook updates are paused. Player Charts and Prop Lists show projections and season averages.</p></>:<><RecordHeader title={market==='All'?'College basketball':market} icon={BarChart3}>Saved pregame picks and settled results by week.</RecordHeader><div className="cb-tabs">{['All','Player prop','Moneyline','Total','Spread'].map(m=><button key={m} aria-pressed={m===market} onClick={()=>setMarket(m)}>{m}</button>)}</div><Select label="Week starting Monday" value={date} onChange={setDate}><option>All</option>{dates.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select><p>{counts('Win')} wins · {counts('Loss')} losses · {counts('Push')} pushes · {counts('Void')} void · {show.filter(r=>!r.result).length} pending</p></>}
     {!show.length&&<p>{top?'No saved Top Looks for this date.':'No saved picks in this selection.'}</p>}
-    {show.slice(0,limit).map((r,i)=><article className="cb-pick" key={r.game+r.market+r.label+r.side+i}><small>{r.matchup} · {dateFmt.format(new Date(r.time))}</small><h3>{r.label} {r.market==='Player prop'?r.side+' '+r.line+' '+markets[r.metric]:r.market==='Moneyline'?'ML':r.line}</h3><p>DK {money(r.price)} · {pct(r.prob)} model · {r.result||'Pending'}</p><small>{Date.parse(r.time)<=Date.now()?'Locked':'Pregame'} · Saved {dateFmt.format(new Date(r.saved))}, {timeFmt.format(new Date(r.saved))}</small></article>)}
+    {show.slice(0,limit).map(r=><RecordPick key={[r.game,r.market,r.pid,r.metric,r.side,r.line].join('-')} row={r} teams={teams} byName={byName}/>)}
     {show.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more</button>}
     {!top&&<details><summary>Historical game-model check</summary><p>{evaluation.games} games in the season ending {evaluation.season}, predicted chronologically. Winner accuracy {pct(evaluation.winner)} · margin error {evaluation.marginMAE} points · total error {evaluation.totalMAE} points.</p>{evaluation.playerCount>0&&<p>Current-season player check · {evaluation.playerCount} projected players who appeared in sampled games. Average absolute errors · minutes {evaluation.playerErrors.minutes}, points {evaluation.playerErrors.points}, rebounds {evaluation.playerErrors.rebounds}, assists {evaluation.playerErrors.assists}.</p>}</details>}</section>;
 }
