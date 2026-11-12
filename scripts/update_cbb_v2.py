@@ -127,6 +127,7 @@ def main():
     now=datetime.now(timezone.utc)
     pending=[g for g in pending if instant(g['time'])>now]
     archive=read(ROOT/'record.json',[])
+    saved_winners={r['game'] for r in archive if r['market']=='Moneyline'}
     frozen=[r for r in archive if instant(r['time'])<=now]
     for r in frozen:
         result=finals.get(r['game'])
@@ -159,6 +160,13 @@ def main():
         score_draws=[(round(hs+x),round(aws+y)) for x,y in errors]
         margins=[x-y for x,y in score_draws];totals=[x+y for x,y in score_draws]
         g['homeWin']=round(mean(1 if m>0 else .5 if m==0 else 0 for m in margins),3)
+        if id not in saved_winners and instant(g['time']).astimezone(ET).date()==day and instant(g['time'])>datetime.now(timezone.utc):
+            side='home' if g['homeWin']>=.5 else 'away'
+            archive.append(dict(game=id,time=g['time'],market='Moneyline',side=side,label=names[g[side]]['name'],
+                                matchup=names[a]['name']+' @ '+names[h]['name'],away=a,home=h,
+                                prob=round(max(g['homeWin'],1-g['homeWin']),3),price=None,line=0,
+                                saved=datetime.now(timezone.utc).isoformat(),result=None))
+            saved_winners.add(id)
         g['picks']=[]
         roster=[]
         for t,o in [(h,a),(a,h)]:

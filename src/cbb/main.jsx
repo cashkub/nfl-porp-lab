@@ -179,34 +179,32 @@ function Charts({games,teams,target,slateFilters}){
     <section className="lab-block player-log"><h2>Game log</h2><div className="history-scroll log-table"><table><thead><tr>{['Date','Opponent','Minutes',markets[metric],'Result'].map(k=><th key={k}>{k}</th>)}</tr></thead><tbody>{rows.slice().reverse().map(r=><tr key={r.id}><td>{r.log.date}</td><td><TeamLogo sport="cbb" team={r.opponent}/>{r.opponentLabel}</td><td>{r.log.min}</td><td>{r.value}</td><td><span className="log-outcome" data-result={r.outcome}>{r.outcome}</span></td></tr>)}</tbody></table></div></section>
   </div>;
 }
-function weekOf(time){
-  const d=new Date(etDay(time)+'T12:00Z');
-  d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);
-  return d.toISOString().slice(0,10);
-}
 function RecordPick({row:r,teams,byName}){
   const [awayName,homeName]=r.matchup.split(' @ ');
   const away=r.away||byName.get(awayName),home=r.home||byName.get(homeName);
   const player=r.market==='Player prop';
   const picked=player?r.team:r.side==='away'?away:r.side==='home'?home:null;
   const color=id=>teams[id]?.color?'#'+teams[id].color:'#9f79b7';
-  const description=player?r.side+' '+r.line+' '+markets[r.metric]:r.market==='Moneyline'?'ML':r.line;
+  const description=player?r.side+' '+r.line+' '+markets[r.metric]:r.market==='Moneyline'?(r.price==null?'to win':'ML'):r.line;
   return <article className="cb-pick cb-record-pick" style={{'--away-color':color(away),'--home-color':color(home),'--pick-color':color(picked)}}>
     <div className="cb-record-match">{away&&home?<><span><TeamLogo sport="cbb" team={away}/>{awayName}</span><small>@</small><span><TeamLogo sport="cbb" team={home}/>{homeName}</span></>:r.matchup}</div>
     <small>{dateFmt.format(new Date(r.time))}</small>
     <h3 className="cb-record-selection">{player?<Headshot id={r.pid} team={picked}/>:picked&&<TeamLogo sport="cbb" team={picked}/>}<span>{r.label} {description}</span></h3>
-    <p>DK {money(r.price)} · {pct(r.prob)} model · {r.result||'Pending'}</p>
+    <p>{r.price==null?'Model winner':'DK '+money(r.price)} · {pct(r.prob)} model · {r.result||'Pending'}</p>
     <small>{Date.parse(r.time)<=Date.now()?'Locked':'Pregame'} · Saved {dateFmt.format(new Date(r.saved))}, {timeFmt.format(new Date(r.saved))}</small>
   </article>;
 }
 function Ledger({teams,rows,top,day,evaluation}){
-  const [market,setMarket]=useState('All'),[date,setDate]=useState('All'),[limit,setLimit]=useState(40);
-  const dates=[...new Set(rows.map(r=>weekOf(r.time)))].sort().reverse();
-  const show=rows.filter(r=>(top?etDay(r.time)===day&&r.market==='Player prop'&&r.top:date==='All'||weekOf(r.time)===date)&&(top||market==='All'||market===r.market))
+  const [market,setMarket]=useState('All'),[chosenDate,setDate]=useState(''),[limit,setLimit]=useState(40);
+  const today=etDay(Date.now());
+  const dailyRows=rows.filter(r=>etDay(r.time)>='2026-11-12'&&etDay(r.time)<=today);
+  const dates=[...new Set(dailyRows.map(r=>etDay(r.time)))].sort().reverse();
+  const date=chosenDate||dates[0]||'All';
+  const show=(top?rows:dailyRows).filter(r=>(top?etDay(r.time)===day&&r.market==='Player prop'&&r.top:date==='All'||etDay(r.time)===date)&&(top||market==='All'||market===r.market))
     .sort((a,b)=>top?b.ev-a.ev:b.time.localeCompare(a.time));
   const byName=new Map(Object.entries(teams).map(([id,t])=>[t.name,id]));
   const counts=s=>show.filter(r=>r.result===s).length;
-  return <section className={top?"top-pick-list":"panel props-board model-record-shell"}>{top?<><div className="top-looks-heading"><h2>Ranked player props</h2><span className="slate-count">{show.length} qualified</span></div><p>CBB sportsbook updates are paused. Player Charts and Prop Lists show projections and season averages.</p></>:<><div className="board-sort model-record-tabs">{['All','Player prop','Moneyline','Total','Spread'].map(m=><button className="outline-button" key={m} aria-pressed={m===market} onClick={()=>setMarket(m)}>{m}</button>)}</div><RecordHeader title={market==='All'?'College basketball':market} icon={BarChart3}>Saved pregame picks and settled results by week.</RecordHeader><div className="cb-filter-grid cb-single"><Select label="Week starting Monday" value={date} onChange={setDate}><option>All</option>{dates.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select></div><p>{counts('Win')} wins · {counts('Loss')} losses · {counts('Push')} pushes · {counts('Void')} void · {show.filter(r=>!r.result).length} pending</p></>}
+  return <section className={top?"top-pick-list":"panel props-board model-record-shell"}>{top?<><div className="top-looks-heading"><h2>Ranked player props</h2><span className="slate-count">{show.length} qualified</span></div><p>CBB sportsbook updates are paused. Player Charts and Prop Lists show projections and season averages.</p></>:<><div className="board-sort model-record-tabs">{['All','Player prop','Moneyline','Total','Spread'].map(m=><button className="outline-button" key={m} aria-pressed={m===market} onClick={()=>setMarket(m)}>{m}</button>)}</div><RecordHeader title={market==='All'?'College basketball':market} icon={BarChart3}>Saved pregame picks and settled results by Eastern game date. Tracking began November 12, 2026.</RecordHeader><div className="cb-filter-grid cb-single"><Select label="Game date" value={date} onChange={d=>{setDate(d);setLimit(40);}}><option value="All">All game days</option>{dates.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select></div><p>{counts('Win')} wins · {counts('Loss')} losses · {counts('Push')} pushes · {counts('Void')} void · {show.filter(r=>!r.result).length} pending</p></>}
     {!show.length&&<p>{top?'No saved Top Looks for this date.':'No saved picks in this selection.'}</p>}
     {show.slice(0,limit).map(r=><RecordPick key={[r.game,r.market,r.pid,r.metric,r.side,r.line].join('-')} row={r} teams={teams} byName={byName}/>)}
     {show.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more</button>}
