@@ -73,3 +73,9 @@
   .pick-reason{width:auto;padding:.7rem}.pick-reason-grid{grid-template-columns:1fr}.pick-reason-grid .injury-reason,.pick-reason-grid .favorite-reason{grid-column:auto}.pick-reason-grid>section{padding:.55rem}.pick-reason-grid>section>span{font-size:.75rem;overflow-wrap:anywhere}.top-pick:hover{transform:none}
 }
 @media(prefers-reduced-motion:reduce){.top-pick,.why-toggle,.why-toggle svg:last-child,.top-pick-actions button,.pick-reason-collapse{transition:none}}
+
+.top-pregame-form {display:grid; gap:.25rem; width:min(100%,12rem); margin-top:.55rem}
+.top-pregame-form>small {font-size:.62rem; font-weight:750; color:#decce9; letter-spacing:.05em}
+.top-pregame-form>small span {font-weight:500; color:#b7aebe; letter-spacing:normal}
+.top-pregame-form .record-form {height:27px; justify-content:flex-start}
+.top-pregame-form .record-form-game b {font-size:.67rem}

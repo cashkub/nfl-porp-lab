@@ -1,0 +1,7 @@
+.record-form{display:flex;align-items:end;gap:4px;height:32px}
+.record-form-game{position:relative;display:grid;place-items:center;flex:1;max-width:39px;height:100%;overflow:hidden;border:1px solid #534858;border-radius:5px;background:#232128}
+.record-form-game i{position:absolute;bottom:0;left:0;width:100%;background:#d2748b4d}
+.record-form-game.form-good i{background:#62d09a62}
+.record-form-game.form-push i{background:#e5c46366}
+.record-form-game b{position:relative;z-index:1;color:#efe9f1;font-size:.56rem}
+.record-no-sample{color:#928996;font-size:.62rem}
