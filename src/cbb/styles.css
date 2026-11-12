@@ -73,3 +73,16 @@
 @media (max-width: 350px) {
   .cb .cb-filter-grid { --columns: 1; }
 }
+
+/* Give the CBB menu and its six tools a balanced navigation row. */
+.cb .nfl-tool-header nav {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+@media (max-width: 1080px) {
+  .cb .nfl-tool-header { flex-wrap: wrap; }
+  .cb .nfl-tool-header nav {
+    flex: 1 0 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cb .nfl-tool-header nav a:first-child { grid-column: 1 / -1; }
+}
