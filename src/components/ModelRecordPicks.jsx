@@ -1,3 +1,4 @@
+import PregameForm from './PregameForm.jsx';
 import TeamLogo from './TeamLogo.jsx';
 import React,{useMemo,useState} from 'react';
 import {Activity,CalendarDays,ChevronDown,Filter,Search,Shield,Target,TrendingUp,UserRound} from 'lucide-react';
@@ -20,20 +21,6 @@ const sourceLabel=r=>r.kind==='touchdown'?(r.price==null?'Anytime TD · Odds Una
 const sourceType=r=>r.lineSource==='average'||r.isAverageLine?'average':r.price==null?'unavailable':'book';
 const resultClass=r=>(r.result||'pending').toLowerCase().replace(' ','-');
 const recentResults=r=>Array.isArray(r.values)?r.values.slice(-5):[];
-
-function MiniForm({row}){
-  const samples=recentResults(row),max=Math.max(1,...samples.map(v=>Number(v)||0));
-  if(!samples.length)return <span className="record-no-sample">No pregame sample saved</span>;
-  return <div className="record-form" aria-label="Last saved player game results">
-    {samples.map((value,index)=>{
-      const push=row.kind!=='touchdown'&&Number(value)===Number(row.line);
-      const good=row.kind==='touchdown'?Number(value)>0:row.side==='under'?Number(value)<Number(row.line):Number(value)>Number(row.line);
-      return <div className={`record-form-game ${push?'form-push':good?'form-good':'form-bad'}`} key={index} title={`${value} ${row.label || 'stat'} · ${push?'push':good?'hit':'miss'} at saved line`}>
-        <i style={{height:`${Math.max(8,Number(value)/max*100)}%`}}/><b>{value}</b>
-      </div>;
-    })}
-  </div>;
-}
 
 function SummaryTile({icon:Icon,label,value,detail,tone=''}){
   return <article className={`mr-stat ${tone}`}><span className="mr-stat-icon"><Icon size={17}/></span><div><small>{label}</small><strong>{value}</strong><em>{detail}</em></div></article>;
@@ -58,7 +45,7 @@ function RecordPick({row}){
     </button>
     <div className="mr-pick-glance">
       <span className="mr-glance-date"><CalendarDays size={13}/>{Number.isFinite(kickoff)?dateLabel.format(new Date(kickoff)):row.date||'—'} · {recordPeriod(row,'nfl') ? periodLabel(recordPeriod(row,'nfl'),'nfl') : 'NFL'}</span>
-      <span className="mr-glance-form"><small>PRE-GAME FORM</small><MiniForm row={row}/></span>
+      <span className="mr-glance-form"><small>PRE-GAME FORM</small><PregameForm values={row.values} line={row.line} side={row.side} touchdown={row.kind==='touchdown'} label={row.label}/></span>
       <span className="mr-glance-prediction"><small>MODEL EST. HIT RATE</small><b>{rateText(row.modelHitRate)} <i>V2 estimate · {observed==null?'prior rate —':`${rateText(observed)} observed · ${row.hits??'—'}/${row.total||history.length||'—'}`}</i></b></span>
     </div>
     {open&&<div className="mr-detail-grid">
