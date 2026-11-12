@@ -1,4 +1,5 @@
 .nfl-page-banner {
+  --page-accent:var(--violet,#c49bff);
   position:relative;
   isolation:isolate;
   display:flex;

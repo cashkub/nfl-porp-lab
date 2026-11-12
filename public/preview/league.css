@@ -9,17 +9,9 @@ a { color: inherit; text-decoration: none }
 h1,h2,strong { font-family: var(--display); font-style: italic; font-weight: 800 }
 h1 { margin: clamp(1.5rem,4vw,3rem) 0 1.2rem; font-size: clamp(3.4rem,7.2vw,6.3rem); line-height: .98; text-transform: uppercase; letter-spacing: -.035em }
 h1 em { color: var(--fire) }
-.hero { isolation: isolate; position: relative; display: flex; align-items: end; overflow: hidden; padding: clamp(1.6rem,4vw,3.2rem); min-height: clamp(18rem,32vw,26rem); border: 1px solid #875848; border-radius: 4px; background: #211822; view-transition-name: nfl-feature }
-.hero::before { position: absolute; inset: 0; z-index: -1; content: ''; background: linear-gradient(90deg,#130f19c4,transparent 73%),url('./assets/nfl-night.jpg') center 42% / cover }
 small { text-transform: uppercase; font: 650 .66rem/1.4 system-ui; letter-spacing: .14em }
-.hero h2 { margin: .1rem 0 1.25rem; font-size: clamp(6rem,12vw,11rem); line-height: .85; letter-spacing: -.025em }
-.action { display: inline-flex; gap: 1.4rem; align-items: center; background: var(--fire); color: #241418; padding: .8rem 1.15rem; font-weight: 750; border-radius: 2px }
-.action b { font-size: 1.25em }
-.hero-copy p { max-width: 19rem; text-shadow: 0 1px 4px #000 }
 body { background-image:url('./assets/playbook.svg'),radial-gradient(ellipse at 0% 8%,#29202f,transparent 58%),radial-gradient(ellipse at 100% 75%,#211922,transparent 65%); background-color:#100e13; background-blend-mode:luminosity,normal,normal; background-size:100% auto,cover,cover; background-position:center top; background-repeat:repeat-y,no-repeat,no-repeat }
 h1 em { color:var(--violet); -webkit-text-stroke:1px #e2c6ff; paint-order:stroke fill; text-shadow:2px 3px #49265e,0 0 12px #ae63e780,0 0 24px #a550fb40 }
-.build-note { max-width:45rem; margin:-.35rem 0 1.4rem; padding:.8rem 1rem; border:1px solid #76588d; border-radius:.55rem; background:linear-gradient(100deg,#241b2cdd,#17161bdd); color:#d9cfdf; font-size:.9rem; line-height:1.5; box-shadow:0 0 15px #a550fb12 }
-.build-note strong { color:#f0ddff; font-family:inherit; font-style:normal; letter-spacing:.025em }
 .leagues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(.55rem,1.5vw,1rem) }
 .frame { --accent:var(--frame); position:relative; isolation:isolate; overflow:hidden; height:clamp(13rem,20vw,17rem); border:1px solid var(--accent); border-radius:.65rem; background:#16191d; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 16%,transparent) }
 .frame::before { content:''; position:absolute; inset:0; z-index:-2; background:#242628 var(--scene) center 42% / cover no-repeat; background-blend-mode:normal;filter:saturate(.58) brightness(.81) }
@@ -28,29 +20,20 @@ h1 em { color:var(--violet); -webkit-text-stroke:1px #e2c6ff; paint-order:stroke
 .cfb { --scene:url('./assets/cfb-action.jpg'); --accent:#b68bf7 }
 .nba { --scene:url('./assets/nba-action.jpg'); --accent:#dbb3ff }
 .cbb { --scene:url('./assets/cbb-action.jpg'); --accent:#dfa0f1 }
-a.frame,.frame summary { display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; padding:clamp(.9rem,2.2vw,1.8rem) }
-.frame summary { cursor:pointer; height:100%; list-style:none }
-.frame summary::-webkit-details-marker { display:none }
+.frame { display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; padding:clamp(.9rem,2.2vw,1.8rem) }
 .frame strong { display:flex; gap:.06em; margin:.18rem 0 .65rem; font-size:clamp(3.4rem,6.8vw,6.2rem); line-height:.88 }
-.sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap }
-.glyph { display:inline-block; font:inherit; color:#faf0ff; -webkit-text-stroke:1px var(--accent); text-shadow:1px 1px #311b40,2px 2px #311b40,3px 3px var(--accent),4px 4px var(--accent),0 0 6px var(--accent),0 0 14px var(--accent); }
+.glyph { color:#faf0ff; -webkit-text-stroke:1px var(--accent); text-shadow:1px 1px #311b40,2px 2px #311b40,3px 3px var(--accent),4px 4px var(--accent),0 0 6px var(--accent),0 0 14px var(--accent); }
 .cue { position:absolute; top:.8rem; right:.9rem; color:var(--accent); font:600 1rem/1 system-ui; display:grid; place-items:center; width:1.65rem; height:1.65rem; border-radius:50%; border:1px solid currentColor; background:#15171cec }
-.coming-soon { position:absolute; top:.9rem; left:clamp(.9rem,2.2vw,1.8rem); padding:.42rem .65rem; border:1px solid color-mix(in srgb,var(--accent) 70%,white); border-radius:999px; background:#151219dc; color:#f1dfff; font:850 .62rem/1 system-ui; letter-spacing:.12em; box-shadow:0 0 12px color-mix(in srgb,var(--accent) 35%,transparent) }
-.shortcut { font:700 .77rem/1.2 system-ui; padding:.5rem .65rem; border-radius:2px; position:absolute; left:clamp(.9rem,2.2vw,1.8rem); bottom:clamp(.9rem,2.2vw,1.8rem); background:var(--accent); color:#19141c }
-details[open] strong { transform:translateY(-2rem) }
-details[open] .cue { transform:rotate(45deg) }
-a:focus-visible,summary:focus-visible { outline:3px solid white; outline-offset:-4px }
+.league-status { padding:.35rem .55rem; border:1px solid #9877ae; border-radius:.4rem; background:#19131fe8; color:#f2e4ff; font:700 clamp(.72rem,1.4vw,.9rem)/1.25 system-ui }
+a:focus-visible { outline:3px solid white; outline-offset:-4px }
 @media (max-width:600px) {
   .frame { height:clamp(10.5rem,44vw,14rem) }
   .frame::before { background-position:70% center }
-  .shortcut { font-size:.69rem }
   body { background-size:185% auto,cover,cover; background-position:center 1rem,center,center }
 }
 @media (prefers-reduced-motion:no-preference) {
   @view-transition { navigation:auto }
   .frame::before,.frame strong,.cue { transition:transform .32s ease }
-  .frame:is(:hover,:focus-within)::before { transform:scale(1.035) }
-  .frame:active::before { transform:scale(.985) }
-  details[open] .shortcut { animation:reveal .22s ease-out }
-  @keyframes reveal { from { opacity:0; transform:translateY(5px) } }
+  a.frame:is(:hover,:focus-visible)::before { transform:scale(1.035) }
+  a.frame:active::before { transform:scale(.985) }
 }

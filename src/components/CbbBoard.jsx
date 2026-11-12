@@ -12,7 +12,7 @@ import ConferenceFilter from './ConferenceFilter.jsx';
 import React,{useMemo,useState} from 'react';
 import {cfbRoleGames,manualMarkets,seasonLabel} from '../lib/manualSports.js';
 import {useLeague} from './ManualLeague.jsx';
-import {useCbbFile} from './CbbAnalyzer.jsx';
+import {useCbbFile} from './useCbbFile.js';
 import HitRate from './HitRate.jsx';
 import LineSelect from './LineSelect.jsx';
 import {recordPeriod,periodLabel} from '../lib/recordWeeks.js';
