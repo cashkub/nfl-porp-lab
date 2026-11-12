@@ -74,15 +74,40 @@
   .cb .cb-filter-grid { --columns: 1; }
 }
 
-/* Give the CBB menu and its six tools a balanced navigation row. */
-.cb .nfl-tool-header nav {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+/* Let the tool grid use the header's full width. */
+.chart-lab.cb .nfl-tool-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  container-type: inline-size;
 }
-@media (max-width: 1080px) {
-  .cb .nfl-tool-header { flex-wrap: wrap; }
-  .cb .nfl-tool-header nav {
-    flex: 1 0 100%;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.chart-lab.cb .nfl-tool-header nav {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.cb .nfl-tool-header .cbb-menu-link {
+  justify-self: end;
+  min-height: 44px;
+  font-size: .85rem;
+}
+.chart-lab.cb .nfl-tool-header nav a {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@container (max-width: 48rem) {
+  .chart-lab.cb .nfl-tool-header nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container (max-width: 30rem) {
+  .chart-lab.cb .nfl-tool-header nav a {
+    flex-direction: column;
+    padding: .35rem .2rem;
+    min-height: 48px;
+    gap: .16rem;
   }
-  .cb .nfl-tool-header nav a:first-child { grid-column: 1 / -1; }
+}
+@container (max-width: 20rem) {
+  .chart-lab.cb .nfl-tool-header nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
