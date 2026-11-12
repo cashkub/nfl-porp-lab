@@ -1,0 +1,27 @@
+.cb {min-height:100vh}
+.cb :is(input,select){font:inherit;color:#faf6ff;background:#221e2b;border:1px solid #765884;border-radius:.45rem;min-height:42px;padding:.4rem .6rem;width:100%;min-width:0}
+.cb-controls,.cb-tabs,.cb-kpis{display:flex;flex-wrap:wrap;align-items:end;gap:.65rem;margin:.7rem 0}
+.cb-select{display:grid;gap:.3rem;flex:1 1 10rem;min-width:0;font:650 .84rem system-ui;color:#dcccec}
+.cb-panel,.cb-game,.cb-pick{border:1px solid #544263;border-radius:.85rem;background:linear-gradient(120deg,#211e2c,#17161f);color:#f7f3fa;padding:clamp(.75rem,2vw,1.2rem);margin:.65rem 0;min-width:0}
+.cb-panel h2,.cb-panel h3{margin:.6rem 0;color:#f4ebff}
+.cb-panel p,.cb-foot{line-height:1.5;color:#d1c7da}
+.cb-slate{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:.7rem}
+.cb .cb-game{margin:0;text-align:left;display:grid;gap:.4rem;cursor:pointer}
+.cb-game:focus-visible,.cb-game:hover{border-color:#c49bff}
+.cb-team,.cb-player{display:inline-flex;gap:.4rem;align-items:center}
+.cb-team{border-left:3px solid var(--team);padding-left:.4rem;font-weight:750}
+.cb .cb-score{font:italic 800 1.7rem LabDisplay,system-ui;color:#d8b9ff}
+.cb small{font-size:.75rem;color:#cdbed7}
+.cb :is(.cb-tabs button,.cb-back,.cb-panel>button){color:#ead9ff;background:#241e2d;border:1px solid #705483;border-radius:.5rem;padding:.6rem .8rem;cursor:pointer}
+.cb-tabs button[aria-pressed=true]{background:#46314f;border-color:#c49bff}
+.cb-scroll,.cb-bars{overflow-x:auto}
+.cb table{width:100%;border-collapse:collapse;font:500 .9rem/1.35 system-ui}
+.cb :is(td,th){text-align:left;border-bottom:1px solid #43364b;padding:.45rem}
+.cb :is(th button,.cb-player){font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;text-align:left}
+.cb td small{display:block}
+.cb-kpis span{padding:.6rem .8rem;background:#302536;border-radius:.55rem;display:grid;min-width:5rem}
+.cb-kpis b{font-size:1.4rem}
+.cb-bars{display:flex;align-items:end;gap:.3rem;border-bottom:1px solid #8b68a5;margin:1rem 0;padding:0 .25rem .25rem}
+.cb-bars div{flex:1 0 2rem;display:grid;text-align:center;gap:.2rem}.cb-bars i{border-radius:.2rem .2rem 0 0}
+.cb details{padding:.65rem 0}.cb summary{cursor:pointer;color:#dec7fa}.cb-foot{font-size:.78rem}
+@media(max-width:600px){.cb{padding-inline:.55rem}.cb-panel{padding:.65rem}.cb td,.cb th{padding:.38rem .22rem}.cb table{font-size:.78rem}.cb td small{font-size:.66rem}.cb-select{flex-basis:8rem}.cb-props td:first-child{width:45%}}

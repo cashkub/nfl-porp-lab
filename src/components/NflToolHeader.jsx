@@ -11,17 +11,19 @@ const destinations=[
   {name:'Model Record',icon:BarChart3,href:'#model-record',key:'record'},
 ];
 
-export default function NflToolHeader({active}){
+export default function NflToolHeader({active,league='NFL'}){
   const page=destinations.find(item=>item.key===active);
   const Icon=page.icon;
-  const [first,last]=(active==='games'?'NFL Games':page.name).split(' ');
+  const [first,last]=(active==='games'?league+' Games':page.name).split(' ');
   return <><header className="nfl-tool-header">
     <a href="/preview/" className="pb-brand" aria-label="PropBets preview home"><img alt="" src="/preview/assets/mark.svg"/><span className="pb-wordmark">Prop<span>Bets</span></span></a>
-    <nav aria-label="NFL Navigation">
+    <nav aria-label={league+" Navigation"}>
       {destinations.map(({name,icon:Icon,href,key})=>{
-        const content=<><Icon size={18} strokeWidth={1.8} aria-hidden="true"/><span>{name}</span></>;
+        const label=key?name:league+' Menu';
+        const target=league==='CBB'?(key?'#cbb-'+key:'/preview/cbb/'):href;
+        const content=<><Icon size={18} strokeWidth={1.8} aria-hidden="true"/><span>{label}</span></>;
         return href
-          ? <a key={name} href={href} aria-current={active===key?'page':undefined}>{content}</a>
+          ? <a key={name} href={target} aria-current={active===key?'page':undefined}>{content}</a>
           : <button key={name} type="button" disabled title="Not available yet">{content}</button>;
       })}
     </nav>

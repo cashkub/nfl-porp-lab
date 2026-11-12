@@ -1,0 +1,45 @@
+name: Refresh CBB V2
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 12,21 * * *'
+  push:
+    branches: [main]
+    paths: ['scripts/cbb_*.py', 'scripts/update_cbb_v2.py', '.github/workflows/cbb-v2.yml']
+permissions:
+  contents: write
+concurrency:
+  group: refresh-cbb-v2
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'pyarrow>=18,<24'
+      - run: python -m unittest discover -s tests -p 'test_cbb*.py'
+      - name: Refresh pregame snapshots and grade completed games
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          CBB_PROP_EVENT_LIMIT: ${{ vars.CBB_PROP_EVENT_LIMIT || '2' }}
+          CBB_ODDS_RESERVE: ${{ vars.CBB_ODDS_RESERVE || '300' }}
+        run: python scripts/update_cbb_v2.py
+      - name: Publish CBB data
+        run: |
+          git add public/data/cbb-v2
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'data: refresh CBB V2 pregame projections and record'
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+            sleep "$attempt"
+          done
+          exit 1
