@@ -1,9 +1,10 @@
+import LineControl,{ControlLabel} from './LineControl.jsx';
+import GameBars from './GameBars.jsx';
 import TeamLogo from './TeamLogo.jsx';
 import NflToolHeader from './NflToolHeader.jsx';
 import WorkloadUsage from './WorkloadUsage.jsx';
 import ChartSelect from './ChartSelect.jsx';
 import React,{useMemo,useState} from 'react';
-import {ChevronDown} from 'lucide-react';
 import {METRICS,getPlayerGames,filteredWindow,summarize,formatNumber,formatRate,estimateModelHitRate} from '../lib/stats.js';
 import {fairSideProbability,priceText,usageFor} from '../lib/bookLine.js';
 import {defenseTable} from '../lib/matchup.js';
@@ -76,26 +77,17 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
     const value=game.stats[metric] ?? 0;
     return {game,value,...ranks.get(game.gameId),...lineResult(value,line,direction)};
   });
-  const low=Math.min(0,...rows.map(r=>r.value));
-  const high=Math.max(1,line,...rows.map(r=>r.value));
-  const position=v=>8+75*(v-low)/(high-low);
   const active=rows.find(r=>r.game.gameId===selected);
   if(!rows.length)return <p>No recorded games match this venue and window.</p>;
-  return <><div className="plot-heading"><span>{info.label}</span><small>{rows.length} {rows.length===1?'Game':'Games'} Shown{windowSize!=='season' && rows.length<Number(windowSize) && ' · Last '+windowSize+' Requested'}</small><button className="plot-details-toggle" type="button" aria-expanded={showDetails} aria-controls="game-by-game-bars" onClick={()=>setShowDetails(open=>!open)}>{showDetails?'Hide Game Details':'Show Game Details'} <ChevronDown size={15}/></button></div>
-    <div className="margin-scroll"><div id="game-by-game-bars" className={'margin-bars'+(showDetails?' details-open':'')} style={{'--count':rows.length,'--target':position(line)+'%'}}>
-    {rows.map(r=><button key={r.game.gameId} type="button" data-result={r.outcome} aria-pressed={r===active}
-      aria-label={'Week '+r.game.week+' against '+r.game.opponent+', '+r.value+' '+info.unit+', '+r.outcome+', offensive snaps '+formatRate(r.game.usage?.offenseSnapRate)}
-      onClick={()=>setSelected(previous=>previous===r.game.gameId?'':r.game.gameId)}>
-      <span className="bar-space"><i style={{bottom:Math.min(position(0),position(r.value))+'%',height:Math.max(1,Math.abs(position(r.value)-position(0)))+'%'}}/>
-        {line!=null && r===rows.at(-1) && <span className="chart-reference">{direction} {line}</span>}
-        <strong style={{bottom:Math.max(position(0),position(r.value))+'%'}}>{r.value}</strong></span>
-      <span className="chart-opponent"><TeamLogo className="chart-logo" team={r.game.opponent}/><b>{r.game.venue==='A'?'@':'vs'} {r.game.opponent}</b></span><span>{gameDate(r.game)}</span><span>W{r.game.week} · {r.outcome}</span>
-      {showDetails&&<span className="bar-details"><span className="bar-detail-item"><b>{r.margin==null?'—':r.margin===0?'Push':marginNumber.format(r.margin)+' '+info.unit}</b><small>{line==null?'No Line':r.outcome==='Hit'?`${Math.abs(r.margin).toFixed(1)} ${info.unit} ${direction==='under'?'Below':'Above'} Line`:`${Math.abs(r.margin).toFixed(1)} ${info.unit} From Line`}</small></span>{usageFields.map(([key,label])=>{
+  return <><GameBars label={info.label} line={line} direction={direction} selected={selected} onSelect={setSelected} expanded={showDetails} onExpand={()=>setShowDetails(open=>!open)}
+    caption={rows.length+' '+(rows.length===1?'Game':'Games')+' Shown'+(windowSize!=='season'&&rows.length<Number(windowSize)?' · Last '+windowSize+' Requested':'')}
+    rows={rows.map(r=>({...r,id:r.game.gameId,opponent:r.game.opponent,opponentLabel:(r.game.venue==='A'?'@ ':'vs ')+r.game.opponent,date:gameDate(r.game),footer:'W'+r.game.week+' · '+r.outcome,
+      description:'Week '+r.game.week+' against '+r.game.opponent+', '+r.value+' '+info.unit+', '+r.outcome+', offensive snaps '+formatRate(r.game.usage?.offenseSnapRate)}))}
+    details={r=><><span className="bar-detail-item"><b>{r.margin==null?'—':r.margin===0?'Push':marginNumber.format(r.margin)+' '+info.unit}</b><small>{line==null?'No Line':r.outcome==='Hit'?`${Math.abs(r.margin).toFixed(1)} ${info.unit} ${direction==='under'?'Below':'Above'} Line`:`${Math.abs(r.margin).toFixed(1)} ${info.unit} From Line`}</small></span>{usageFields.map(([key,label])=>{
         const own=Number(r.game.usage?.[key]),team=teamVolumes.get(r.game.gameId+'|'+r.game.team)?.[key];
         const share=Number.isFinite(own)&&Number.isFinite(team)&&team>0?formatRate(own/team):'—';
         return <span className="bar-detail-item" key={key}><b>{Number.isFinite(own)?own:'—'}</b><small>{label}</small><small>{share} Of Team</small></span>;
-      })}<span className="bar-detail-item"><b>{formatRate(r.game.usage?.offenseSnapRate)}</b><small>Offensive Snaps</small></span></span>}
-    </button>)}</div></div>
+      })}<span className="bar-detail-item"><b>{formatRate(r.game.usage?.offenseSnapRate)}</b><small>Offensive Snaps</small></span></>}/>
     {active?<section className="bar-report game-report" aria-label="Selected Game Details">
       <header className="game-report-header"><div className="game-report-title"><TeamLogo className="chart-logo" team={active.game.opponent}/><div><small>SELECTED GAME · WEEK {active.game.week}</small><h3>{playerName}</h3><p>{active.game.team} {active.game.venue==='A'?'at':'vs.'} {active.game.opponent} <span>·</span> {gameDate(active.game)}</p></div></div><button type="button" className="game-report-clear" onClick={()=>setSelected('')}>Clear Selection</button></header>
       <div className="game-report-summary">
@@ -109,52 +101,6 @@ function GameChart({games,windowSize,players,playerPosition,playerName,metric,li
         <section className="game-report-card game-report-defense"><h4>Defense Against {playerPosition}s</h4>{active.defense?<><strong><TeamLogo className="chart-logo" team={active.game.opponent}/>{active.game.opponent} DEF <DefenseRank rank={active.defense.rank} total={active.teams} side={direction}/></strong><p>{formatNumber(active.defense.average)} {info.unit} allowed per game across {active.defense.games} earlier games.</p></>:<p>Pregame defense rank unavailable for this week.</p>}</section>
       </div>
     </section>:<p className="bar-hint">{showDetails?'Tap A Game Bar To See The Full Box Score, Workload And Matchup.':'Select A Game Bar For Player Stats.'}</p>}</>;
-}
-
-function ControlLabel({children}) {
-  return <b><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 7h5m5 0h8M3 17h10m5 0h3"/><circle cx="10.5" cy="7" r="2.5"/><circle cx="15.5" cy="17" r="2.5"/></svg>{children}</b>;
-}
-
-function LineControl({line,setLine,resetLine,manual,manualLabel,quote,median,games,metric,direction}) {
-  const [draft,setDraft]=useState(null);
-  const savedAt=Date.parse(quote?.updated);
-  const stamp=Number.isFinite(savedAt)?new Date(savedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'}):'';
-  const source=quote?'DraftKings · '+quote.point+(stamp?' · '+stamp:''):'No Sportsbook Line Data';
-  const anchor=quote?.point ?? median ?? line;
-  const interval=chartMarkets[metric].unit==='yds'?5:1;
-  const options=anchor==null || !games.length?[]:Array.from({length:3},(_,i)=>(anchor>=interval?anchor-interval:Math.max(0,anchor))+i*interval);
-  function step(delta){setDraft(null);setLine(Math.max(0,Math.round((line+delta)*100)/100))}
-  function apply(){
-    const value=Number(draft);
-    if(draft!=null && draft.trim() && Number.isFinite(value) && value>=0)setLine(value);
-    setDraft(null);
-  }
-  return <details className="line-control">
-    <summary className="chart-disclosure">
-      <ControlLabel>Prop Line</ControlLabel>
-      <span className="line-selection">{line!=null && <strong>{direction} {line}</strong>}
-        {manual?manualLabel:quote?'DraftKings':line!=null?'Player Average':'No Sportsbook Line'}
-      </span>
-    </summary>
-    <div className="chart-line-panel">
-    <div className="chart-line-options">
-    {options.length>0 && <h3>Compare Lines</h3>}
-    {options.length>0 && <div className="line-compare" role="group" aria-label="Compare research lines">{options.map(value=>{
-      const summary=summarize(games,metric,value,direction);
-      const saved=quote?.point===value;
-      return <button type="button" key={value} aria-pressed={line===value} onClick={()=>{setDraft(null);if(saved)resetLine();else setLine(value)}}>
-        <strong>{value}{saved && <sup> DK</sup>}</strong><span style={rateStyle(summary.rate)}>{summary.hits}/{summary.total} {direction}</span>
-      </button>;
-    })}</div>}
-    <small className="line-source">{source}</small>
-    </div><div className="line-exact"><label htmlFor="chart-line">Exact Line</label>
-    <div className="line-stepper"><button aria-label="Decrease line by half a point" disabled={line==null || line<=0} onClick={()=>step(-.5)}>−</button>
-    <input id="chart-line" aria-label="Exact prop line" type="text" inputMode="decimal" placeholder="Line" value={draft ?? line ?? ''} onFocus={e=>e.target.select()} onChange={e=>setDraft(e.target.value)} onBlur={apply} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>
-    <button aria-label="Increase line by half a point" disabled={line==null} onClick={()=>step(.5)}>+</button></div>
-    <div className="line-actions">
-    {Number.isFinite(median) && median>=0 && median!==line && <button className="line-reset" onClick={()=>{setDraft(null);setLine(median)}}>Use median · {median}</button>}
-    {manual && <button className="line-reset" onClick={()=>{setDraft(null);resetLine()}}>{quote?'Use DK '+quote.point:'Clear custom line'}</button>}
-    </div></div></div></details>;
 }
 
 function recentDefenseGames(players,matchup,position,metric) {
@@ -321,7 +267,7 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
       <ChartSelect label="Window" value={windowSize} onChange={setWindowSize}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full history</option></ChartSelect>
     </div>
     </div>
-    <LineControl key={player.id+metric+(upcoming?.id || '')} line={line} setLine={setLine} resetLine={resetLine} manual={manual} manualLabel={manualLabel} quote={quote} median={current.median} games={displayed} metric={metric} direction={direction}/>
+    <LineControl interval={chartMarkets[metric].unit==='yds'?5:1} key={player.id+metric+(upcoming?.id || '')} line={line} setLine={setLine} resetLine={resetLine} manual={manual} manualLabel={manualLabel} quote={quote} median={current.median} games={displayed} metric={metric} direction={direction}/>
     <section className="lab-player">
       <div className="player-identity"><PlayerPhoto key={player.id} large id={player.id} name={player.name} url={player.photo}/>
         <div><small>{season} · {player.team} · {player.position}</small><h2>{player.name}</h2><div className="player-prop">

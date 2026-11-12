@@ -1,9 +1,13 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import NflToolHeader from '../components/NflToolHeader.jsx';
+import GameBars from '../components/GameBars.jsx';
+import LineControl,{ControlLabel} from '../components/LineControl.jsx';
+import ChartSelect from '../components/ChartSelect.jsx';
+import {rateStyle} from '../components/HitRate.jsx';
 import FilterMenu from '../components/FilterMenu.jsx';
 import RecordHeader from '../components/RecordHeader.jsx';
-import {BarChart3} from 'lucide-react';
+import {BarChart3,Target,Shield,ChartNoAxesCombined} from 'lucide-react';
 import '../components/ModelRecordPicks.css';
 import '../components/NflGames.css';
 import '../components/NflPropList.css';
@@ -55,7 +59,7 @@ function Shell(){
     const onHash=()=>{const next=current();if(!pages.includes(next)){location.replace('/preview/cbb/');return;}setPage(next);window.scrollTo(0,0);};
     window.addEventListener('hashchange',onHash);return ()=>window.removeEventListener('hashchange',onHash);
   },[]);
-  return <main className="chart-lab cb"><NflToolHeader league="CBB" active={page}/>{meta.value?<League page={page} meta={meta.value}/>:<p role="status">{meta.error?'CBB snapshot unavailable.':'Loading college basketball…'}</p>}</main>;
+  return <main className={'chart-lab cb '+({props:'prop-list',top:'top-looks',games:'model-record-preview',record:'model-record-preview'}[page]||'')}><NflToolHeader league="CBB" active={page}/>{meta.value?<League page={page} meta={meta.value}/>:<p role="status">{meta.error?'CBB snapshot unavailable.':'Loading college basketball…'}</p>}</main>;
 }
 function League({page,meta}){
   const today=etDay(Date.now());
@@ -74,19 +78,20 @@ function League({page,meta}){
   const filteredPlayers=selected&&games.some(g=>g.id===selected)?playerGames.filter(g=>g.id===selected):playerGames;
   const game=games.find(g=>g.id===selected);
   function chart(g,p,k){pickGame(g.id);setTarget({id:p,metric:k});location.hash='cbb-charts';}
-  return <>
-    {page!=='record'&&<div className="cb-controls panel"><Select label="Game date" value={day} onChange={d=>{setDay(d);pickGame('');setTarget(null);}}>{meta.days.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select>
+  const slateFilters=<div className={page==='props'?'prop-list-filters prop-primary':page==='charts'?'lab-controls secondary-controls':page==='top'?'top-filter panel cb-controls':'board-controls cb-controls'}><Select label="Game date" value={day} onChange={d=>{setDay(d);pickGame('');setTarget(null);}}>{meta.days.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select>
       {['games','charts','props'].includes(page)&&<>
         <Select label="Team ranking" value={ranked?'ranked':'all'} disabled={!directory?.ranks} onChange={v=>{setRanked(v==='ranked');pickGame('');setTarget(null);}}>
           <option value="all">All teams</option><option value="ranked">AP Top 25</option>
         </Select>
         <Select label="Conference" value={conference} onChange={c=>{setConference(c);pickGame('');setTarget(null);}}><option value="">All conferences</option>{[...new Set(Object.values(conferences))].sort().map(c=><option key={c}>{c}</option>)}</Select>
       </>}
-      {page!=='top'&&<Select label="Matchup · Eastern time" value={game?.id||''} onChange={id=>{pickGame(id);setTarget(null);}}><option value="">All games</option>{games.map(g=><option key={g.id} value={g.id}>{timeFmt.format(new Date(g.time))} · {ranks[g.away]?'#'+ranks[g.away]+' ':''}{teams[g.away].name} @ {ranks[g.home]?'#'+ranks[g.home]+' ':''}{teams[g.home].name}</option>)}</Select>}</div>}
+      {page!=='top'&&<Select label="Matchup · Eastern time" value={game?.id||''} onChange={id=>{pickGame(id);setTarget(null);}}><option value="">All games</option>{games.map(g=><option key={g.id} value={g.id}>{timeFmt.format(new Date(g.time))} · {ranks[g.away]?'#'+ranks[g.away]+' ':''}{teams[g.away].name} @ {ranks[g.home]?'#'+ranks[g.home]+' ':''}{teams[g.home].name}</option>)}</Select>}</div>;
+  return <>
+    {page!=='record'&&(page!=='charts'||!filteredPlayers.some(g=>g.roster.length))&&slateFilters}
     {page==='record'||page==='top'?record.value?<Ledger teams={teams} rows={record.value} top={page==='top'} day={day} evaluation={meta.evaluation}/>:<p>{record.error?'Record unavailable.':'Loading picks…'}</p>:
       !slate.value?<p>{slate.error?'Slate unavailable.':'Loading slate…'}</p>:!games.length?<p>No matching games for {labelDay(day)}.</p>:
-      page==='games'?game?<Detail game={{...game,roster:filteredPlayers[0].roster,priced:false,lines:[]}} meta={{...meta,teams}} back={()=>pickGame('')} chart={chart}/>:<div className="weekly-slate">{games.map(g=><GameCard key={g.id} game={g} teams={teams} open={()=>pickGame(g.id)}/>)}</div>:
-      page==='props'?<PropList games={filteredPlayers} teams={teams} chart={chart}/>:<Charts key={target?.id+':'+(target?.metric||'')+day} games={filteredPlayers} teams={teams} target={target}/>}
+      page==='games'?game?<Detail game={{...game,roster:filteredPlayers[0].roster,priced:false,lines:[]}} meta={{...meta,teams}} back={()=>pickGame('')} chart={chart}/>:<div className="panel nfl-games"><div className="weekly-slate"><section><h3>{labelDay(day)}</h3>{games.map(g=><GameCard key={g.id} game={g} teams={teams} open={()=>pickGame(g.id)}/>)}</section></div></div>:
+      page==='props'?<PropList games={filteredPlayers} teams={teams} chart={chart}/>:<Charts slateFilters={slateFilters} key={target?.id+':'+(target?.metric||'')+day} games={filteredPlayers} teams={teams} target={target}/>}
     <p className="cb-foot">Pregame snapshot · {dateFmt.format(new Date(meta.updated))}, {timeFmt.format(new Date(meta.updated))} · hoopR box scores</p>
   </>;
 }
@@ -105,10 +110,13 @@ function GameCard({game:g,teams,open}){
 function Detail({game:g,meta,back,chart}){
   const {teams}=meta;
   const [tab,set]=useState('Game picks');
-  return <><button className="cb-back" onClick={back}>← All games</button><div className="cb-panel lab-block"><h2><Team id={g.away} teams={teams}/> @ <Team id={g.home} teams={teams}/></h2><p>{g.arena||'Venue unlisted'} · {g.neutral?'Neutral court':'Home court'} · {timeFmt.format(new Date(g.time))}</p><strong className="cb-score">Projected score {g.awayScore} – {g.homeScore}</strong></div>
-  <div className="cb-tabs">{['Game picks','Player props','Matchup breakdown'].map(t=><button aria-pressed={t===tab} key={t} onClick={()=>set(t)}>{t}</button>)}</div>
-  {tab==='Player props'?<PropList games={[g]} teams={teams} chart={chart}/>:tab==='Game picks'?<section className="cb-panel lab-block"><h2>Pregame markets</h2><p>Model total {(g.homeScore+g.awayScore).toFixed(1)} · Home margin {(g.homeScore-g.awayScore).toFixed(1)} · Home win {pct(g.homeWin)}</p>{g.picks.map(p=><p key={p.market}><b>{p.market} · {p.label} {p.market==='Moneyline'?'':p.line}</b> · DK {money(p.price)} · {pct(p.prob)} model probability{p.quoted?' · Quote '+dateFmt.format(new Date(p.quoted))+', '+timeFmt.format(new Date(p.quoted)):''}{p.ev<=0?' · No positive estimated value':''}</p>)}{!g.picks.length&&<p>CBB sportsbook updates are paused.</p>}</section>:
-  <section className="cb-panel lab-block"><h2>Matchup breakdown</h2><p>{g.pace} projected possessions · {g.court} points home-court adjustment</p><div className="cb-scroll"><table><thead><tr><th>Profile</th>{[g.away,g.home].map(t=><th key={t}><Team id={t} teams={teams}/></th>)}</tr></thead><tbody>{[['AdjO','adjO'],['AdjD','adjD'],['AdjT','adjT']].map(([label,k])=><tr key={k}><th>{label}</th>{[g.away,g.home].map(t=><td key={t}>{g.ratings[t][k]}</td>)}</tr>)}{['Effective FG','Turnover rate','Offensive rebound rate','FT attempts / FG attempts'].flatMap((label,i)=>['offense','defense'].map(k=><tr key={k+i}><th>{label} · {k==='offense'?'offense':'allowed'}</th>{[g.away,g.home].map(t=><td key={t}>{g.ratings[t][k][i]==null?'—':g.ratings[t][k][i]+'%'}</td>)}</tr>))}<tr><th>Days since last game</th>{[g.away,g.home].map(t=><td key={t}>{g.rest[t]??'—'}</td>)}</tr></tbody></table></div><h3>Availability</h3>{[g.away,g.home].map(t=>g.missingScoring?.[t]>0&&<p key={t}>{teams[t].name} · projected scoring reduced by {g.missingScoring[t]} points for reported absences.</p>)}{g.injuries.length?g.injuries.map((r,i)=><p key={i}>{r.name} · {r.status}</p>):<p>{meta.injuryFeed?'No players listed in the available report.':'Injury feed unavailable.'}</p>}</section>}</>;
+  return <section className="panel nfl-games"><button className="slate-back" onClick={back}>← All games</button>
+    <section className="match-score"><div className="match-score-caption"><h2>Projected final score</h2><span>{g.arena} · {g.neutral?'Neutral court':'Home court'} · {timeFmt.format(new Date(g.time))}</span></div>
+      <div className="match-score-teams">{['away','home'].map(side=><div key={side} style={{'--club':'#'+teams[g[side]].color}}><TeamLogo team={g[side]} sport="cbb"/><span><small>{side}</small><b>{teams[g[side]].name}</b></span><strong>{g[side+'Score']}</strong></div>)}</div></section>
+    <nav className="nfl-analysis-tabs" aria-label="Game analysis" role="tablist">{[['Game picks',Target],['Player props',ChartNoAxesCombined],['Matchup breakdown',Shield]].map(([t,Icon])=><button type="button" role="tab" aria-selected={t===tab} key={t} onClick={()=>set(t)}><Icon size={17}/>{t}</button>)}</nav>
+    <div className="nfl-tab-panel" role="tabpanel">
+  {tab==='Player props'?<PropList games={[g]} teams={teams} chart={chart}/>:tab==='Game picks'?<section className="nfl-view-panel"><div className="nfl-predictions-heading"><h3>Game projections</h3></div><div className="nfl-pick-grid">{[['Projected total',(g.homeScore+g.awayScore).toFixed(1)],['Home margin',(g.homeScore-g.awayScore).toFixed(1)],['Home win probability',pct(g.homeWin)]].map(([label,v])=><article key={label} className="nfl-pick-tile"><small>{label}</small><b>{v}</b></article>)}</div>{g.picks.map(p=><p key={p.market}><b>{p.market} · {p.label} {p.market==='Moneyline'?'':p.line}</b> · DK {money(p.price)} · {pct(p.prob)} model probability{p.quoted?' · Quote '+dateFmt.format(new Date(p.quoted))+', '+timeFmt.format(new Date(p.quoted)):''}{p.ev<=0?' · No positive estimated value':''}</p>)}{!g.picks.length&&<p>CBB sportsbook updates are paused.</p>}</section>:
+  <section className="cb-panel lab-block"><h2>Matchup breakdown</h2><p>{g.pace} projected possessions · {g.court} points home-court adjustment</p><div className="cb-scroll"><table><thead><tr><th>Profile</th>{[g.away,g.home].map(t=><th key={t}><Team id={t} teams={teams}/></th>)}</tr></thead><tbody>{[['AdjO','adjO'],['AdjD','adjD'],['AdjT','adjT']].map(([label,k])=><tr key={k}><th>{label}</th>{[g.away,g.home].map(t=><td key={t}>{g.ratings[t][k]}</td>)}</tr>)}{['Effective FG','Turnover rate','Offensive rebound rate','FT attempts / FG attempts'].flatMap((label,i)=>['offense','defense'].map(k=><tr key={k+i}><th>{label} · {k==='offense'?'offense':'allowed'}</th>{[g.away,g.home].map(t=><td key={t}>{g.ratings[t][k][i]==null?'—':g.ratings[t][k][i]+'%'}</td>)}</tr>))}<tr><th>Days since last game</th>{[g.away,g.home].map(t=><td key={t}>{g.rest[t]??'—'}</td>)}</tr></tbody></table></div><h3>Availability</h3>{[g.away,g.home].map(t=>g.missingScoring?.[t]>0&&<p key={t}>{teams[t].name} · projected scoring reduced by {g.missingScoring[t]} points for reported absences.</p>)}{g.injuries.length?g.injuries.map((r,i)=><p key={i}>{r.name} · {r.status}</p>):<p>{meta.injuryFeed?'No players listed in the available report.':'Injury feed unavailable.'}</p>}</section>}</div></section>;
 }
 function rowsFor(games,metric){
   return games.flatMap(g=>g.priced?g.lines.filter(l=>metric==='ALL'||l.metric===metric).map(l=>({...l,g,book:true})):
@@ -121,10 +129,11 @@ function PropList({games,teams,chart}){
     return dir*(typeof a[k]==='string'?a[k].localeCompare(b[k]):a[k]-b[k]);
   }),[games,market,search,sort]);
   const headers=[['name','Player'],['line','Line'],['proj','Model'],['minutes','Min']];
-  return <section className="cb-panel lab-block"><div className="cb-controls panel"><Select label="Market" value={market} onChange={v=>{setMarket(v);setLimit(40);}}><option value="ALL">All markets</option>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v}</option>)}</Select><label className="cb-select">Find player<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Player name"/></label></div><div className="prop-table-scroll cb-scroll"><table className="cb-props prop-research-table"><thead><tr>{headers.map(([k,v])=><th key={k} aria-sort={sort[0]===k?(sort[1]===1?'ascending':'descending'):'none'}><button className="column-sort" onClick={()=>setSort([k,sort[0]===k?-sort[1]:k==='name'?1:-1])}>{v} {sort[0]===k?(sort[1]>0?'↑':'↓'):'↕'}</button></th>)}</tr></thead><tbody>{rows.slice(0,limit).map((r,i)=><tr key={r.g.id+r.name+r.metric+i}><td style={{'--club':'#'+(teams[r.team]?.color||'aa77cc')}}><button className="cb-player" disabled={!r.pid} onClick={()=>chart(r.g,r.pid,r.metric)}><Headshot id={r.pid} team={r.team}/><span className="cb-player-copy"><b>{r.name}</b><small>{teams[r.team]?.name} · {markets[r.metric]}</small></span></button></td><td>{r.line}<small>{r.book?'DK · O '+money(r.over)+' / U '+money(r.under):'Player avg'}</small></td><td>{r.proj??'—'}</td><td>{r.minutes??'—'}</td></tr>)}</tbody></table></div>{!rows.length&&<p>No players match this selection.</p>}{rows.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more ({rows.length-limit})</button>}</section>;
+  return <section className="cb-prop-list"><div className="prop-list-filters prop-primary"><Select label="Market" value={market} onChange={v=>{setMarket(v);setLimit(40);}}><option value="ALL">All markets</option>{Object.entries(markets).map(([k,v])=><option key={k} value={k}>{v}</option>)}</Select><label className="cb-select">Find player<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Player name"/></label></div><p className="prop-list-note">{rows.length} props · Select a player for charts or a column to sort.</p><div className="prop-table-scroll cb-scroll"><table className="cb-props prop-research-table"><thead><tr>{headers.map(([k,v])=><th key={k} aria-sort={sort[0]===k?(sort[1]===1?'ascending':'descending'):'none'}><button className="column-sort" onClick={()=>setSort([k,sort[0]===k?-sort[1]:k==='name'?1:-1])}>{v} {sort[0]===k?(sort[1]>0?'↑':'↓'):'↕'}</button></th>)}</tr></thead><tbody>{rows.slice(0,limit).map((r,i)=><tr key={r.g.id+r.name+r.metric+i}><td style={{'--club':'#'+(teams[r.team]?.color||'aa77cc')}}><button className="cb-player" disabled={!r.pid} onClick={()=>chart(r.g,r.pid,r.metric)}><Headshot id={r.pid} team={r.team}/><span className="cb-player-copy"><b>{r.name}</b><small>{teams[r.team]?.name} · {markets[r.metric]}</small></span></button></td><td>{r.line}<small>{r.book?'DK · O '+money(r.over)+' / U '+money(r.under):'Player avg'}</small></td><td>{r.proj??'—'}</td><td>{r.minutes??'—'}</td></tr>)}</tbody></table></div>{!rows.length&&<p>No players match this selection.</p>}{rows.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more ({rows.length-limit})</button>}</section>;
 }
 function valueOf(g,k){if(k==='PRA')return g.points+g.rebounds+g.assists;if(k==='PR')return g.points+g.rebounds;if(k==='PA')return g.points+g.assists;if(k==='RA')return g.rebounds+g.assists;return g[k];}
-function Charts({games,teams,target}){
+function Charts({games,teams,target,slateFilters}){
+  const [filters,setFilters]=useState(false),[expanded,setExpanded]=useState(false),[windowSize,setWindow]=useState('10');
   const [selectedLog,setSelectedLog]=useState('');
   const available=useMemo(()=>games.flatMap(g=>g.roster.filter(p=>!g.priced||g.lines.some(l=>l.pid===p.id)).map(p=>({p,g}))),[games]);
   const [id,select]=useState(target?.id||''),[k,setK]=useState(target?.metric||'points'),[venue,setV]=useState('All'),[line,setL]=useState(''),[side,setSide]=useState('over');
@@ -133,24 +142,42 @@ function Charts({games,teams,target}){
   if(!p)return <p>No rotation history for this selection.</p>;
   const listed=g.lines.filter(l=>l.pid===p.id),keys=g.priced?[...new Set(listed.map(l=>l.metric))]:Object.keys(markets),metric=keys.includes(k)?k:keys[0];
   const book=listed.find(l=>l.metric===metric),base=book?.line??p.average[metric],point=line===''?base:Number(line);
-  const logs=(hist.value?.[p.id]||[]).filter(l=>venue==='All'||l.venue===venue).slice(-15);
-  const vals=logs.map(l=>valueOf(l,metric)),max=Math.max(1,point,...vals),hit=v=>side==='over'?v>point:v<point;
+  const history=(hist.value?.[p.id]||[]).filter(l=>venue==='All'||l.venue===venue);
+  const logs=windowSize==='season'?history:history.slice(-Number(windowSize));
+  const rows=logs.map(log=>{
+    const value=valueOf(log,metric),outcome=value===point?'Push':(side==='over'?value>point:value<point)?'Hit':'Miss';
+    const opponent=teams[log.opp]?.name||log.opp;
+    return {log,id:log.game,opponent:log.opp,opponentLabel:(log.venue==='Away'?'@ ':'vs ')+opponent,date:log.date.slice(5),value,outcome,footer:outcome,description:log.date+' vs '+opponent+', '+value+' '+markets[metric]+', '+outcome};
+  });
+  const values=rows.map(r=>r.value).sort((a,b)=>a-b);
+  const median=values.length?(values[Math.floor((values.length-1)/2)]+values[Math.floor(values.length/2)])/2:null;
+  const hits=rows.filter(r=>r.outcome==='Hit').length,pushes=rows.filter(r=>r.outcome==='Push').length;
+  const active=rows.find(r=>r.id===selectedLog),opp=p.team===g.home?g.away:g.home;
   const adj=p.adjustment[metric],pos=p.positionEffect[metric];
-  return <section className="cb-panel lab-block"><div className="cb-controls panel"><Select label="Player" value={p.id} onChange={v=>{select(v);setL('');}}>{available.map(({p,g})=><option key={g.id+p.id} value={p.id}>{p.name} · {teams[p.team]?.name}</option>)}</Select><Select label="Market" value={metric} onChange={v=>{setK(v);setL('');}}>{keys.map(k=><option key={k} value={k}>{markets[k]}</option>)}</Select><Select label="Venue history" value={venue} onChange={setV}>{venueOptions.map(v=><option key={v}>{v}</option>)}</Select><Select label="Side" value={side} onChange={setSide}><option value="over">Over</option><option value="under">Under</option></Select><label className="cb-select">Research line<input type="number" min="0" step=".5" value={line} placeholder={String(base)} onChange={e=>setL(e.target.value)}/></label></div>
-  <div className="lab-player" style={{'--club':'#'+teams[p.team]?.color}}><div><h2 className="cb-identity"><Headshot id={p.id} team={p.team} large/>{p.name}</h2><Team id={p.team} teams={teams}/><p>{p.role} · {p.venue} · {p.minutes} projected minutes · {p.sample} games played · recent minutes {p.minuteRange?.join('–')} · {p.starts} recent starts · {p.foulRate} fouls per 40</p></div></div>
-  <div className="cb-kpis"><span><small>Model projection</small><b>{p.estimate[metric]}</b></span><span><small>{line!==''?'Research line':book?'DraftKings line':'Player average'}</small><b>{point}</b></span><span><small>Historical {side}</small><b>{vals.length?vals.filter(hit).length+'/'+vals.length:'—'}</b></span></div>
-  {hist.error?<p>Game log unavailable.</p>:logs.length?<><div className="plot-heading"><span>{markets[metric]}</span><small>{logs.length} games shown</small></div>
-    <div className="margin-scroll"><div className="margin-bars" style={{'--count':logs.length,'--target':(8+75*point/max)+'%'}}>
-      {logs.map((l,i)=>{
-        const result=vals[i]===point?'Push':hit(vals[i])?'Hit':'Miss';
-        return <button type="button" key={l.game} data-result={result} aria-pressed={selectedLog===l.game} aria-label={l.date+' vs '+(teams[l.opp]?.name||l.opp)+', '+vals[i]+' '+markets[metric]+', '+result} onClick={()=>setSelectedLog(selectedLog===l.game?'':l.game)}>
-          <span className="bar-space"><i style={{bottom:'8%',height:Math.max(1,75*vals[i]/max)+'%'}}/><strong style={{bottom:(8+75*vals[i]/max)+'%'}}>{vals[i]}</strong>{i===logs.length-1&&<span className="chart-reference">{side} {point}</span>}</span>
-          <span className="chart-opponent"><TeamLogo sport="cbb" className="chart-logo" team={l.opp}/></span><span>{l.date.slice(5)}</span><span>{result}</span>
-        </button>;
-      })}
+  return <div style={{'--club':'#'+teams[p.team].color}}>
+    <div className="lab-controls primary-controls">
+      <ChartSelect label="Player" value={p.id} onChange={v=>{select(v);setL('');setSelectedLog('');}}>{available.map(({p,g})=><option key={g.id+p.id} value={p.id}>{p.name} · {teams[p.team]?.name}</option>)}</ChartSelect>
+      <ChartSelect label="Market" value={metric} onChange={v=>{setK(v);setL('');}}>{keys.map(k=><option key={k} value={k}>{markets[k]}</option>)}</ChartSelect>
+    </div>
+    <button className="filter-toggle chart-disclosure" aria-expanded={filters} aria-controls="cbb-chart-filters" onClick={()=>setFilters(!filters)}><ControlLabel>Filters</ControlLabel><span>{dateFmt.format(new Date(g.time))} · {venue} · {windowSize==='season'?'Full history':'Last '+windowSize}</span></button>
+    <div className="extra-filters" id="cbb-chart-filters" data-open={filters}>{slateFilters}<div className="lab-controls secondary-controls">
+      <ChartSelect label="Side" value={side} onChange={setSide}><option value="over">Over</option><option value="under">Under</option></ChartSelect>
+      <ChartSelect label="Venue" value={venue} onChange={setV}>{venueOptions.map(v=><option key={v}>{v}</option>)}</ChartSelect>
+      <ChartSelect label="Window" value={windowSize} onChange={setWindow}><option value="5">Last 5</option><option value="10">Last 10</option><option value="season">Full history</option></ChartSelect>
     </div></div>
-    {logs.filter(l=>l.game===selectedLog).map(l=><p key={l.game} role="status">{l.date} · {l.venue} vs {teams[l.opp]?.name||l.opp} · {l.min} minutes · {valueOf(l,metric)} {markets[metric].toLowerCase()}</p>)}<details><summary>Game log</summary>{logs.slice().reverse().map(l=><p key={l.game}>{l.date} · {l.venue} vs {teams[l.opp]?.name||l.opp} · {l.min} min · {valueOf(l,metric)} {markets[metric]}</p>)}</details></>:<p>{hist.value?'No games in this venue split.':'Loading game log…'}</p>}
-  <p>Estimated middle range · {p.range?.[metric]?.join('–')} {markets[metric].toLowerCase()}</p><h3>Opponent defense vs {p.role.toLowerCase()}</h3>{adj?<p>{adj[0]>0?'+':''}{adj[0]}% versus expected {markets[metric].toLowerCase()} across {adj[1]} prior player appearances in this role. {adj[1]>0&&<>Allowed {adj[2]} per appearance versus {adj[3]} expected. </>}{p.defenseRank?.[metric]&&<>Ranks {p.defenseRank[metric][0]} of {p.defenseRank[metric][1]} eligible defenses, most allowed relative to expectation first. </>}Position adjustment {pos[0]>0?'+':''}{pos[0]}% ({pos[1]} appearances).</p>:<p>Combination projections use the individual stat matchups.</p>}</section>;
+    <LineControl key={p.id+metric} line={point} setLine={setL} resetLine={()=>setL('')} manual={line!==''} manualLabel="Research line" median={median} games={rows.map(r=>({stats:{[metric]:r.value}}))} metric={metric} direction={side}/>
+    <section className="lab-player"><div className="player-identity"><Headshot id={p.id} team={p.team} large/><div><small>{teams[p.team].name} · {p.role}</small><h2>{p.name}</h2>
+      <div className="player-prop"><strong>{side} {point}</strong><span>{markets[metric]}</span><small>{line!==''?'Research line':'Player average'}</small></div>
+      <div className="player-next"><TeamLogo sport="cbb" team={opp}/><span><b>Next game</b> · {p.venue} vs {teams[opp].name}<br/>{dateFmt.format(new Date(g.time))} · {timeFmt.format(new Date(g.time))}</span></div></div></div>
+      <div className="player-numbers"><div><small>Median</small><b>{median??'—'}</b></div><div><small>Hit rate</small><b style={values.length?rateStyle(hits/values.length):undefined}>{values.length?pct(hits/values.length):'—'}</b><small>{hits} hits · {rows.length-hits-pushes} misses · {pushes} pushes</small></div>
+      <div><small>Model projection</small><b>{p.estimate[metric]}</b><small>Range {p.range?.[metric]?.join('–')}</small></div><div><small>Games shown</small><b>{rows.length}</b></div></div></section>
+    <section className="lab-block"><h2>Game By Game</h2>{rows.length?<><GameBars rows={rows} label={markets[metric]} caption={rows.length+' games shown'} line={point} direction={side} sport="cbb" selected={selectedLog} onSelect={setSelectedLog} expanded={expanded} onExpand={()=>setExpanded(!expanded)}
+      details={r=><><span className="bar-detail-item"><b>{r.log.min}</b><small>Minutes</small></span><span className="bar-detail-item"><b>{r.log.fga}</b><small>Field goal attempts</small></span></>}/>
+      {active?<section className="bar-report game-report"><header className="game-report-header"><div className="game-report-title"><TeamLogo sport="cbb" team={active.opponent}/><div><small>Selected game · {active.log.date}</small><h3>{p.name}</h3><p>{active.opponentLabel}</p></div></div><button className="game-report-clear" onClick={()=>setSelectedLog('')}>Clear selection</button></header><dl className="game-report-stats">{[['Result',active.outcome],['Minutes',active.log.min],['Points',active.log.points],['Rebounds',active.log.rebounds],['Assists',active.log.assists],['Made threes',active.log.threes]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></section>:<p className="bar-hint">Select a game bar for player stats.</p>}</>:<p>{hist.error?'Game log unavailable.':hist.value?'No games in this venue split.':'Loading game log…'}</p>}</section>
+    <section className="lab-block matchup-lab"><h2>Matchup research</h2><h3><Team id={opp} teams={teams}/> · Defense vs {p.role.toLowerCase()}</h3>{adj?<p>{adj[0]>0?'+':''}{adj[0]}% versus expected {markets[metric].toLowerCase()} across {adj[1]} prior player appearances in this role. {adj[1]>0&&<>Allowed {adj[2]} per appearance versus {adj[3]} expected. </>}{p.defenseRank?.[metric]&&<>Ranks {p.defenseRank[metric][0]} of {p.defenseRank[metric][1]} eligible defenses, most allowed relative to expectation first. </>}Position adjustment {pos[0]>0?'+':''}{pos[0]}% ({pos[1]} appearances).</p>:<p>Combination projections use the individual stat matchups.</p>}</section>
+    <section className="lab-block"><h2>Production &amp; workload</h2><dl>{[['Projected minutes',p.minutes],['Recent minutes range',p.minuteRange?.join('–')],['Recent starts',p.starts],['Fouls per 40 minutes',p.foulRate]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></section>
+    <section className="lab-block player-log"><h2>Game log</h2><div className="history-scroll log-table"><table><thead><tr>{['Date','Opponent','Minutes',markets[metric],'Result'].map(k=><th key={k}>{k}</th>)}</tr></thead><tbody>{rows.slice().reverse().map(r=><tr key={r.id}><td>{r.log.date}</td><td><TeamLogo sport="cbb" team={r.opponent}/>{r.opponentLabel}</td><td>{r.log.min}</td><td>{r.value}</td><td><span className="log-outcome" data-result={r.outcome}>{r.outcome}</span></td></tr>)}</tbody></table></div></section>
+  </div>;
 }
 function weekOf(time){
   const d=new Date(etDay(time)+'T12:00Z');
@@ -179,7 +206,7 @@ function Ledger({teams,rows,top,day,evaluation}){
     .sort((a,b)=>top?b.ev-a.ev:b.time.localeCompare(a.time));
   const byName=new Map(Object.entries(teams).map(([id,t])=>[t.name,id]));
   const counts=s=>show.filter(r=>r.result===s).length;
-  return <section className="cb-panel lab-block">{top?<><div className="top-looks-heading"><h2>Ranked player props</h2><span className="slate-count">{show.length} qualified</span></div><p>CBB sportsbook updates are paused. Player Charts and Prop Lists show projections and season averages.</p></>:<><RecordHeader title={market==='All'?'College basketball':market} icon={BarChart3}>Saved pregame picks and settled results by week.</RecordHeader><div className="cb-tabs">{['All','Player prop','Moneyline','Total','Spread'].map(m=><button key={m} aria-pressed={m===market} onClick={()=>setMarket(m)}>{m}</button>)}</div><Select label="Week starting Monday" value={date} onChange={setDate}><option>All</option>{dates.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select><p>{counts('Win')} wins · {counts('Loss')} losses · {counts('Push')} pushes · {counts('Void')} void · {show.filter(r=>!r.result).length} pending</p></>}
+  return <section className={top?"top-pick-list":"panel props-board model-record-shell"}>{top?<><div className="top-looks-heading"><h2>Ranked player props</h2><span className="slate-count">{show.length} qualified</span></div><p>CBB sportsbook updates are paused. Player Charts and Prop Lists show projections and season averages.</p></>:<><div className="board-sort model-record-tabs">{['All','Player prop','Moneyline','Total','Spread'].map(m=><button className="outline-button" key={m} aria-pressed={m===market} onClick={()=>setMarket(m)}>{m}</button>)}</div><RecordHeader title={market==='All'?'College basketball':market} icon={BarChart3}>Saved pregame picks and settled results by week.</RecordHeader><Select label="Week starting Monday" value={date} onChange={setDate}><option>All</option>{dates.map(d=><option key={d} value={d}>{labelDay(d)}</option>)}</Select><p>{counts('Win')} wins · {counts('Loss')} losses · {counts('Push')} pushes · {counts('Void')} void · {show.filter(r=>!r.result).length} pending</p></>}
     {!show.length&&<p>{top?'No saved Top Looks for this date.':'No saved picks in this selection.'}</p>}
     {show.slice(0,limit).map(r=><RecordPick key={[r.game,r.market,r.pid,r.metric,r.side,r.line].join('-')} row={r} teams={teams} byName={byName}/>)}
     {show.length>limit&&<button onClick={()=>setLimit(limit+40)}>Show more</button>}
