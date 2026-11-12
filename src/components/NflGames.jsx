@@ -161,7 +161,7 @@ export default function NflGames({schedule,books,players,validation,season,now,o
     </div>
   </section>;
 
-  return <section className="panel nfl-games"><header className="nfl-games-heading"><div><small>NFL · V2</small><h1>NFL Games</h1></div><span className="nfl-data-chip"><span/> SCHEDULE SNAPSHOT</span></header>
+  return <section className="panel nfl-games">
     {weeks.length>0&&<><div className="board-controls nfl-week-control"><label>Game Week<FilterMenu aria-label="Game Week" value={week} onChange={e=>{setWeek(e.target.value);setSelected('');}}>{weeks.map(w=><option key={w}>{w}</option>)}</FilterMenu></label><label>Matchup<FilterMenu aria-label="Matchup" value={selected?gameKey(selected):''} onChange={e=>openMatchup(e.target.value)}>
         <option value="">All games</option>{games.map(g=><option key={gameKey(g)} value={gameKey(g)} data-group={gameDay(g)} data-short-label={g.away+' @ '+g.home}>{gameTime(g)+' · '+g.away+' @ '+g.home}</option>)}
       </FilterMenu></label>{selected&&<div className="match-arrows" aria-label="Switch matchup">{[-1,1].map(step=>{

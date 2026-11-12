@@ -56,7 +56,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
   const displayedGameCount=isReplay?replayDays.reduce((sum,day)=>sum+Number(day.gameCount||0),0):slate.length;
   return <main className="top-looks chart-lab"><NflToolHeader active="top"/>
     <div className="top-looks-heading">
-      <div><span className="top-kicker">MODEL RANKED PLAYER PROPS</span><h1>Top <em>Looks</em></h1>
+      <div>
         <p>Player point projections match NFL Games. Top Looks adds line-specific hit rates and matchup signals to rank qualified props.</p></div>
       <span className="slate-count">{picks.length} QUALIFIED</span>
     </div>

@@ -302,7 +302,6 @@ export default function NflCharts({players,seasons,slate,venue,onVenue,resetLine
   const recentUsage=displayed.slice(-3).map(g=>g.usage?.[usage.key]).filter(Number.isFinite);
   return <main className="chart-lab" style={{'--club':teamColor(player?.team) || '#be98ed'}}>
     <NflToolHeader active="charts"/>
-    <h1>Player <em>Charts</em></h1>
     {!loading && !error && !player && <ChartSlate slate={slate}/>}
     {loading || error || !player?<p>{loading?'Loading player charts…':error || 'No player history available.'}</p>:<>
     <div className="lab-controls primary-controls">

@@ -95,7 +95,6 @@ export default function NflPropList({players,roster,schedule,season,books,market
   ];
   return <main className="chart-lab prop-list">
     <NflToolHeader active="props"/>
-    <h1>Prop <em>Lists</em></h1>
     {loading || error?<p>{error || 'Loading Player Props…'}</p>:<>
       <div className="prop-list-filters prop-primary">
         <WeekAndMatchup slate={slate}/>

@@ -1,0 +1,43 @@
+.nfl-page-banner {
+  position:relative;
+  isolation:isolate;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:.75rem;
+  margin:1rem 0;
+  padding:clamp(.8rem,2vw,1.4rem) clamp(1rem,3vw,2rem);
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--page-accent) 42%,#252332);
+  border-inline-start:4px solid var(--page-accent);
+  border-radius:.9rem;
+  background:linear-gradient(108deg,#191824 22%,#211e31 62%,color-mix(in srgb,var(--page-accent) 24%,#171621));
+}
+.nfl-page-banner::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:0 0 0 52%;
+  background:repeating-linear-gradient(117deg,transparent 0 20px,#ffffff0c 20px 22px,transparent 22px 35px);
+}
+.chart-lab .nfl-page-banner h1 {
+  margin:0;
+  color:#fffaff;
+  font:italic 800 clamp(2rem,5vw,3.75rem)/1.08 LabDisplay,system-ui,sans-serif;
+  letter-spacing:.005em;
+  text-transform:uppercase;
+}
+.chart-lab .nfl-page-banner h1 em {color:var(--page-accent);text-shadow:none}
+.nfl-page-emblem {
+  display:grid;
+  place-items:center;
+  width:clamp(2.5rem,6vw,4rem);
+  aspect-ratio:1;
+  flex:none;
+  color:var(--page-accent);
+  border:1px solid currentColor;
+  border-radius:26%;
+  background:#171621;
+  box-shadow:3px 3px 0 color-mix(in srgb,var(--page-accent) 35%,transparent);
+}
+.nfl-page-emblem svg {width:55%;height:55%}
