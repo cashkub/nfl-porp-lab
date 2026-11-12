@@ -8,7 +8,7 @@ from statistics import mean
 from urllib.request import urlopen
 from zoneinfo import ZoneInfo
 from cbb_model import Teams,Players,MARKETS,FIELDS,combine,outcomes
-from cbb_feeds import injuries,instant,team_directory
+from cbb_feeds import injuries,instant,team_directory,d1_conferences
 
 ROOT=Path(__file__).resolve().parents[1]/'public/data/cbb-v2'
 CACHE=Path(os.environ.get('CBB_CACHE','/tmp/cbb-cache'))
@@ -54,17 +54,22 @@ def main():
     teams=Teams();teams.eval_year=year-1
     players=Players();names={};finals={};pending=[];actual={}
     player_errors=defaultdict(list)
+    directory_file=ROOT/'team-directory.json'
+    directory=team_directory(year,read(directory_file,{}))
     for season in range(year-2,year+1):
         teams.rollover()
         schedule=source('schedules','mbb_schedule',season,'game_id date status_type_completed status_period neutral_site home_id away_id home_conference_id away_conference_id home_display_name away_display_name home_color away_color venue_full_name home_score away_score')
+        members=directory['conferences'] if season==year else d1_conferences(season)
+        schedule=[g for g in schedule if str(g['home_id']) in members and str(g['away_id']) in members]
         box=source('team_box','team_box',season,'game_id team_id team_score field_goals_made field_goals_attempted three_point_field_goals_made free_throws_attempted offensive_rebounds defensive_rebounds total_turnovers')
         totals={(r['game_id'],r['team_id']):r for r in box}
         bygame=defaultdict(list)
         if season==year-1:
+            eligible_games={g['game_id'] for g in schedule}
             prior=defaultdict(lambda:defaultdict(float))
             mapping={**{k:k for k in FIELDS},'threes':'three_point_field_goals_made','orb':'offensive_rebounds','drb':'defensive_rebounds','fgm':'field_goals_made','ftm':'free_throws_made','fga':'field_goals_attempted','tpa':'three_point_field_goals_attempted','fta':'free_throws_attempted','fouls':'fouls'}
-            for r in source('player_box','player_box',season,'athlete_id minutes '+' '.join(mapping.values())):
-                if not r['minutes'] or not r['athlete_id']:continue
+            for r in source('player_box','player_box',season,'game_id athlete_id minutes '+' '.join(mapping.values())):
+                if r['game_id'] not in eligible_games or not r['minutes'] or not r['athlete_id']:continue
                 acc=prior[str(r['athlete_id'])]
                 acc['minutes']+=r['minutes']
                 for k,col in mapping.items():acc[k]+=r[col] or 0
@@ -114,8 +119,7 @@ def main():
             batch.append((g,h,a,s['status_period'] or 2,teams.forecast(g),[teams.context(g,g[t],g[o]) for t,o in [('home','away'),('away','home')]]))
         for args in batch:teams.update(*args)
     if not players.logs or len(teams.errors)<100:raise ValueError('Incomplete CBB inputs')
-    directory_file=ROOT/'team-directory.json'
-    write(directory_file,team_directory(year,read(directory_file,{})))
+    write(directory_file,directory)
     reports,report_ok=injuries()
     inactive={p for p,r in reports.items() if (r['status'] or '').lower() in ('out','inactive','suspended')}
     ranks={}

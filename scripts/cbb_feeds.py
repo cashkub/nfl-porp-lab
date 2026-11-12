@@ -36,13 +36,24 @@ def team_directory(season, previous):
             data.update(ranks=ranks, pollDate=poll.get('lastUpdated'))
     except (OSError, ValueError):
         pass
+    data['conferences'] = d1_conferences(season, data.get('conferences', {}))
+    return data
+
+
+def d1_conferences(season, previous=None):
+    url = ESPN.replace('/apis/site/v2/', '/apis/v2/') + f'standings?season={season}&group=50'
     try:
-        url = ESPN.replace('/apis/site/v2/', '/apis/v2/') + f'standings?season={season}'
         standings, _ = get(url)
-        conferences = {str(entry['team']['id']): c['name'] for c in standings.get('children', [])
-                       for entry in c.get('standings', {}).get('entries', [])}
+        if str(standings.get('id')) != '50':
+            raise ValueError('Expected NCAA Division I standings')
+        conferences = {str(entry['team']['id']): group['name']
+                       for group in standings.get('children', [])
+                       if str(group.get('standings', {}).get('season')) == str(season)
+                       for entry in group['standings'].get('entries', [])}
         if conferences:
-            data['conferences'] = conferences
+            return conferences
     except (OSError, ValueError):
         pass
-    return data
+    if previous:
+        return previous
+    raise RuntimeError(f'Division I membership unavailable for {season}')
