@@ -8,7 +8,7 @@ from statistics import mean
 from urllib.request import urlopen
 from zoneinfo import ZoneInfo
 from cbb_model import Teams,Players,MARKETS,FIELDS,combine,outcomes
-from cbb_feeds import game_prices,supplement_game_prices,injuries,props,key,instant
+from cbb_feeds import injuries,instant,team_directory
 
 ROOT=Path(__file__).resolve().parents[1]/'public/data/cbb-v2'
 CACHE=Path(os.environ.get('CBB_CACHE','/tmp/cbb-cache'))
@@ -114,16 +114,8 @@ def main():
             batch.append((g,h,a,s['status_period'] or 2,teams.forecast(g),[teams.context(g,g[t],g[o]) for t,o in [('home','away'),('away','home')]]))
         for args in batch:teams.update(*args)
     if not players.logs or len(teams.errors)<100:raise ValueError('Incomplete CBB inputs')
-    book=game_prices(days)
-    supplement_game_prices(pending,names,book)
-    observed=datetime.now(timezone.utc).isoformat()
-    saved=read(ROOT/'game-quotes.json',{})
-    for g in pending:
-        bucket=saved.setdefault(g['id'],{})
-        for market,prices in book.get(g['id'],{}).items():
-            bucket[market]=dict(prices=prices,observed=observed)
-    saved={g['id']:saved[g['id']] for g in pending if saved.get(g['id'])}
-    write(ROOT/'game-quotes.json',saved)
+    directory_file=ROOT/'team-directory.json'
+    write(directory_file,team_directory(year,read(directory_file,{})))
     reports,report_ok=injuries()
     inactive={p for p,r in reports.items() if (r['status'] or '').lower() in ('out','inactive','suspended')}
     ranks={}
@@ -132,8 +124,6 @@ def main():
         if n>=5:groups[group,metric].append(((obs+35)/(exp+35),tid))
     for (group,metric),entries in groups.items():
         for rank,(_,tid) in enumerate(sorted(entries,reverse=True),1):ranks[tid,group,metric]=[rank,len(entries)]
-    previous=read(ROOT/'quotes.json',{})
-    quotes=props(pending,names,previous,now)
     now=datetime.now(timezone.utc)
     pending=[g for g in pending if instant(g['time'])>now]
     archive=read(ROOT/'record.json',[])
@@ -170,48 +160,19 @@ def main():
         margins=[x-y for x,y in score_draws];totals=[x+y for x,y in score_draws]
         g['homeWin']=round(mean(1 if m>0 else .5 if m==0 else 0 for m in margins),3)
         g['picks']=[]
-        matchup=names[a]['name']+' @ '+names[h]['name']
-        for market,quote in saved.get(id,{}).items():
-            sides=quote['prices']
-            pick=choose(market,sides,totals if market=='Total' else margins,{'home':names[h]['name'],'away':names[a]['name']})
-            if pick:pick['quoted']=quote['observed'];g['picks'].append(pick);live.append(dict(**pick,game=id,time=g['time'],matchup=matchup,saved=now.isoformat()))
         roster=[]
         for t,o in [(h,a),(a,h)]:
             v='Neutral' if g['neutral'] else 'Home' if t==h else 'Away'
             roster.extend(players.project(t,o,v,pace,hs-aws,inactive,g['ratings'][t],g['ratings'][o]))
-        q=quotes.get(id,{});lines=q.get('lines',[])
-        g['priced']=bool(lines);g['quoteTime']=q.get('checked');g['injuries']=[r for pid,r in reports.items() if players.last_team.get(pid) in (h,a)]
-        prices=[]
-        for line in lines:
-            matches=[p for p in roster if key(p['name'])==key(line['name'])]
-            p=matches[0] if len(matches)==1 else None
-            row=dict(**line,pid=p['id'] if p else None,team=p['team'] if p else None)
-            if p:
-                metric=line['metric']; probs=outcomes([d[metric] for d in p['draws']],line['line'])
-                row.update(proj=p['estimate'][metric],sample=p['sample'],minutes=p['minutes'],probs=probs)
-                options=[(expected(probs[s],line[s],probs['push']),s) for s in ['over','under'] if line.get(s) and abs(line[s])>=100]
-                if options and p['sample']>=5:
-                    edge,side=max(options)
-                    if edge>0:live.append(dict(market='Player prop',label=p['name'],metric=metric,side=side,line=line['line'],price=line[side],prob=probs[side],ev=edge,
-                                              game=id,pid=p['id'],time=g['time'],matchup=matchup,saved=now.isoformat()))
-            prices.append(row)
+        g['priced']=False
+        g['injuries']=[r for pid,r in reports.items() if players.last_team.get(pid) in (h,a)]
         for p in roster:
             p.pop('draws')
             opponent=a if p['team']==h else h
             p['defenseRank']={k:ranks[opponent,p['role'],k] for k in FIELDS if (opponent,p['role'],k) in ranks}
-        g['roster']=roster;g['lines']=prices
+        g['roster']=roster;g['lines']=[]
         day_games[str(instant(g['time']).astimezone(ET).date())].append(g)
-    # Keep a saved quote if a refresh loses coverage; never replace a game after tip.
-    fresh={(r['game'],r['market'],r.get('pid'),r.get('metric')) for r in live}
-    old=[r for r in archive if instant(r['time'])>now and (r['game'],r['market'],r.get('pid'),r.get('metric')) not in fresh and
-         (r['market']!='Player prop' or r['game'] not in quotes)]
-    candidates=frozen+live+old
-    for d in days:
-        ranked=sorted([r for r in candidates if instant(r['time'])>now and str(instant(r['time']).astimezone(ET).date())==d and r['market']=='Player prop'],key=lambda r:-r['ev'])
-        slots=max(0,8-sum(bool(r.get('top')) for r in frozen if str(instant(r['time']).astimezone(ET).date())==d))
-        for i,r in enumerate(ranked):r['top']=i<slots
-    write(ROOT/'record.json',[r for r in candidates if r['market']!='Player prop' or r.get('top')])
-    write(ROOT/'quotes.json',quotes)
+    write(ROOT/'record.json',archive)
     for d in days:write(ROOT/(d+'.json'),day_games[d])
     for p in (ROOT.glob('????-??-??.json')):
         if p.stem not in days:p.unlink()

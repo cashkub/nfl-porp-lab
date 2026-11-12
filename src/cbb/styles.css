@@ -25,3 +25,10 @@
 .cb-bars div{flex:1 0 2rem;display:grid;text-align:center;gap:.2rem}.cb-bars i{border-radius:.2rem .2rem 0 0}
 .cb details{padding:.65rem 0}.cb summary{cursor:pointer;color:#dec7fa}.cb-foot{font-size:.78rem}
 @media(max-width:600px){.cb{padding-inline:.55rem}.cb-panel{padding:.65rem}.cb td,.cb th{padding:.38rem .22rem}.cb table{font-size:.78rem}.cb td small{font-size:.66rem}.cb-select{flex-basis:8rem}.cb-props td:first-child{width:45%}}
+.cb-face{display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:#33283e;border-radius:50%;flex:none;width:32px;height:32px}
+.cb-face img{width:100%;height:100%;object-fit:cover}
+.cb-face .team-logo{width:70%;height:70%;object-fit:contain}
+.cb-face-large{width:64px;height:64px}
+.cb-identity,.cb-rank-filter{display:flex;align-items:center;gap:.6rem}
+.cb-rank-filter{align-self:center;color:#ead9ff;font-weight:650;cursor:pointer}
+.cb-rank-filter input{width:1.1rem;height:1.1rem;accent-color:#b983ef}
