@@ -22,6 +22,17 @@ class BasketballModelTests(unittest.TestCase):
         game['neutral'] = False
         self.assertGreater(team.forecast(game)[0], team.forecast(game)[1])
 
+    def test_conference_carryover_changes_strength_and_preserves_total(self):
+        teams = Teams()
+        teams.state['home'] = [10., -4., 2.]
+        teams.conference['home'] = 'Big Ten'
+        teams.four['home'].append(([0.] * 4, [0.] * 4))
+        teams.rollover()
+        offense, defense, pace = teams.state['home']
+        self.assertGreater(offense - defense, .55 * 14)
+        self.assertAlmostEqual(offense + defense, .55 * 6)
+        self.assertAlmostEqual(pace, .55 * 2)
+
     def test_spread_sign_and_push(self):
         quotes = {'away': {'line': 4, 'price': -110}, 'home': {'line': -4, 'price': -110}}
         selected = choose('Spread', quotes, [1, 4, 5, 2], {})
