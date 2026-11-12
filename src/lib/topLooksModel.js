@@ -4,7 +4,8 @@ import {defenseTable} from './matchup.js';
 import {getPlayerGames,formatRate,isHit,estimateModelHitRate,METRICS} from './stats.js';
 import {buildOpportunityEfficiencyPriors,estimateOpportunityProjection} from './playerProjection.js';
 
-const dayKey=value=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
+const easternDay=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'});
+const dayKey=value=>easternDay.format(new Date(value));
 // `value` is an Eastern calendar date (YYYY-MM-DD), not a UTC instant.
 // Noon UTC keeps it on that same calendar day when formatted in Eastern time.
 const dayLabel=value=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'long',month:'short',day:'numeric'}).format(new Date(value+'T12:00:00Z'));

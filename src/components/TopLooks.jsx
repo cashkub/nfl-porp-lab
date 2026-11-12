@@ -1,3 +1,4 @@
+import {priceText} from '../lib/bookLine.js';
 import PregameForm from './PregameForm.jsx';
 import {useArchive} from './TrackedPicks.jsx';
 import {publishedLook} from '../lib/publishedLooks.js';
@@ -14,7 +15,7 @@ import './TopLooks.css';
 
 import {buildTopLooks,dayKey,dayLabel,fmtShare,averageLineLabel,projectionReason,gameContext} from '../lib/topLooksModel.js';
 export default function TopLooks({players,schedule,books,season,now,loading,error,onOpen}) {
-  const future=schedule.filter(game=>Date.parse(game.kickoff)>now);
+  const future=useMemo(()=>schedule.filter(game=>Date.parse(game.kickoff)>now),[schedule,now]);
   const days=[...new Set(future.map(game=>dayKey(game.kickoff)))].sort();
   const weeks=[...new Set(future.map(game=>String(game.week)))].sort((a,b)=>Number(a)-Number(b));
   const initialParams=new URLSearchParams(window.location.search);
@@ -29,7 +30,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
   const value=options.includes(selected)?selected:options[0]||'';
   const isReplay=mode==='week'&&String(value)==='9'&&replayData?.week===9;
   const replayDays=isReplay?replayData.days||[]:[];
-  const slate=future.filter(game=>mode==='day'?dayKey(game.kickoff)===value:String(game.week)===value);
+  const slate=useMemo(()=>future.filter(game=>mode==='day'?dayKey(game.kickoff)===value:String(game.week)===value),[future,mode,value]);
   const replayPicks=isReplay?replayDays.flatMap(day=>(day.picks?.[type]||[]).map(pick=>({...pick,replayDayDate:day.date,replayDayLabel:day.label,replayGameCount:day.gameCount,replayAsOf:day.asOf}))):[];
   useEffect(()=>{
     const url=new URL(window.location.href);
@@ -40,6 +41,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
   },[mode,value,type]);
   const archive=useArchive('nfl-picks.json');
   const livePicks=useMemo(()=>{
+    if(isReplay || loading || !archive.rows)return [];
     const dates=[...new Set(slate.map(g=>dayKey(g.kickoff)))];
     return dates.flatMap(date=>{
       const fixtures=slate.filter(g=>dayKey(g.kickoff)===date);
@@ -47,7 +49,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
       if(locked.length)return locked.filter(r=>fixtures.some(g=>g.id===r.gameId)).sort((a,b)=>a.rank-b.rank).map(r=>publishedLook(r,players,fixtures));
       return buildTopLooks({players,slate:fixtures,books,season,type});
     });
-  },[slate,players,season,books,type,archive.rows]);
+  },[slate,players,season,books,type,archive.rows,isReplay,loading]);
   const picks=isReplay?replayPicks:livePicks;
   const markets=Object.fromEntries(Object.entries(METRICS).map(([key,market])=>[key,market.label]));
   const kickDate=value&&mode==='day'?dayLabel(value):value?'Week '+value:'Upcoming';
@@ -94,7 +96,7 @@ export default function TopLooks({players,schedule,books,season,now,loading,erro
           </div>
           <div className="top-pick-stat projection-stat"><small>PROJECTION</small><b>{pick.projection.toFixed(1)}</b><small>vs. {pick.line} Line</small></div>
           <div className="top-pick-stat chance-stat"><small title="The model's predicted chance that this prop hits, based on the available data.">MODEL PREDICTED HIT RATE</small><b style={rateStyle(pick.chance)}>{formatRate(pick.chance)}</b><small>{pick.hits}/{pick.history.length} PRIOR · <span style={rateStyle(pick.hits/pick.history.length)}>{formatRate(pick.hits/pick.history.length)} PRIOR RATE</span></small></div>
-          <div className="top-pick-stat defense-stat"><small>TOP REASON</small><b data-fit={pick.favoriteReason.label==='Matchup'?pick.matchupTone:undefined} style={pick.favoriteReason.label==='Matchup'?defenseRankStyle(pick.defense?.rank,32,pick.side):undefined}>{pick.favoriteReason.label}</b><small className="top-reason-detail">{pick.favoriteReason.label==='Matchup'?pick.matchup:pick.favoriteReason.detail}</small><small>{pick.quote.isBookLine?(pick.side==='over'?'DK YES ':'DK NO ')+(pick.side==='over'?pick.quote.over:pick.quote.under):'Odds unavailable'}</small></div>
+          <div className="top-pick-stat defense-stat"><small>TOP REASON</small><b data-fit={pick.favoriteReason.label==='Matchup'?pick.matchupTone:undefined} style={pick.favoriteReason.label==='Matchup'?defenseRankStyle(pick.defense?.rank,32,pick.side):undefined}>{pick.favoriteReason.label}</b><small className="top-reason-detail">{pick.favoriteReason.label==='Matchup'?pick.matchup:pick.favoriteReason.detail}</small><small>{pick.quote.isBookLine?'DK '+(type==='anytime'?'YES':pick.side.toUpperCase())+' '+priceText(pick.quote[pick.side]):'Odds unavailable'}</small></div>
           <div className="top-pick-actions">
             <button type="button" onClick={()=>onOpen(pick.player,{metric:pick.metric,point:pick.line,source:pick.quote.anytime?(pick.quote.isBookLine?'DraftKings Anytime TD Odds':'Model Estimate'):(pick.quote.isBookLine?'DraftKings':'Player Average')},pick.side,pick.game)}><Activity size={15}/>Charts</button>
           </div>

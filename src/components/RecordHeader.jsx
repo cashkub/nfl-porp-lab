@@ -7,6 +7,6 @@ export default function RecordHeader({title,icon:Icon,children}){
       <h1>{title} <em>RECORD</em></h1>
       <p>{children}</p>
     </div>
-    <div className="mr-hero-mark"><Icon size={35}/><span>LOCKED<br/>PREGAME DATA</span></div>
+    <div className="mr-hero-mark"><Icon size={35}/><span>PREGAME<br/>MODEL DATA</span></div>
   </header>;
 }

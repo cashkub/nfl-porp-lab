@@ -32,6 +32,7 @@ function RecordPick({row}){
   const observed=Number(row.total)>0?Number(row.hits)/Number(row.total):null;
   const breakeven=Number.isFinite(Number(row.breakEven))?row.breakEven:row.price==null?null:row.price<0?Math.abs(row.price)/(100+Math.abs(row.price)):100/(100+row.price);
   const kickoff=Date.parse(row.kickoff),published=Date.parse(row.saved);
+  const locked=Date.now()>=Date.parse(row.locksAt||row.kickoff) || Boolean(row.result && row.result!=='Pending');
   const opponent=row.team===(row.home||'')?row.away:row.home;
   const injuryEvidence=Array.isArray(row.injuries)?row.injuries:null;
   return <article className={`mr-pick ${open?'is-open':''} ${resultClass(row)}`}>
@@ -44,12 +45,12 @@ function RecordPick({row}){
       <ChevronDown className="mr-chevron" size={18}/>
     </button>
     <div className="mr-pick-glance">
-      <span className="mr-glance-date"><CalendarDays size={13}/>{Number.isFinite(kickoff)?dateLabel.format(new Date(kickoff)):row.date||'—'} · {recordPeriod(row,'nfl') ? periodLabel(recordPeriod(row,'nfl'),'nfl') : 'NFL'}</span>
+      <span className="mr-glance-date"><CalendarDays size={13}/>{Number.isFinite(kickoff)?dateLabel.format(new Date(kickoff)):row.date||'—'} · {recordPeriod(row,'nfl') ? periodLabel(recordPeriod(row,'nfl'),'nfl') : 'NFL'} · {locked?'Locked':'Pregame'}{!locked && Number.isFinite(published)?' · updated '+new Date(published).toLocaleString():''}</span>
       <span className="mr-glance-form"><small>PRE-GAME FORM</small><PregameForm values={row.values} line={row.line} side={row.side} touchdown={row.kind==='touchdown'} label={row.label}/></span>
       <span className="mr-glance-prediction"><small>MODEL EST. HIT RATE</small><b>{rateText(row.modelHitRate)} <i>V2 estimate · {observed==null?'prior rate —':`${rateText(observed)} observed · ${row.hits??'—'}/${row.total||history.length||'—'}`}</i></b></span>
     </div>
     {open&&<div className="mr-detail-grid">
-      <section className="mr-detail-block"><h3><Activity size={15}/> Locked Performance</h3><dl>
+      <section className="mr-detail-block"><h3><Activity size={15}/> Pregame Performance</h3><dl>
         <div><dt>Line At Publish</dt><dd>{row.kind==='touchdown'?'0.5 TD':`${row.side||'—'} ${row.line??'—'} ${row.label||''}`}</dd></div>
         <div><dt>Sportsbook Price</dt><dd>{row.price==null?'Unavailable':priceText(row.price)}</dd></div>
         <div><dt>Break-Even Rate</dt><dd>{breakeven==null?'—':rateText(breakeven)}</dd></div>
@@ -108,7 +109,7 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
   const periodTitle=selectedPeriod==='all'?'All Weeks':periodLabel(selectedPeriod,'nfl');
   return <div className="model-record-picks">
     <RecordHeader title={kind==='touchdowns'?'ANYTIME TOUCHDOWN':'PLAYER PROP'} icon={kind==='touchdowns'?Target:TrendingUp}>
-      Each pick keeps its locked line, available odds, model estimate, and pregame evidence.
+      Each pick keeps its published line, available odds, model estimate, and pregame evidence.
     </RecordHeader>
     {emptyMessage&&<p className="record-v2-empty mr-empty-record-note">{emptyMessage}</p>}
     <div className="mr-period-select"><label><CalendarDays size={16}/><span>WEEKLY RECORD VIEW</span><FilterMenu aria-label="Select week for record summary" value={selectedPeriod} onChange={e=>setPeriod(e.target.value)}><option value="all">All Weeks</option>{periods.map(value=><option value={value} key={value}>{periodLabel(value,'nfl')}</option>)}</FilterMenu></label><small>Official V2 picks only · pending picks are not counted as wins or losses.</small></div>
@@ -119,7 +120,7 @@ export default function ModelRecordPicks({rows=[],kind='props',emptyMessage=''})
       <SummaryTile icon={Shield} label={`${periodTitle.toUpperCase()} HIT RATE`} value={rate(weekRows)==null?'—':rateText(rate(weekRows))} detail="Selected week · pending excluded" tone={rate(weekRows)==null?'':rate(weekRows)>=.55?'green':'red'}/>
     </div>
     <section className="mr-archive">
-      <div className="mr-section-title"><div><span className="mr-eyebrow">PICK ARCHIVE</span><h2>EVERY LOCKED PICK</h2></div><span className="mr-count">{filtered.length} RECORDS</span></div>
+      <div className="mr-section-title"><div><span className="mr-eyebrow">PICK ARCHIVE</span><h2>PUBLISHED PICKS</h2></div><span className="mr-count">{filtered.length} RECORDS</span></div>
       <div className="mr-filters">
         <label><Target size={15}/> MARKET <FilterMenu aria-label="Filter by market" value={market} onChange={e=>setMarket(e.target.value)}><option value="all">All Markets</option>{markets.map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>
         <label><UserRound size={15}/> POSITION <FilterMenu aria-label="Filter by player position" value={position} onChange={e=>setPosition(e.target.value)}><option value="all">All Positions</option>{positions.map(value=><option value={value} key={value}>{value}</option>)}</FilterMenu></label>

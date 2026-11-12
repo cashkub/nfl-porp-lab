@@ -271,6 +271,7 @@ if(sport==='nfl'){
         favoriteReason:{label:pick.favoriteReason.label,detail:pick.favoriteReason.detail},context:pick.favoriteReason.detail,
         look:{recentHits:pick.recentHits,recent:pick.recent,matchup:pick.matchup,matchupTone:pick.matchupTone,
           defense:pick.defense,volumeSignal:pick.volumeSignal,fairSide:pick.fairSide,quote:pick.quote},
+        locksAt:new Date(Math.min(...games.map(g=>Date.parse(g.kickoff)))).toISOString(),
         snapshotVersion:2,model:'2026.11.v2',saved
       });
     });

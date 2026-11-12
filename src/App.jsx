@@ -142,7 +142,7 @@ export default function App() {
   const sport = ['cbb','nba','cfb'].find(s=>page.startsWith(s)) || 'nfl';
   const manualLeague = sport!=='nfl';
   const nflTool = !launch && !manualLeague;
-  const previewTools=new URLSearchParams(window.location.search).get('view')==='nfl';
+  const previewTools=new URLSearchParams(window.location.search).get('view')==='nfl' || ['analyzer','prop-lists','nfl-top','nfl-games','model-record'].includes(page);
   useEffect(()=>{
     if(previewTools && !['analyzer','prop-lists','nfl-top','nfl-games','model-record'].includes(page))window.location.replace('/preview/nfl/');
   },[previewTools,page]);
@@ -195,7 +195,7 @@ export default function App() {
     if (!nflTool || data.status === 'ready') return;
     let active = true;
     const base = import.meta.env.BASE_URL || '/';
-    fetch(`${base}data/stats.json?v=${Date.now()}`, {cache:'no-store'})
+    fetch(`${base}data/stats.json`, {cache:'no-cache'})
       .then(async response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
       .then(payload => {
         if (!active) return;
@@ -216,12 +216,14 @@ export default function App() {
     if (hasTouches(data)) return;
     const controller = new AbortController();
     let pending = false;
+    let lastCheck = Date.now();
     async function refreshTouches() {
-      if (pending || document.hidden) return;
+      if (pending || document.hidden || Date.now() - lastCheck < 600000) return;
+      lastCheck = Date.now();
       pending = true;
       try {
-        const response = await fetch(import.meta.env.BASE_URL + 'data/stats.json?v=' + Date.now(),
-          {cache:'no-store', signal:controller.signal});
+        const response = await fetch(import.meta.env.BASE_URL + 'data/stats.json',
+          {cache:'no-cache', signal:controller.signal});
         if (response.ok) {
           const payload = await response.json();
           if (!controller.signal.aborted && payload.status === 'ready' && hasTouches(payload)) setData(payload);
@@ -232,7 +234,7 @@ export default function App() {
         pending = false;
       }
     }
-    const timer = window.setInterval(refreshTouches, 60000);
+    const timer = window.setInterval(refreshTouches, 600000);
     document.addEventListener('visibilitychange', refreshTouches);
     return () => {
       controller.abort();
@@ -334,7 +336,7 @@ export default function App() {
   const manual = custom?.context === lineContext && !(custom.source==='Player Average' && hasMarket);
   const line = manual ? custom.value : quote?.point ?? (previewTools?averageLine:markets[metric].defaultLine);
   const setLine = value => setCustom({context:lineContext, value});
-  const defenseRows = useMemo(() => defenseTable(players, season, player?.position, metric), [players, season, player?.position, metric]);
+  const defenseRows = useMemo(() => page==='analyzer' ? defenseTable(players, season, player?.position, metric) : [], [page,players, season, player?.position, metric]);
   const opponents = useMemo(() => getDistinctOpponents(player, season), [player, season]);
   const allGames = useMemo(() => getPlayerGames(player, season, opponent, venue), [player, season, opponent, venue]);
   const splitGames = useMemo(() => getPlayerGames(player, season, opponent), [player, season, opponent]);
