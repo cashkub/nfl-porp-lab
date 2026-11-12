@@ -208,3 +208,6 @@
  .prop-list-head>.prop-column-button {text-align:right}
  .prop-list-head span:last-child {padding-right:0}
 }
+
+.nfl-games .nfl-week-control .filter-trigger { height: 44px; }
+.nfl-games .nfl-week-control .filter-trigger span { white-space: nowrap; }

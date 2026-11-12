@@ -48,3 +48,28 @@
 .cb-record-match .team-logo,.cb-record-selection .team-logo{margin:0}
 
 .cb .match-score-teams b{overflow-wrap:anywhere}.cb .chart-opponent b{overflow-wrap:anywhere}.cb .match-score-teams>div{min-width:0}
+
+.cb .cb-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 2), minmax(0, 1fr));
+  gap: .65rem;
+  margin-block: .7rem;
+  align-items: end;
+}
+.cb .cb-slate { --columns: 4; }
+.cb .cb-single { --columns: 1; max-width: 16rem; }
+.cb .cb-select { align-content: end; }
+.cb .cb-select :is(input, .filter-trigger) { height: 44px; box-sizing: border-box; }
+.cb .filter-trigger span { white-space: nowrap; }
+.cb .extra-filters { grid-template-columns: minmax(0, 1fr); }
+.cb .lab-controls.secondary-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 800px) {
+  .cb .cb-slate { --columns: 2; }
+}
+@media (max-width: 600px) {
+  .cb .cb-single { max-width: none; }
+  .cb .lab-controls.secondary-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 350px) {
+  .cb .cb-filter-grid { --columns: 1; }
+}
