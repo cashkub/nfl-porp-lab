@@ -62,7 +62,7 @@ def main():
         bygame=defaultdict(list)
         if season==year-1:
             prior=defaultdict(lambda:defaultdict(float))
-            mapping={**{k:k for k in FIELDS},'threes':'three_point_field_goals_made','orb':'offensive_rebounds','drb':'defensive_rebounds','fga':'field_goals_attempted','tpa':'three_point_field_goals_attempted','fta':'free_throws_attempted','fouls':'fouls'}
+            mapping={**{k:k for k in FIELDS},'threes':'three_point_field_goals_made','orb':'offensive_rebounds','drb':'defensive_rebounds','fgm':'field_goals_made','ftm':'free_throws_made','fga':'field_goals_attempted','tpa':'three_point_field_goals_attempted','fta':'free_throws_attempted','fouls':'fouls'}
             for r in source('player_box','player_box',season,'athlete_id minutes '+' '.join(mapping.values())):
                 if not r['minutes'] or not r['athlete_id']:continue
                 acc=prior[str(r['athlete_id'])]
@@ -83,7 +83,7 @@ def main():
                 batch.clear()
                 previous_day=game_day
             g=dict(id=str(gid),time=s['date'],season=season,neutral=bool(s['neutral_site']),arena=s['venue_full_name'],
-                   home=str(s['home_id']),away=str(s['away_id']))
+                   home=str(s['home_id']),away=str(s['away_id']),homeConf=s['home_conference_id'],awayConf=s['away_conference_id'])
             for side in ['home','away']:
                 names[g[side]]=dict(name=s[side+'_display_name'],color=s[side+'_color'] or 'a87ecb')
             if start>now:

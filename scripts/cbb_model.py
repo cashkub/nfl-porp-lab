@@ -37,10 +37,23 @@ class Teams:
         self.errors=[]
         self.check=[]
         self.weights=[0.]*5
+        self.conference={}
 
     def rollover(self):
-        for r in self.state.values():
-            for i in range(3): r[i]*=.55
+        # Returning teams share a schedule-strength prior with their previous conference.
+        members=defaultdict(list)
+        for tid,conf in self.conference.items():
+            if self.four.get(tid):members[conf].append(self.state[tid])
+        baseline={conf:[sum(r[i] for r in rows)/(len(rows)+3) for i in range(3)]
+                  for conf,rows in members.items()}
+        for tid,r in self.state.items():
+            prior=baseline.get(self.conference.get(tid),[0.,0.,0.])
+            # The conference prior informs strength (margin). Retain the team's own
+            # scoring environment and pace when projecting the combined score.
+            strength=.20*(prior[0]-prior[1])
+            r[0]=.55*r[0]+strength
+            r[1]=.55*r[1]-strength
+            r[2]*=.55
         self.four.clear()
         self.last.clear()
 
@@ -94,6 +107,8 @@ class Teams:
             self.state[opp][1]+=.075*e
             self.state[tid][2]+=.13*(possessions*reg-pace)
             self.four[tid].append((factors(r,o),factors(o,r)))
+            conf=g.get('homeConf' if i==0 else 'awayConf')
+            if conf:self.conference[tid]=conf
             self.last[tid]=g['time']
         if not g['neutral']:
             delta=clamp(error[0]-error[1],-25,25)
@@ -195,7 +210,7 @@ class Players:
             self.players[pid]=info
             self.last_team[pid]=tid
             seen.append(dict(game=game['id'],date=game['time'][:10],venue=venue,opp=opp,team=tid,
-                             min=r['minutes'],starter=bool(r['starter']),fga=r['field_goals_attempted'] or 0,
+                             pace=poss,min=r['minutes'],starter=bool(r['starter']),fga=r['field_goals_attempted'] or 0,
                              tpa=r['three_point_field_goals_attempted'] or 0,fta=r['free_throws_attempted'] or 0,
                              fouls=r['fouls'] or 0,fgm=r['field_goals_made'] or 0,ftm=r['free_throws_made'] or 0,
                              orb=r['offensive_rebounds'] or 0,drb=r['defensive_rebounds'] or 0,**stats))
@@ -229,9 +244,14 @@ class Players:
             two_trials=sum(g['fga']-g['tpa'] for g in logs)
             three_trials=sum(g['tpa'] for g in logs)
             ft_trials=sum(g['fta'] for g in logs)
-            two_pct=(sum(g['fgm']-g['threes'] for g in logs)+5)/(two_trials+10)
-            three_pct=(sum(g['threes'] for g in logs)+3.3)/(three_trials+10)
-            ft_pct=(sum(g['ftm'] for g in logs)+5.6)/(ft_trials+8)
+            prior_two=prior.get('fga',0)-prior.get('tpa',0)
+            prior_pct=lambda made,trials,avg:clamp(made/trials,.15,.95) if trials>0 else avg
+            two_base=prior_pct(prior.get('fgm',0)-prior.get('threes',0),prior_two,.50)
+            three_base=prior_pct(prior.get('threes',0),prior.get('tpa',0),.33)
+            ft_base=prior_pct(prior.get('ftm',0),prior.get('fta',0),.70)
+            two_pct=(sum(g['fgm']-g['threes'] for g in logs)+20*two_base)/(two_trials+20)
+            three_pct=(sum(g['threes'] for g in logs)+25*three_base)/(three_trials+25)
+            ft_pct=(sum(g['ftm'] for g in logs)+12*ft_base)/(ft_trials+12)
             rates={k:blended(k) for k in FIELDS}
             rates['threes']=tpa*three_pct
             rates['points']=2*max(0,fga-tpa)*two_pct+3*rates['threes']+fta*ft_pct
@@ -247,6 +267,8 @@ class Players:
             missing_ast=sum(mean(g['assists'] for g in batch) for batch in missing if batch)
             for stat in ('points','threes'):rates[stat]*=1+min(.12,missing_fga/150)
             if group=='Primary creator':rates['assists']*=1+min(.15,missing_ast/40)
+            # Per-minute rates already include the pace of the player's recent games.
+            sample_pace=mean(x['pace'] for x in logs[-15:])
             for k in FIELDS:
                 obs,exp,n=self.allow[opp,group,k]
                 baseline=clamp((obs+35)/(exp+35),.8,1.2)
@@ -255,7 +277,7 @@ class Players:
                 adj[k]=[round(100*(baseline-1),1),n]
                 position[k]=[round(100*(posratio-1),1),count]
                 adj[k]+=[round(obs/n,1) if n else None,round(exp/n,1) if n else None]
-                projected[k]=max(0,m*rates[k]*pace/PACE*(.65*baseline+.35*posratio))
+                projected[k]=max(0,m*rates[k]*pace/max(45,sample_pace)*(.65*baseline+.35*posratio))
             # Keep all stats from a historical game together for combination-prop ranges.
             recent=logs[-15:]
             averages={k:mean(h[k] for h in recent) for k in FIELDS}
