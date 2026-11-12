@@ -42,3 +42,4 @@
   box-shadow:3px 3px 0 color-mix(in srgb,var(--page-accent) 35%,transparent);
 }
 .nfl-page-emblem svg {width:55%;height:55%}
+.chart-lab:not(.cb) .nfl-tool-header { flex-wrap: wrap; }

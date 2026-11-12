@@ -3,3 +3,10 @@ header a.pb-brand[href] { display: inline-flex; align-items: center; gap: .42rem
 header a.pb-brand img { width:clamp(2.8rem,4.8vw,3.8rem); height:auto; filter:drop-shadow(0 0 7px #efaeff85) }
 header .pb-wordmark { font:italic 400 clamp(1.55rem,3.25vw,2.6rem)/1 'Archivo Black',system-ui,sans-serif; font-synthesis:style;letter-spacing:-.065em; color:#f5eaff; text-shadow:0 2px 0 #382044,0 0 10px #c49bff66 }
 header .pb-wordmark span { color:#efaeff; text-shadow:0 2px 0 #51265e,0 0 12px #ed99ff66 }
+header .pb-sport {
+  border-inline-start: 1px solid #856696;
+  padding-inline-start: .5rem;
+  color: #dfb7f5;
+  font: 750 clamp(.78rem,1.4vw,1rem)/1.2 system-ui,sans-serif;
+  letter-spacing: .045em;
+}

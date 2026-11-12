@@ -12,12 +12,13 @@ const destinations=[
 ];
 
 export default function NflToolHeader({active,league='NFL'}){
-  const links=league==='CBB'?[...destinations,{name:'Bracketology',icon:Trophy,href:'#cbb-bracket',key:'bracket'}]:destinations;
+  const links=league==='CBB'?[...destinations.slice(1),{name:'Bracketology',icon:Trophy,href:'#cbb-bracket',key:'bracket'}]:destinations;
   const page=links.find(item=>item.key===active);
   const Icon=page.icon;
   const [first,last]=(active==='games'?league+' Games':active==='bracket'?'CBB Bracketology':page.name).split(' ');
   return <><header className="nfl-tool-header">
-    <a href="/preview/" className="pb-brand" aria-label="PropBets preview home"><img alt="" src="/preview/assets/mark.svg"/><span className="pb-wordmark">Prop<span>Bets</span></span></a>
+    <a href="/preview/" className="pb-brand" aria-label={'PropBets '+league+' · All leagues'}><img alt="" src="/preview/assets/mark.svg"/><span className="pb-wordmark">Prop<span>Bets</span></span><span className="pb-sport">{league}</span></a>
+    {league==='CBB'&&<a className="cbb-menu-link" href="/preview/cbb/"><LayoutGrid size={16} aria-hidden="true"/> CBB Menu</a>}
     <nav aria-label={league+" Navigation"}>
       {links.map(({name,icon:Icon,href,key})=>{
         const label=key?name:league+' Menu';
