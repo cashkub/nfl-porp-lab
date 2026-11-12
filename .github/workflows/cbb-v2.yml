@@ -25,10 +25,6 @@ jobs:
       - run: pip install 'pyarrow>=18,<24'
       - run: python -m unittest discover -s tests -p 'test_cbb*.py'
       - name: Refresh pregame snapshots and grade completed games
-        env:
-          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
-          CBB_PROP_EVENT_LIMIT: ${{ vars.CBB_PROP_EVENT_LIMIT || '2' }}
-          CBB_ODDS_RESERVE: ${{ vars.CBB_ODDS_RESERVE || '300' }}
         run: python scripts/update_cbb_v2.py
       - name: Publish CBB data
         run: |
