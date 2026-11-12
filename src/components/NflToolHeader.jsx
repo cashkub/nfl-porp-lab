@@ -1,6 +1,6 @@
 import React from 'react';
 import './NflToolHeader.css';
-import {LayoutGrid, Activity, ListFilter, Crosshair, CalendarDays, BarChart3} from 'lucide-react';
+import {LayoutGrid, Activity, ListFilter, Crosshair, CalendarDays, BarChart3, Trophy} from 'lucide-react';
 
 const destinations=[
   {name:'NFL Menu',icon:LayoutGrid,href:'/preview/nfl/'},
@@ -12,13 +12,14 @@ const destinations=[
 ];
 
 export default function NflToolHeader({active,league='NFL'}){
-  const page=destinations.find(item=>item.key===active);
+  const links=league==='CBB'?[...destinations,{name:'Bracketology',icon:Trophy,href:'#cbb-bracket',key:'bracket'}]:destinations;
+  const page=links.find(item=>item.key===active);
   const Icon=page.icon;
-  const [first,last]=(active==='games'?league+' Games':page.name).split(' ');
+  const [first,last]=(active==='games'?league+' Games':active==='bracket'?'CBB Bracketology':page.name).split(' ');
   return <><header className="nfl-tool-header">
     <a href="/preview/" className="pb-brand" aria-label="PropBets preview home"><img alt="" src="/preview/assets/mark.svg"/><span className="pb-wordmark">Prop<span>Bets</span></span></a>
     <nav aria-label={league+" Navigation"}>
-      {destinations.map(({name,icon:Icon,href,key})=>{
+      {links.map(({name,icon:Icon,href,key})=>{
         const label=key?name:league+' Menu';
         const target=league==='CBB'?(key?'#cbb-'+key:'/preview/cbb/'):href;
         const content=<><Icon size={18} strokeWidth={1.8} aria-hidden="true"/><span>{label}</span></>;

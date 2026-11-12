@@ -7,6 +7,7 @@ from pathlib import Path
 from statistics import mean
 from urllib.request import urlopen
 from zoneinfo import ZoneInfo
+from cbb_bracket import project
 from cbb_model import Teams,Players,MARKETS,FIELDS,combine,outcomes
 from cbb_feeds import injuries,instant,team_directory,d1_conferences
 
@@ -194,6 +195,11 @@ def main():
     write(ROOT/'index.json',dict(days=days,firstDay=next((d for d in days if day_games[d]),days[0]),teams=names,updated=now.isoformat(),season=year,injuryFeed=report_ok,
         evaluation=dict(playerCount=len(player_errors['minutes']),playerErrors={k:round(mean(values),1) for k,values in player_errors.items() if values},season=teams.eval_year,games=len(teams.check),marginMAE=round(mean(x[0] for x in teams.check),1),
                         totalMAE=round(mean(x[1] for x in teams.check),1),winner=round(mean(x[2] for x in teams.check),3))))
+    if year==2027 and str(day)<='2027-03-14':
+        bracket=project(schedule,directory['conferences'],teams,day,now.isoformat())
+        folder=ROOT/'bracket'/str(year)
+        write(folder/(str(day)+'.json'),bracket)
+        write(ROOT/'bracket.json',dict(season=year,dates=sorted(p.stem for p in folder.glob('*.json'))))
     print(f'CBB: {len(pending)} upcoming games, {len(players.logs)} players, {len(teams.check)} chronological evaluation games')
 
 if __name__=='__main__':main()
